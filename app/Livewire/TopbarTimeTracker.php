@@ -93,7 +93,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                             ->live()
                             ->afterStateUpdated(fn (Set $set): mixed => $set('activity_id', null)),
                         Select::make('activity_id')
-                            ->label('Activity')
+                            ->label('Activity template')
                             ->required()
                             ->options(fn (Get $get): array => $this->activityOptions($get('project_id')))
                             ->getOptionLabelUsing(fn (mixed $value): ?string => $this->activityOptionLabel($value))
@@ -121,6 +121,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                             ->label('Hourly rate override')
                             ->numeric()
                             ->minValue(0)
+                            ->suffix(fn (Get $get): string => $this->unitRateCurrencySuffix($get('project_id')))
                             ->helperText(fn (Get $get): string => $this->rateHelperText($get('project_id'), $get('activity_id')))
                             ->columnSpanFull(),
                         Toggle::make('is_billable')
@@ -590,6 +591,28 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             Number::format($projectHourlyRate, precision: 2),
             $currency,
         );
+    }
+
+    private function unitRateCurrencySuffix(mixed $projectId): string
+    {
+        $ownerDefaultCurrency = (string) (data_get(Filament::auth()->user(), 'default_currency', 'CZK'));
+
+        if (! is_numeric($projectId)) {
+            return $ownerDefaultCurrency;
+        }
+
+        $ownerId = Filament::auth()->id();
+
+        if ($ownerId === null) {
+            return $ownerDefaultCurrency;
+        }
+
+        $currency = Project::query()
+            ->where('owner_id', $ownerId)
+            ->whereKey((int) $projectId)
+            ->first()?->effectiveCurrency();
+
+        return (string) ($currency ?? $ownerDefaultCurrency);
     }
 
     private function resolveActivityById(mixed $activityId): ?Activity

@@ -20,11 +20,13 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -67,9 +69,11 @@ class RecurringServicesRelationManager extends RelationManager
                     ->required(),
                 TextInput::make('currency'),
                 TextInput::make('fixed_amount')
-                    ->numeric(),
+                    ->numeric()
+                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
                 TextInput::make('hourly_rate')
-                    ->numeric(),
+                    ->numeric()
+                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
                 TextInput::make('included_quantity')
                     ->numeric(),
                 Select::make('cadence_unit')
@@ -104,7 +108,7 @@ class RecurringServicesRelationManager extends RelationManager
                     ->columnSpanFull(),
                 Textarea::make('notes')
                     ->columnSpanFull(),
-                Textarea::make('meta')
+                KeyValue::make('meta')
                     ->columnSpanFull(),
             ]);
     }

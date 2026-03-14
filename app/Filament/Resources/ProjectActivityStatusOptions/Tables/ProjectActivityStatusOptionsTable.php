@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\ProjectActivityStatusOptions\Tables;
 
 use App\Models\ProjectActivityStatusOption;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -54,11 +53,6 @@ class ProjectActivityStatusOptionsTable
             ])
             ->recordActions([
                 EditAction::make(),
-                DeleteAction::make()
-                    ->disabled(fn (ProjectActivityStatusOption $record): bool => $record->isUsedByActivities())
-                    ->tooltip(fn (ProjectActivityStatusOption $record): ?string => $record->isUsedByActivities()
-                        ? 'Cannot delete status that is assigned to worklogs.'
-                        : null),
             ])
             ->defaultSort('sort_order');
     }

@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\ProjectActivityStatusOptions;
 
 use App\Filament\Clusters\Configuration\ConfigurationCluster;
-use App\Filament\Resources\ProjectActivityStatusOptions\Pages\CreateProjectActivityStatusOption;
 use App\Filament\Resources\ProjectActivityStatusOptions\Pages\EditProjectActivityStatusOption;
 use App\Filament\Resources\ProjectActivityStatusOptions\Pages\ListProjectActivityStatusOptions;
 use App\Filament\Resources\ProjectActivityStatusOptions\Schemas\ProjectActivityStatusOptionForm;
@@ -21,6 +20,12 @@ class ProjectActivityStatusOptionResource extends Resource
     protected static ?string $model = ProjectActivityStatusOption::class;
 
     protected static ?string $cluster = ConfigurationCluster::class;
+
+    protected static ?string $modelLabel = 'Worklog status';
+
+    protected static ?string $pluralModelLabel = 'Worklog statuses';
+
+    protected static ?string $navigationLabel = 'Worklog statuses';
 
     protected static string|BackedEnum|null $navigationIcon = null;
 
@@ -43,16 +48,10 @@ class ProjectActivityStatusOptionResource extends Resource
         ];
     }
 
-    public static function getNavigationLabel(): string
-    {
-        return 'Worklog Statuses';
-    }
-
     public static function getPages(): array
     {
         return [
             'index' => ListProjectActivityStatusOptions::route('/'),
-            'create' => CreateProjectActivityStatusOption::route('/create'),
             'edit' => EditProjectActivityStatusOption::route('/{record}/edit'),
         ];
     }

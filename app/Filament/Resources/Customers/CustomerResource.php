@@ -5,17 +5,15 @@ namespace App\Filament\Resources\Customers;
 use App\Filament\Resources\Customers\Pages\CreateCustomer;
 use App\Filament\Resources\Customers\Pages\EditCustomer;
 use App\Filament\Resources\Customers\Pages\ListCustomers;
-use App\Filament\Resources\Customers\RelationManagers\ContactsRelationManager;
 use App\Filament\Resources\Customers\RelationManagers\LeadsRelationManager;
-use App\Filament\Resources\Customers\RelationManagers\NotesRelationManager;
 use App\Filament\Resources\Customers\RelationManagers\ProjectsRelationManager;
 use App\Filament\Resources\Customers\RelationManagers\RecurringServicesRelationManager;
-use App\Filament\Resources\Customers\RelationManagers\TagsRelationManager;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
 use App\Filament\Resources\Customers\Tables\CustomersTable;
 use App\Models\Customer;
 use BackedEnum;
 use Filament\Facades\Filament;
+use Filament\Resources\RelationManagers\RelationGroup;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -49,12 +47,11 @@ class CustomerResource extends Resource
     public static function getRelations(): array
     {
         return [
-            ContactsRelationManager::class,
-            ProjectsRelationManager::class,
+            RelationGroup::make('Delivery', [
+                ProjectsRelationManager::class,
+                RecurringServicesRelationManager::class,
+            ]),
             LeadsRelationManager::class,
-            RecurringServicesRelationManager::class,
-            NotesRelationManager::class,
-            TagsRelationManager::class,
         ];
     }
 

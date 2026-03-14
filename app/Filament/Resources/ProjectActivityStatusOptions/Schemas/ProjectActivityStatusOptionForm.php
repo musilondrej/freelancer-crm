@@ -30,20 +30,16 @@ class ProjectActivityStatusOptionForm
                                     ->default($ownerId),
                                 TextInput::make('label')
                                     ->required()
-                                    ->maxLength(120)
-                                    ->live(onBlur: true)
-                                    ->afterStateUpdated(function (string $operation, mixed $state, callable $set): void {
-                                        if ($operation !== 'create' || ! is_string($state)) {
-                                            return;
-                                        }
-
-                                        $set('code', str($state)->slug('_')->toString());
-                                    }),
-                                TextInput::make('code')
+                                    ->maxLength(120),
+                                Select::make('code')
+                                    ->options([
+                                        'in_progress' => 'In Progress',
+                                        'done' => 'Done',
+                                        'cancelled' => 'Cancelled',
+                                    ])
                                     ->required()
-                                    ->maxLength(64)
-                                    ->helperText('Internal key used by timer and metrics.')
-                                    ->rule('regex:/^[a-z0-9_]+$/'),
+                                    ->helperText('Execution statuses are fixed to In Progress, Done, Cancelled.')
+                                    ->disabled(fn (string $operation): bool => $operation === 'edit'),
                                 Select::make('color')
                                     ->options([
                                         'gray' => 'Gray',
@@ -69,19 +65,24 @@ class ProjectActivityStatusOptionForm
                             ->schema([
                                 Toggle::make('is_default')
                                     ->label('Default status')
+                                    ->disabled()
                                     ->inline(false),
                                 Toggle::make('is_open')
                                     ->label('Counts as open')
                                     ->default(true)
+                                    ->disabled()
                                     ->inline(false),
                                 Toggle::make('is_done')
                                     ->label('Counts as done')
+                                    ->disabled()
                                     ->inline(false),
                                 Toggle::make('is_cancelled')
                                     ->label('Counts as cancelled')
+                                    ->disabled()
                                     ->inline(false),
                                 Toggle::make('is_running')
                                     ->label('Running timer status')
+                                    ->disabled()
                                     ->inline(false),
                             ])
                             ->columns(2),

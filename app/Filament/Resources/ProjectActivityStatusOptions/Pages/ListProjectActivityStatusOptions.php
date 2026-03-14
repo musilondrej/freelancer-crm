@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\ProjectActivityStatusOptions\Pages;
 
 use App\Filament\Resources\ProjectActivityStatusOptions\ProjectActivityStatusOptionResource;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListProjectActivityStatusOptions extends ListRecords
@@ -12,8 +11,6 @@ class ListProjectActivityStatusOptions extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            CreateAction::make(),
-        ];
+        return [];
     }
 }

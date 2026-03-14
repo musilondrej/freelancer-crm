@@ -1,19 +1,15 @@
 <?php
 
-namespace App\Filament\Resources\Projects;
+namespace App\Filament\Resources\BacklogItems;
 
-use App\Filament\Resources\Projects\Pages\CreateProject;
-use App\Filament\Resources\Projects\Pages\EditProject;
-use App\Filament\Resources\Projects\Pages\ListProjects;
-use App\Filament\Resources\Projects\RelationManagers\ActivitiesRelationManager;
-use App\Filament\Resources\Projects\RelationManagers\RecurringServicesRelationManager;
-use App\Filament\Resources\Projects\Schemas\ProjectForm;
-use App\Filament\Resources\Projects\Tables\ProjectsTable;
-use App\Models\Project;
-use App\Models\ProjectStatusOption;
+use App\Filament\Resources\BacklogItems\Pages\CreateBacklogItem;
+use App\Filament\Resources\BacklogItems\Pages\EditBacklogItem;
+use App\Filament\Resources\BacklogItems\Pages\ListBacklogItems;
+use App\Filament\Resources\BacklogItems\Schemas\BacklogItemForm;
+use App\Filament\Resources\BacklogItems\Tables\BacklogItemsTable;
+use App\Models\BacklogItem;
 use BackedEnum;
 use Filament\Facades\Filament;
-use Filament\Resources\RelationManagers\RelationGroup;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -22,46 +18,46 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
-class ProjectResource extends Resource
+class BacklogItemResource extends Resource
 {
-    protected static ?string $model = Project::class;
+    protected static ?string $model = BacklogItem::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBriefcase;
+    protected static ?string $modelLabel = 'Backlog item';
+
+    protected static ?string $pluralModelLabel = 'Backlog';
+
+    protected static ?string $navigationLabel = 'Backlog';
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQueueList;
 
     protected static string|UnitEnum|null $navigationGroup = 'Work Log';
 
-    protected static ?int $navigationSort = 30;
-
-    protected static ?string $recordTitleAttribute = 'name';
+    protected static ?int $navigationSort = 5;
 
     public static function form(Schema $schema): Schema
     {
-        return ProjectForm::configure($schema);
+        return BacklogItemForm::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return ProjectsTable::configure($table);
+        return BacklogItemsTable::configure($table);
     }
 
     public static function getRelations(): array
     {
         return [
-            RelationGroup::make('Delivery', [
-                ActivitiesRelationManager::class,
-                RecurringServicesRelationManager::class,
-            ]),
+            //
         ];
     }
 
     public static function getNavigationBadge(): ?string
     {
         $ownerId = Filament::auth()->id();
-        $openStatuses = ProjectStatusOption::openCodesForOwner($ownerId);
 
-        $count = Project::query()
-            ->whereIn('status', $openStatuses)
+        $count = BacklogItem::query()
             ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
+            ->whereNull('converted_at')
             ->count();
 
         return $count > 0 ? (string) $count : null;
@@ -69,20 +65,20 @@ class ProjectResource extends Resource
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'info';
+        return 'warning';
     }
 
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Projects in open workflow statuses.';
+        return 'Open backlog items waiting for execution.';
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ListProjects::route('/'),
-            'create' => CreateProject::route('/create'),
-            'edit' => EditProject::route('/{record}/edit'),
+            'index' => ListBacklogItems::route('/'),
+            'create' => CreateBacklogItem::route('/create'),
+            'edit' => EditBacklogItem::route('/{record}/edit'),
         ];
     }
 

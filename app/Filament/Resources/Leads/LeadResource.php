@@ -6,8 +6,6 @@ use App\Enums\LeadStatus;
 use App\Filament\Resources\Leads\Pages\CreateLead;
 use App\Filament\Resources\Leads\Pages\EditLead;
 use App\Filament\Resources\Leads\Pages\ListLeads;
-use App\Filament\Resources\Leads\RelationManagers\NotesRelationManager;
-use App\Filament\Resources\Leads\RelationManagers\TagsRelationManager;
 use App\Filament\Resources\Leads\Schemas\LeadForm;
 use App\Filament\Resources\Leads\Tables\LeadsTable;
 use App\Models\Lead;
@@ -45,10 +43,7 @@ class LeadResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            NotesRelationManager::class,
-            TagsRelationManager::class,
-        ];
+        return [];
     }
 
     public static function getNavigationBadge(): ?string

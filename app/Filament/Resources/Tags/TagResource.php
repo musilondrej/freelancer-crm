@@ -17,6 +17,7 @@ use App\Filament\Resources\Tags\Tables\TagsTable;
 use App\Models\Tag;
 use BackedEnum;
 use Filament\Facades\Filament;
+use Filament\Resources\RelationManagers\RelationGroup;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -47,11 +48,15 @@ class TagResource extends Resource
     public static function getRelations(): array
     {
         return [
-            CustomersRelationManager::class,
-            ProjectsRelationManager::class,
-            LeadsRelationManager::class,
-            ProjectActivitiesRelationManager::class,
-            RecurringServicesRelationManager::class,
+            RelationGroup::make('CRM', [
+                CustomersRelationManager::class,
+                LeadsRelationManager::class,
+            ]),
+            RelationGroup::make('Delivery', [
+                ProjectsRelationManager::class,
+                ProjectActivitiesRelationManager::class,
+                RecurringServicesRelationManager::class,
+            ]),
             NotesRelationManager::class,
         ];
     }

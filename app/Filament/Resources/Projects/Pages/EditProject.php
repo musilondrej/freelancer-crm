@@ -20,4 +20,9 @@ class EditProject extends EditRecord
             RestoreAction::make(),
         ];
     }
+
+    public function hasCombinedRelationManagerTabsWithContent(): bool
+    {
+        return true;
+    }
 }

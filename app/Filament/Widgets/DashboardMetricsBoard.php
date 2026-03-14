@@ -64,7 +64,7 @@ class DashboardMetricsBoard extends BaseWidget
             'billable_hours_month' => 'Billable hours (month)',
             'worked_hours_month' => 'Worked hours (month)',
             'open_projects' => 'Open projects',
-            'overdue_activities' => 'Overdue activities',
+            'overdue_activities' => 'Overdue worklogs',
             'open_leads' => 'Open leads',
         ];
     }
@@ -150,7 +150,7 @@ class DashboardMetricsBoard extends BaseWidget
             'open_projects' => Stat::make('Open Projects', $this->formatCountMetric($snapshot['open_projects']))
                 ->icon('heroicon-o-briefcase')
                 ->color('warning'),
-            'overdue_activities' => Stat::make('Overdue Activities', $this->formatCountMetric($snapshot['overdue_activities']))
+            'overdue_activities' => Stat::make('Overdue Worklogs', $this->formatCountMetric($snapshot['overdue_activities']))
                 ->icon('heroicon-o-exclamation-triangle')
                 ->color('danger'),
             'open_leads' => Stat::make('Open Leads', $this->formatCountMetric($snapshot['open_leads']))

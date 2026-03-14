@@ -16,10 +16,12 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
@@ -51,7 +53,8 @@ class CustomersRelationManager extends RelationManager
                 TextInput::make('timezone'),
                 TextInput::make('billing_currency'),
                 TextInput::make('hourly_rate')
-                    ->numeric(),
+                    ->numeric()
+                    ->suffix(fn (Get $get): string => (string) ($get('billing_currency') ?: 'CZK')),
                 Select::make('status')
                     ->options(CustomerStatus::class)
                     ->default('lead')
@@ -61,7 +64,7 @@ class CustomersRelationManager extends RelationManager
                 DateTimePicker::make('next_follow_up_at'),
                 Textarea::make('internal_summary')
                     ->columnSpanFull(),
-                Textarea::make('meta')
+                KeyValue::make('meta')
                     ->columnSpanFull(),
             ]);
     }

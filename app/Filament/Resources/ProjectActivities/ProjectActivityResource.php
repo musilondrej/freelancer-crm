@@ -5,8 +5,6 @@ namespace App\Filament\Resources\ProjectActivities;
 use App\Filament\Resources\ProjectActivities\Pages\CreateProjectActivity;
 use App\Filament\Resources\ProjectActivities\Pages\EditProjectActivity;
 use App\Filament\Resources\ProjectActivities\Pages\ListProjectActivities;
-use App\Filament\Resources\ProjectActivities\RelationManagers\NotesRelationManager;
-use App\Filament\Resources\ProjectActivities\RelationManagers\TagsRelationManager;
 use App\Filament\Resources\ProjectActivities\Schemas\ProjectActivityForm;
 use App\Filament\Resources\ProjectActivities\Tables\ProjectActivitiesTable;
 use App\Models\ProjectActivity;
@@ -51,10 +49,7 @@ class ProjectActivityResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            NotesRelationManager::class,
-            TagsRelationManager::class,
-        ];
+        return [];
     }
 
     public static function getNavigationBadge(): ?string

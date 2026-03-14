@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->enum('type', ProjectActivityType::values())->default(ProjectActivityType::Hourly->value);
-            $table->string('status', 64)->default(ProjectActivityStatus::Planned->value);
+            $table->string('status', 64)->default(ProjectActivityStatus::InProgress->value);
             $table->boolean('is_running')->default(false);
             $table->boolean('is_billable')->default(true);
             $table->boolean('is_invoiced')->default(false);

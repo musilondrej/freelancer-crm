@@ -15,6 +15,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -40,7 +41,7 @@ class NotesRelationManager extends RelationManager
                 Toggle::make('is_pinned')
                     ->required(),
                 DateTimePicker::make('noted_at'),
-                Textarea::make('meta')
+                KeyValue::make('meta')
                     ->columnSpanFull(),
             ]);
     }

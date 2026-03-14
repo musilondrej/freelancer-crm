@@ -21,10 +21,12 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
@@ -68,20 +70,23 @@ class ProjectsRelationManager extends RelationManager
                 DatePicker::make('closed_date'),
                 TextInput::make('currency'),
                 TextInput::make('hourly_rate')
-                    ->numeric(),
+                    ->numeric()
+                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
                 TextInput::make('fixed_price')
                     ->numeric()
-                    ->prefix('$'),
+                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
                 TextInput::make('estimated_hours')
                     ->numeric(),
                 TextInput::make('estimated_value')
-                    ->numeric(),
+                    ->numeric()
+                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
                 TextInput::make('actual_value')
-                    ->numeric(),
+                    ->numeric()
+                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
                 Textarea::make('description')
                     ->columnSpanFull(),
                 DateTimePicker::make('last_activity_at'),
-                Textarea::make('meta')
+                KeyValue::make('meta')
                     ->columnSpanFull(),
             ]);
     }

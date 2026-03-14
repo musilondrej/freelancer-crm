@@ -5,7 +5,9 @@ namespace App\Filament\Resources\Leads\Schemas;
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use App\Models\Lead;
+use App\Models\Tag;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
@@ -145,7 +147,7 @@ class LeadForm
                                                 TextInput::make('estimated_value')
                                                     ->numeric()
                                                     ->minValue(0)
-                                                    ->prefix(fn (Get $get): string => self::currencyPrefix(self::resolveCurrencyCode($get('currency'))))
+                                                    ->suffix(fn (Get $get): string => self::resolveCurrencyCode($get('currency')))
                                                     ->placeholder('0'),
                                                 DatePicker::make('expected_close_date')
                                                     ->native(false),
@@ -187,6 +189,62 @@ class LeadForm
                                                     ->collapsed()
                                                     ->reorderable(false)
                                                     ->itemLabel(fn (array $state): string => Str::limit((string) ($state['body'] ?? 'Note'), 64)),
+                                            ]),
+                                        Section::make('Tags')
+                                            ->description('WordPress-like tag picker: search existing tags or create one inline.')
+                                            ->schema([
+                                                Select::make('tags')
+                                                    ->multiple()
+                                                    ->relationship(
+                                                        name: 'tags',
+                                                        titleAttribute: 'name',
+                                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
+                                                            ? $query->where('owner_id', $ownerId)->orderBy('sort_order')->orderBy('name')
+                                                            : $query->orderBy('name'),
+                                                    )
+                                                    ->searchable()
+                                                    ->preload()
+                                                    ->native(false)
+                                                    ->createOptionForm([
+                                                        TextInput::make('name')
+                                                            ->required()
+                                                            ->maxLength(255),
+                                                        ColorPicker::make('color')
+                                                            ->default('#f59e0b'),
+                                                    ])
+                                                    ->createOptionUsing(function (array $data) use ($ownerId): int {
+                                                        $resolvedOwnerId = (int) ($ownerId ?? Filament::auth()->id());
+                                                        $name = trim((string) ($data['name'] ?? ''));
+                                                        $slug = Str::slug($name);
+
+                                                        if ($slug === '') {
+                                                            $slug = 'tag';
+                                                        }
+
+                                                        $existingTag = Tag::query()
+                                                            ->where('owner_id', $resolvedOwnerId)
+                                                            ->where('slug', $slug)
+                                                            ->first();
+
+                                                        if ($existingTag instanceof Tag) {
+                                                            return $existingTag->id;
+                                                        }
+
+                                                        $nextSortOrder = (int) (Tag::query()
+                                                            ->where('owner_id', $resolvedOwnerId)
+                                                            ->max('sort_order') ?? 0) + 10;
+
+                                                        $tag = Tag::query()->create([
+                                                            'owner_id' => $resolvedOwnerId,
+                                                            'name' => $name,
+                                                            'slug' => $slug,
+                                                            'color' => $data['color'] ?? null,
+                                                            'sort_order' => $nextSortOrder,
+                                                        ]);
+
+                                                        return $tag->id;
+                                                    })
+                                                    ->columnSpanFull(),
                                             ]),
                                     ])
                                     ->hidden(fn (?Lead $record): bool => ! $record instanceof Lead),
@@ -246,15 +304,6 @@ class LeadForm
                 'default' => 1,
                 'lg' => 12,
             ]);
-    }
-
-    private static function currencyPrefix(string $currency): string
-    {
-        return match (strtoupper($currency)) {
-            'EUR' => '€',
-            'USD' => '$',
-            default => 'Kč',
-        };
     }
 
     private static function formatEstimatedValue(string $currency, mixed $estimatedValue): string

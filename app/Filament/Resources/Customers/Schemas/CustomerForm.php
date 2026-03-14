@@ -4,7 +4,9 @@ namespace App\Filament\Resources\Customers\Schemas;
 
 use App\Enums\CustomerStatus;
 use App\Models\Customer;
+use App\Models\Tag;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\KeyValue;
@@ -18,6 +20,7 @@ use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Str;
@@ -105,9 +108,48 @@ class CustomerForm
                                                     ]),
                                                 TextInput::make('hourly_rate')
                                                     ->numeric()
-                                                    ->minValue(0),
+                                                    ->minValue(0)
+                                                    ->suffix(fn (Get $get): string => (string) ($get('billing_currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
                                             ])
                                             ->columns(2),
+                                    ]),
+                                Tab::make('Contacts')
+                                    ->icon(Heroicon::OutlinedUserGroup)
+                                    ->schema([
+                                        Section::make('Key Contacts')
+                                            ->description('Use inline contacts for day-to-day CRM work. Keep relation tabs focused on delivery records.')
+                                            ->schema([
+                                                Repeater::make('contacts')
+                                                    ->relationship('contacts')
+                                                    ->schema([
+                                                        Hidden::make('owner_id')
+                                                            ->default($ownerId),
+                                                        TextInput::make('full_name')
+                                                            ->required()
+                                                            ->maxLength(255),
+                                                        TextInput::make('job_title')
+                                                            ->maxLength(255),
+                                                        TextInput::make('email')
+                                                            ->email()
+                                                            ->maxLength(255),
+                                                        TextInput::make('phone')
+                                                            ->tel()
+                                                            ->maxLength(255),
+                                                        Toggle::make('is_primary')
+                                                            ->default(false),
+                                                        Toggle::make('is_billing_contact')
+                                                            ->default(false),
+                                                        DateTimePicker::make('last_contacted_at'),
+                                                        KeyValue::make('meta')
+                                                            ->columnSpanFull(),
+                                                    ])
+                                                    ->columns(2)
+                                                    ->addActionLabel('Add contact')
+                                                    ->defaultItems(0)
+                                                    ->collapsed()
+                                                    ->reorderable(false)
+                                                    ->itemLabel(fn (array $state): string => Str::limit((string) ($state['full_name'] ?? 'Contact'), 64)),
+                                            ]),
                                     ]),
                                 Tab::make('Notes')
                                     ->icon(Heroicon::OutlinedChatBubbleBottomCenterText)
@@ -137,6 +179,62 @@ class CustomerForm
                                                     ->collapsed()
                                                     ->reorderable(false)
                                                     ->itemLabel(fn (array $state): string => Str::limit((string) ($state['body'] ?? 'Note'), 64)),
+                                            ]),
+                                        Section::make('Tags')
+                                            ->description('WordPress-like tag picker: search existing tags or create one inline.')
+                                            ->schema([
+                                                Select::make('tags')
+                                                    ->multiple()
+                                                    ->relationship(
+                                                        name: 'tags',
+                                                        titleAttribute: 'name',
+                                                        modifyQueryUsing: fn ($query) => $ownerId !== null
+                                                            ? $query->where('owner_id', $ownerId)->orderBy('sort_order')->orderBy('name')
+                                                            : $query->orderBy('name'),
+                                                    )
+                                                    ->searchable()
+                                                    ->preload()
+                                                    ->native(false)
+                                                    ->createOptionForm([
+                                                        TextInput::make('name')
+                                                            ->required()
+                                                            ->maxLength(255),
+                                                        ColorPicker::make('color')
+                                                            ->default('#f59e0b'),
+                                                    ])
+                                                    ->createOptionUsing(function (array $data) use ($ownerId): int {
+                                                        $resolvedOwnerId = (int) ($ownerId ?? Filament::auth()->id());
+                                                        $name = trim((string) ($data['name'] ?? ''));
+                                                        $slug = Str::slug($name);
+
+                                                        if ($slug === '') {
+                                                            $slug = 'tag';
+                                                        }
+
+                                                        $existingTag = Tag::query()
+                                                            ->where('owner_id', $resolvedOwnerId)
+                                                            ->where('slug', $slug)
+                                                            ->first();
+
+                                                        if ($existingTag instanceof Tag) {
+                                                            return $existingTag->id;
+                                                        }
+
+                                                        $nextSortOrder = (int) (Tag::query()
+                                                            ->where('owner_id', $resolvedOwnerId)
+                                                            ->max('sort_order') ?? 0) + 10;
+
+                                                        $tag = Tag::query()->create([
+                                                            'owner_id' => $resolvedOwnerId,
+                                                            'name' => $name,
+                                                            'slug' => $slug,
+                                                            'color' => $data['color'] ?? null,
+                                                            'sort_order' => $nextSortOrder,
+                                                        ]);
+
+                                                        return $tag->id;
+                                                    })
+                                                    ->columnSpanFull(),
                                             ]),
                                     ]),
                             ]),

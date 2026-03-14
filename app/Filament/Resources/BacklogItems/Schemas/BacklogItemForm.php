@@ -1,11 +1,10 @@
 <?php
 
-namespace App\Filament\Resources\ProjectActivities\Schemas;
+namespace App\Filament\Resources\BacklogItems\Schemas;
 
-use App\Enums\ProjectActivityType;
+use App\Enums\BacklogItemStatus;
 use App\Models\Activity;
-use App\Models\ProjectActivity;
-use App\Models\ProjectActivityStatusOption;
+use App\Models\BacklogItem;
 use App\Models\Tag;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
@@ -24,13 +23,13 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 
-class ProjectActivityForm
+class BacklogItemForm
 {
     public static function configure(Schema $schema): Schema
     {
@@ -40,12 +39,12 @@ class ProjectActivityForm
             ->components([
                 Group::make()
                     ->schema([
-                        Tabs::make('Worklog Workspace')
+                        Tabs::make('Backlog Workspace')
                             ->tabs([
                                 Tab::make('Details')
-                                    ->icon(Heroicon::OutlinedClipboardDocumentList)
+                                    ->icon(Heroicon::OutlinedQueueList)
                                     ->schema([
-                                        Section::make('Worklog')
+                                        Section::make('Plan')
                                             ->schema([
                                                 Hidden::make('owner_id')
                                                     ->default($ownerId),
@@ -57,124 +56,49 @@ class ProjectActivityForm
                                                             ? $query->where('owner_id', $ownerId)
                                                             : $query,
                                                     )
+                                                    ->label('Project')
                                                     ->required()
                                                     ->searchable()
                                                     ->preload()
-                                                    ->live()
-                                                    ->afterStateUpdated(fn (Set $set): mixed => $set('activity_id', null)),
+                                                    ->live(),
                                                 Select::make('activity_id')
                                                     ->label('Activity template')
-                                                    ->required()
                                                     ->options(fn (Get $get): array => self::activityOptions($ownerId, $get('project_id')))
                                                     ->searchable()
                                                     ->preload()
-                                                    ->disabled(fn (Get $get): bool => ! is_numeric($get('project_id')))
-                                                    ->live()
-                                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                                        if (! is_numeric($state)) {
-                                                            return;
-                                                        }
-
-                                                        $activity = Activity::query()->find((int) $state);
-
-                                                        if (! $activity instanceof Activity) {
-                                                            return;
-                                                        }
-
-                                                        $set('title', $activity->name);
-                                                        $set('is_billable', $activity->is_billable);
-
-                                                        if ($activity->default_hourly_rate !== null) {
-                                                            $set('unit_rate', $activity->default_hourly_rate);
-                                                        }
-                                                    }),
+                                                    ->disabled(fn (Get $get): bool => ! is_numeric($get('project_id'))),
                                                 TextInput::make('title')
                                                     ->required()
                                                     ->maxLength(255)
-                                                    ->readOnly(fn (Get $get): bool => is_numeric($get('activity_id')))
                                                     ->columnSpanFull(),
                                                 Textarea::make('description')
-                                                    ->rows(7)
+                                                    ->rows(6)
                                                     ->columnSpanFull(),
-                                                Select::make('type')
-                                                    ->options(ProjectActivityType::class)
-                                                    ->default(ProjectActivityType::Hourly)
-                                                    ->required()
-                                                    ->live(),
                                             ])
                                             ->columns(2),
-                                        Section::make('Time')
-                                            ->schema([
-                                                DateTimePicker::make('started_at')
-                                                    ->seconds(false),
-                                                DateTimePicker::make('finished_at')
-                                                    ->seconds(false),
-                                                TextInput::make('tracked_minutes')
-                                                    ->numeric()
-                                                    ->minValue(0)
-                                                    ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::Hourly->value),
-                                                DatePicker::make('due_date'),
-                                            ])
-                                            ->columns(2),
-                                        Section::make('Billing')
-                                            ->schema([
-                                                Toggle::make('is_billable')
-                                                    ->default(true),
-                                                Toggle::make('is_invoiced')
-                                                    ->default(false)
-                                                    ->live()
-                                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                                        if (! (bool) $state) {
-                                                            $set('invoice_reference', null);
-                                                            $set('invoiced_at', null);
-
-                                                            return;
-                                                        }
-
-                                                        $set('invoiced_at', now());
-                                                    }),
-                                                Select::make('currency')
-                                                    ->options([
-                                                        'CZK' => 'CZK (Kč)',
-                                                        'EUR' => 'EUR (€)',
-                                                        'USD' => 'USD ($)',
-                                                    ]),
-                                                TextInput::make('quantity')
-                                                    ->numeric()
-                                                    ->minValue(0),
-                                                TextInput::make('unit_rate')
-                                                    ->numeric()
-                                                    ->minValue(0)
-                                                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
-                                                TextInput::make('flat_amount')
-                                                    ->numeric()
-                                                    ->minValue(0)
-                                                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK'))))
-                                                    ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::OneTime->value),
-                                                TextInput::make('invoice_reference')
-                                                    ->maxLength(64)
-                                                    ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
-                                                DateTimePicker::make('invoiced_at')
-                                                    ->seconds(false)
-                                                    ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
-                                            ])
-                                            ->columns(2),
-                                        Section::make('Workflow')
+                                        Section::make('Schedule')
                                             ->schema([
                                                 Select::make('status')
-                                                    ->options(fn (): array => self::worklogStatusOptions($ownerId))
-                                                    ->default(function () use ($ownerId): string {
-                                                        $defaultCode = ProjectActivityStatusOption::defaultCodeForOwner($ownerId);
-                                                        $allowedStatuses = self::worklogStatusOptions($ownerId);
-
-                                                        if (array_key_exists($defaultCode, $allowedStatuses)) {
-                                                            return $defaultCode;
-                                                        }
-
-                                                        return 'in_progress';
-                                                    })
+                                                    ->options(BacklogItemStatus::class)
+                                                    ->default(BacklogItemStatus::Todo)
                                                     ->required(),
-                                            ]),
+                                                Select::make('priority')
+                                                    ->options([
+                                                        1 => '1',
+                                                        2 => '2',
+                                                        3 => '3',
+                                                        4 => '4',
+                                                        5 => '5',
+                                                    ])
+                                                    ->default(3)
+                                                    ->required(),
+                                                DatePicker::make('due_date'),
+                                                TextInput::make('estimated_minutes')
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->suffix('min'),
+                                            ])
+                                            ->columns(2),
                                     ]),
                                 Tab::make('Notes')
                                     ->icon(Heroicon::OutlinedChatBubbleBottomCenterText)
@@ -272,12 +196,23 @@ class ProjectActivityForm
                             ->schema([
                                 TextEntry::make('created_at')
                                     ->label('Created')
-                                    ->state(fn (?ProjectActivity $record): ?string => $record?->created_at?->diffForHumans()),
+                                    ->state(fn (?BacklogItem $record): ?string => $record?->created_at?->diffForHumans()),
                                 TextEntry::make('updated_at')
                                     ->label('Last modified')
-                                    ->state(fn (?ProjectActivity $record): ?string => $record?->updated_at?->diffForHumans()),
+                                    ->state(fn (?BacklogItem $record): ?string => $record?->updated_at?->diffForHumans()),
+                                TextEntry::make('converted_at')
+                                    ->label('Converted to worklog')
+                                    ->state(function (?BacklogItem $record): string {
+                                        $convertedAt = $record?->converted_at;
+
+                                        if ($convertedAt !== null) {
+                                            return Date::parse((string) $convertedAt)->diffForHumans();
+                                        }
+
+                                        return '-';
+                                    }),
                             ])
-                            ->hidden(fn (?ProjectActivity $record): bool => ! $record instanceof ProjectActivity),
+                            ->hidden(fn (?BacklogItem $record): bool => ! $record instanceof BacklogItem),
                         Section::make('Technical Metadata')
                             ->schema([
                                 KeyValue::make('meta')
@@ -293,31 +228,6 @@ class ProjectActivityForm
                 'default' => 1,
                 'lg' => 12,
             ]);
-    }
-
-    private static function resolveActivityTypeValue(mixed $value): string
-    {
-        if ($value instanceof ProjectActivityType) {
-            return $value->value;
-        }
-
-        return (string) $value;
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private static function worklogStatusOptions(?int $ownerId): array
-    {
-        $allowedStatusCodes = [
-            'in_progress',
-            'done',
-            'cancelled',
-        ];
-
-        return collect(ProjectActivityStatusOption::optionsForOwner($ownerId))
-            ->only($allowedStatusCodes)
-            ->all();
     }
 
     /**

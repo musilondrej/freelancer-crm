@@ -61,6 +61,42 @@ class ProjectActivityStatusOption extends Model
         static::saving(function (self $statusOption): void {
             $statusOption->code = Str::slug($statusOption->code, '_');
 
+            $allowedStatusCodes = [
+                'in_progress',
+                'done',
+                'cancelled',
+            ];
+
+            if (! in_array($statusOption->code, $allowedStatusCodes, true)) {
+                throw ValidationException::withMessages([
+                    'code' => 'Only in_progress, done, and cancelled status codes are supported for worklogs.',
+                ]);
+            }
+
+            if ($statusOption->code === 'in_progress') {
+                $statusOption->is_default = true;
+                $statusOption->is_open = true;
+                $statusOption->is_done = false;
+                $statusOption->is_cancelled = false;
+                $statusOption->is_running = true;
+            }
+
+            if ($statusOption->code === 'done') {
+                $statusOption->is_default = false;
+                $statusOption->is_open = false;
+                $statusOption->is_done = true;
+                $statusOption->is_cancelled = false;
+                $statusOption->is_running = false;
+            }
+
+            if ($statusOption->code === 'cancelled') {
+                $statusOption->is_default = false;
+                $statusOption->is_open = false;
+                $statusOption->is_done = false;
+                $statusOption->is_cancelled = true;
+                $statusOption->is_running = false;
+            }
+
             if ($statusOption->exists && $statusOption->isDirty('code')) {
                 $statusOption->previousCodeBeforeSave = (string) $statusOption->getOriginal('code');
             }
@@ -105,7 +141,7 @@ class ProjectActivityStatusOption extends Model
         static::deleting(function (self $statusOption): void {
             if ($statusOption->isUsedByActivities()) {
                 throw ValidationException::withMessages([
-                    'code' => 'This status cannot be deleted because it is assigned to one or more project activities.',
+                    'code' => 'This status cannot be deleted because it is assigned to one or more worklogs.',
                 ]);
             }
         });
@@ -154,24 +190,12 @@ class ProjectActivityStatusOption extends Model
     {
         return [
             [
-                'code' => 'planned',
-                'label' => 'Planned',
-                'color' => 'gray',
-                'icon' => null,
-                'sort_order' => 10,
-                'is_default' => true,
-                'is_open' => true,
-                'is_done' => false,
-                'is_cancelled' => false,
-                'is_running' => false,
-            ],
-            [
                 'code' => 'in_progress',
                 'label' => 'In Progress',
                 'color' => 'warning',
                 'icon' => null,
-                'sort_order' => 20,
-                'is_default' => false,
+                'sort_order' => 10,
+                'is_default' => true,
                 'is_open' => true,
                 'is_done' => false,
                 'is_cancelled' => false,
@@ -182,7 +206,7 @@ class ProjectActivityStatusOption extends Model
                 'label' => 'Done',
                 'color' => 'success',
                 'icon' => null,
-                'sort_order' => 30,
+                'sort_order' => 20,
                 'is_default' => false,
                 'is_open' => false,
                 'is_done' => true,
@@ -194,7 +218,7 @@ class ProjectActivityStatusOption extends Model
                 'label' => 'Cancelled',
                 'color' => 'danger',
                 'icon' => null,
-                'sort_order' => 40,
+                'sort_order' => 30,
                 'is_default' => false,
                 'is_open' => false,
                 'is_done' => false,

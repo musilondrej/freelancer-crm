@@ -20,11 +20,13 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -36,6 +38,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class ProjectActivitiesRelationManager extends RelationManager
 {
     protected static string $relationship = 'projectActivities';
+
+    protected static ?string $title = 'Worklogs';
 
     public function form(Schema $schema): Schema
     {
@@ -53,8 +57,18 @@ class ProjectActivitiesRelationManager extends RelationManager
                     ->default('hourly')
                     ->required(),
                 Select::make('status')
-                    ->options(fn (): array => ProjectActivityStatusOption::optionsForOwner(Filament::auth()->id()))
-                    ->default(fn (): string => ProjectActivityStatusOption::defaultCodeForOwner(Filament::auth()->id()))
+                    ->options(fn (): array => $this->worklogStatusOptions())
+                    ->default(function (): string {
+                        $ownerId = Filament::auth()->id();
+                        $defaultCode = ProjectActivityStatusOption::defaultCodeForOwner($ownerId);
+                        $allowedStatuses = $this->worklogStatusOptions();
+
+                        if (array_key_exists($defaultCode, $allowedStatuses)) {
+                            return $defaultCode;
+                        }
+
+                        return 'in_progress';
+                    })
                     ->required(),
                 Toggle::make('is_billable')
                     ->required(),
@@ -62,15 +76,17 @@ class ProjectActivitiesRelationManager extends RelationManager
                 TextInput::make('quantity')
                     ->numeric(),
                 TextInput::make('unit_rate')
-                    ->numeric(),
+                    ->numeric()
+                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
                 TextInput::make('flat_amount')
-                    ->numeric(),
+                    ->numeric()
+                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
                 TextInput::make('tracked_minutes')
                     ->numeric(),
                 DatePicker::make('due_date'),
                 DateTimePicker::make('started_at'),
                 DateTimePicker::make('finished_at'),
-                Textarea::make('meta')
+                KeyValue::make('meta')
                     ->columnSpanFull(),
             ]);
     }
@@ -79,6 +95,7 @@ class ProjectActivitiesRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('title')
+            ->defaultSort('started_at', 'desc')
             ->columns([
                 TextColumn::make('project.name')
                     ->searchable(),
@@ -156,5 +173,21 @@ class ProjectActivitiesRelationManager extends RelationManager
                 ->withoutGlobalScopes([
                     SoftDeletingScope::class,
                 ]));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function worklogStatusOptions(): array
+    {
+        $allowedStatusCodes = [
+            'in_progress',
+            'done',
+            'cancelled',
+        ];
+
+        return collect(ProjectActivityStatusOption::optionsForOwner(Filament::auth()->id()))
+            ->only($allowedStatusCodes)
+            ->all();
     }
 }

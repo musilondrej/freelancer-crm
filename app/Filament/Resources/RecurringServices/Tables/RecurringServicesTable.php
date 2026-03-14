@@ -2,14 +2,18 @@
 
 namespace App\Filament\Resources\RecurringServices\Tables;
 
+use App\Enums\RecurringServiceStatus;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class RecurringServicesTable
 {
@@ -55,6 +59,19 @@ class RecurringServicesTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('status')
+                    ->options(RecurringServiceStatus::class)
+                    ->multiple(),
+                SelectFilter::make('customer_id')
+                    ->relationship('customer', 'name')
+                    ->label('Customer')
+                    ->searchable()
+                    ->preload(),
+                Filter::make('overdue')
+                    ->label('Overdue')
+                    ->query(fn (Builder $query): Builder => $query
+                        ->where('status', RecurringServiceStatus::Active->value)
+                        ->whereDate('next_due_on', '<', today()->toDateString())),
                 TrashedFilter::make(),
             ])
             ->recordActions([

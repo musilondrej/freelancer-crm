@@ -66,7 +66,8 @@ class ActivityForm
                                             ->schema([
                                                 TextInput::make('default_hourly_rate')
                                                     ->numeric()
-                                                    ->minValue(0),
+                                                    ->minValue(0)
+                                                    ->suffix(fn (): string => (string) (data_get(Filament::auth()->user(), 'default_currency', 'CZK'))),
                                                 Toggle::make('is_billable')
                                                     ->default(true),
                                                 Toggle::make('is_active')

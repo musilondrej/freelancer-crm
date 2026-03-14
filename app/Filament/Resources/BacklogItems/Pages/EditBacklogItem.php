@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Filament\Resources\Customers\Pages;
+namespace App\Filament\Resources\BacklogItems\Pages;
 
-use App\Filament\Resources\Customers\CustomerResource;
+use App\Filament\Resources\BacklogItems\BacklogItemResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
-class EditCustomer extends EditRecord
+class EditBacklogItem extends EditRecord
 {
-    protected static string $resource = CustomerResource::class;
+    protected static string $resource = BacklogItemResource::class;
 
     protected function getHeaderActions(): array
     {
@@ -19,10 +19,5 @@ class EditCustomer extends EditRecord
             ForceDeleteAction::make(),
             RestoreAction::make(),
         ];
-    }
-
-    public function hasCombinedRelationManagerTabsWithContent(): bool
-    {
-        return true;
     }
 }

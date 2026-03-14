@@ -43,7 +43,7 @@ class UnbilledDoneWorkTable extends TableWidget
                 ]))
             ->columns([
                 TextColumn::make('title')
-                    ->label('Activity')
+                    ->label('Worklog')
                     ->searchable()
                     ->limit(60),
                 TextColumn::make('project.name')
@@ -86,7 +86,7 @@ class UnbilledDoneWorkTable extends TableWidget
 
     public function getHeading(): ?string
     {
-        return 'Unbilled Done Work';
+        return 'Unbilled Done Worklogs';
     }
 
     /**

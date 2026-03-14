@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Notes;
 use App\Filament\Resources\Notes\Pages\CreateNote;
 use App\Filament\Resources\Notes\Pages\EditNote;
 use App\Filament\Resources\Notes\Pages\ListNotes;
-use App\Filament\Resources\Notes\RelationManagers\TagsRelationManager;
 use App\Filament\Resources\Notes\Schemas\NoteForm;
 use App\Filament\Resources\Notes\Tables\NotesTable;
 use App\Models\Note;
@@ -45,9 +44,7 @@ class NoteResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            TagsRelationManager::class,
-        ];
+        return [];
     }
 
     public static function getPages(): array

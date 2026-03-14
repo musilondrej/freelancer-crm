@@ -7,8 +7,10 @@ use App\Enums\RecurringServiceCadenceUnit;
 use App\Enums\RecurringServiceStatus;
 use App\Models\RecurringService;
 use App\Models\RecurringServiceType as RecurringServiceTypeModel;
+use App\Models\Tag;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
@@ -155,6 +157,62 @@ class RecurringServiceForm
                                                     ->reorderable(false)
                                                     ->itemLabel(fn (array $state): string => Str::limit((string) ($state['body'] ?? 'Note'), 64)),
                                             ]),
+                                        Section::make('Tags')
+                                            ->description('WordPress-like tag picker: search existing tags or create one inline.')
+                                            ->schema([
+                                                Select::make('tags')
+                                                    ->multiple()
+                                                    ->relationship(
+                                                        name: 'tags',
+                                                        titleAttribute: 'name',
+                                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
+                                                            ? $query->where('owner_id', $ownerId)->orderBy('sort_order')->orderBy('name')
+                                                            : $query->orderBy('name'),
+                                                    )
+                                                    ->searchable()
+                                                    ->preload()
+                                                    ->native(false)
+                                                    ->createOptionForm([
+                                                        TextInput::make('name')
+                                                            ->required()
+                                                            ->maxLength(255),
+                                                        ColorPicker::make('color')
+                                                            ->default('#f59e0b'),
+                                                    ])
+                                                    ->createOptionUsing(function (array $data) use ($ownerId): int {
+                                                        $resolvedOwnerId = (int) ($ownerId ?? Filament::auth()->id());
+                                                        $name = trim((string) ($data['name'] ?? ''));
+                                                        $slug = Str::slug($name);
+
+                                                        if ($slug === '') {
+                                                            $slug = 'tag';
+                                                        }
+
+                                                        $existingTag = Tag::query()
+                                                            ->where('owner_id', $resolvedOwnerId)
+                                                            ->where('slug', $slug)
+                                                            ->first();
+
+                                                        if ($existingTag instanceof Tag) {
+                                                            return $existingTag->id;
+                                                        }
+
+                                                        $nextSortOrder = (int) (Tag::query()
+                                                            ->where('owner_id', $resolvedOwnerId)
+                                                            ->max('sort_order') ?? 0) + 10;
+
+                                                        $tag = Tag::query()->create([
+                                                            'owner_id' => $resolvedOwnerId,
+                                                            'name' => $name,
+                                                            'slug' => $slug,
+                                                            'color' => $data['color'] ?? null,
+                                                            'sort_order' => $nextSortOrder,
+                                                        ]);
+
+                                                        return $tag->id;
+                                                    })
+                                                    ->columnSpanFull(),
+                                            ]),
                                     ]),
                             ]),
                     ])
@@ -179,10 +237,12 @@ class RecurringServiceForm
                                 TextInput::make('fixed_amount')
                                     ->numeric()
                                     ->minValue(0)
+                                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK'))))
                                     ->visible(fn (Get $get): bool => self::resolveBillingModelValue($get('billing_model')) === RecurringServiceBillingModel::Fixed->value),
                                 TextInput::make('hourly_rate')
                                     ->numeric()
                                     ->minValue(0)
+                                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK'))))
                                     ->visible(fn (Get $get): bool => self::resolveBillingModelValue($get('billing_model')) === RecurringServiceBillingModel::Hourly->value),
                                 TextInput::make('included_quantity')
                                     ->numeric()

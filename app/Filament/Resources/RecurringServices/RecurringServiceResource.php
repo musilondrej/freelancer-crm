@@ -6,8 +6,6 @@ use App\Enums\RecurringServiceStatus;
 use App\Filament\Resources\RecurringServices\Pages\CreateRecurringService;
 use App\Filament\Resources\RecurringServices\Pages\EditRecurringService;
 use App\Filament\Resources\RecurringServices\Pages\ListRecurringServices;
-use App\Filament\Resources\RecurringServices\RelationManagers\NotesRelationManager;
-use App\Filament\Resources\RecurringServices\RelationManagers\TagsRelationManager;
 use App\Filament\Resources\RecurringServices\Schemas\RecurringServiceForm;
 use App\Filament\Resources\RecurringServices\Tables\RecurringServicesTable;
 use App\Models\RecurringService;
@@ -45,10 +43,7 @@ class RecurringServiceResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            NotesRelationManager::class,
-            TagsRelationManager::class,
-        ];
+        return [];
     }
 
     public static function getNavigationBadge(): ?string

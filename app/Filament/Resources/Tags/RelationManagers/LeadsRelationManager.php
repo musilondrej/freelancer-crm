@@ -18,10 +18,12 @@ use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
@@ -65,13 +67,14 @@ class LeadsRelationManager extends RelationManager
                     ->default(3),
                 TextInput::make('currency'),
                 TextInput::make('estimated_value')
-                    ->numeric(),
+                    ->numeric()
+                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: 'CZK')),
                 DatePicker::make('expected_close_date'),
                 DateTimePicker::make('contacted_at'),
                 DateTimePicker::make('last_activity_at'),
                 Textarea::make('summary')
                     ->columnSpanFull(),
-                Textarea::make('meta')
+                KeyValue::make('meta')
                     ->columnSpanFull(),
             ]);
     }

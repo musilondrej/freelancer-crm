@@ -141,6 +141,7 @@ class WorklogForm
                                                 TextInput::make('tracked_minutes')
                                                     ->numeric()
                                                     ->minValue(0)
+                                                    ->suffix('min')
                                                     ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::Hourly->value),
                                                 DatePicker::make('due_date'),
                                             ])

@@ -6,6 +6,7 @@ use App\Enums\ProjectActivityType;
 use App\Filament\Resources\Worklogs\WorklogResource;
 use App\Models\ProjectActivityStatusOption;
 use App\Models\Worklog;
+use App\Support\Filament\WorklogStatus;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -16,6 +17,9 @@ use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\QueryException;
 
@@ -68,7 +72,9 @@ class WorklogsTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('tracked_minutes')
-                    ->numeric()
+                    ->label('Tracked time')
+                    ->state(fn (Worklog $record): string => $record->trackedDurationLabel())
+                    ->description(fn (Worklog $record): ?string => $record->tracked_minutes !== null ? $record->trackedMinutesWithSuffix() : null)
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('due_date')
@@ -80,6 +86,23 @@ class WorklogsTable
                     ->dateTime()
                     ->sortable(),
             ])
+            ->filters([
+                SelectFilter::make('status')
+                    ->label('Status')
+                    ->options(fn (): array => WorklogStatus::options(Filament::auth()->id()))
+                    ->multiple(),
+                SelectFilter::make('project_id')
+                    ->relationship('project', 'name')
+                    ->label('Project')
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('backlog_item_id')
+                    ->relationship('backlogItem', 'title')
+                    ->label('Backlog item')
+                    ->searchable()
+                    ->preload(),
+                TrashedFilter::make(),
+            ], layout: FiltersLayout::AboveContent)
             ->filtersFormColumns(4)
             ->recordActions([
                 Action::make('start_timer')

@@ -33,8 +33,9 @@ class WorklogsRelationManager extends RelationManager
                     ->formatStateUsing(fn (Worklog $record): string => $record->resolvedStatusLabel())
                     ->color(fn (Worklog $record): string => $record->resolvedStatusColor()),
                 TextColumn::make('tracked_minutes')
-                    ->label('Tracked minutes')
-                    ->numeric(),
+                    ->label('Tracked time')
+                    ->state(fn (Worklog $record): string => $record->trackedDurationLabel())
+                    ->description(fn (Worklog $record): ?string => $record->tracked_minutes !== null ? $record->trackedMinutesWithSuffix() : null),
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->dateTime()

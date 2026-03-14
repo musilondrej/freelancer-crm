@@ -73,7 +73,8 @@ class ProjectActivitiesRelationManager extends RelationManager
                     ->numeric()
                     ->suffix(fn (Get $get): string => Currency::resolve($get)),
                 TextInput::make('tracked_minutes')
-                    ->numeric(),
+                    ->numeric()
+                    ->suffix('min'),
                 DatePicker::make('due_date'),
                 DateTimePicker::make('started_at'),
                 DateTimePicker::make('finished_at'),
@@ -114,7 +115,9 @@ class ProjectActivitiesRelationManager extends RelationManager
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('tracked_minutes')
-                    ->numeric()
+                    ->label('Tracked time')
+                    ->state(fn (Worklog $record): string => $record->trackedDurationLabel())
+                    ->description(fn (Worklog $record): ?string => $record->tracked_minutes !== null ? $record->trackedMinutesWithSuffix() : null)
                     ->sortable(),
                 TextColumn::make('due_date')
                     ->date()

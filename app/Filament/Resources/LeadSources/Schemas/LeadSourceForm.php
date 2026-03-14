@@ -47,7 +47,7 @@ class LeadSourceForm
                                                     ->unique(LeadSource::class, 'slug', ignoreRecord: true)
                                                     ->columnSpanFull(),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                                 Tab::make('Behavior')
                                     ->icon(Heroicon::OutlinedCog6Tooth)
@@ -61,7 +61,7 @@ class LeadSourceForm
                                                     ->minValue(0)
                                                     ->default(0),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                             ]),
                     ])

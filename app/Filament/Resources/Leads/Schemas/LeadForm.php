@@ -4,10 +4,9 @@ namespace App\Filament\Resources\Leads\Schemas;
 
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
+use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Lead;
-use App\Models\Tag;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
@@ -73,7 +72,7 @@ class LeadForm
                                                     ->prefixIcon(Heroicon::OutlinedGlobeAlt)
                                                     ->columnSpanFull(),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                         Section::make('Problem & Context')
                                             ->schema([
                                                 Textarea::make('summary')
@@ -132,7 +131,7 @@ class LeadForm
                                                     ->default(3)
                                                     ->required(),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                         Section::make('Commercial')
                                             ->schema([
                                                 Select::make('currency')
@@ -160,7 +159,7 @@ class LeadForm
                                                 DateTimePicker::make('last_activity_at')
                                                     ->native(false),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                                 Tab::make('Notes')
                                     ->icon(Heroicon::OutlinedChatBubbleBottomCenterText)
@@ -183,7 +182,7 @@ class LeadForm
                                                         KeyValue::make('meta')
                                                             ->columnSpanFull(),
                                                     ])
-                                                    ->columns(2)
+                                                    ->columns(1)
                                                     ->addActionLabel('Add note')
                                                     ->defaultItems(0)
                                                     ->collapsed()
@@ -191,60 +190,8 @@ class LeadForm
                                                     ->itemLabel(fn (array $state): string => Str::limit((string) ($state['body'] ?? 'Note'), 64)),
                                             ]),
                                         Section::make('Tags')
-                                            ->description('WordPress-like tag picker: search existing tags or create one inline.')
                                             ->schema([
-                                                Select::make('tags')
-                                                    ->multiple()
-                                                    ->relationship(
-                                                        name: 'tags',
-                                                        titleAttribute: 'name',
-                                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
-                                                            ? $query->where('owner_id', $ownerId)->orderBy('sort_order')->orderBy('name')
-                                                            : $query->orderBy('name'),
-                                                    )
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->native(false)
-                                                    ->createOptionForm([
-                                                        TextInput::make('name')
-                                                            ->required()
-                                                            ->maxLength(255),
-                                                        ColorPicker::make('color')
-                                                            ->default('#f59e0b'),
-                                                    ])
-                                                    ->createOptionUsing(function (array $data) use ($ownerId): int {
-                                                        $resolvedOwnerId = (int) ($ownerId ?? Filament::auth()->id());
-                                                        $name = trim((string) ($data['name'] ?? ''));
-                                                        $slug = Str::slug($name);
-
-                                                        if ($slug === '') {
-                                                            $slug = 'tag';
-                                                        }
-
-                                                        $existingTag = Tag::query()
-                                                            ->where('owner_id', $resolvedOwnerId)
-                                                            ->where('slug', $slug)
-                                                            ->first();
-
-                                                        if ($existingTag instanceof Tag) {
-                                                            return $existingTag->id;
-                                                        }
-
-                                                        $nextSortOrder = (int) (Tag::query()
-                                                            ->where('owner_id', $resolvedOwnerId)
-                                                            ->max('sort_order') ?? 0) + 10;
-
-                                                        $tag = Tag::query()->create([
-                                                            'owner_id' => $resolvedOwnerId,
-                                                            'name' => $name,
-                                                            'slug' => $slug,
-                                                            'color' => $data['color'] ?? null,
-                                                            'sort_order' => $nextSortOrder,
-                                                        ]);
-
-                                                        return $tag->id;
-                                                    })
-                                                    ->columnSpanFull(),
+                                                TagsSelect::make($ownerId),
                                             ]),
                                     ])
                                     ->hidden(fn (?Lead $record): bool => ! $record instanceof Lead),
@@ -306,22 +253,6 @@ class LeadForm
             ]);
     }
 
-    private static function formatEstimatedValue(string $currency, mixed $estimatedValue): string
-    {
-        if ($estimatedValue === null || $estimatedValue === '') {
-            return 'No estimate';
-        }
-
-        $numericValue = (float) $estimatedValue;
-        $formattedValue = number_format($numericValue, 0, '.', ' ');
-
-        return match (strtoupper($currency)) {
-            'EUR' => '€ '.$formattedValue,
-            'USD' => '$ '.$formattedValue,
-            default => $formattedValue.' Kč',
-        };
-    }
-
     private static function resolveLeadStatusValue(mixed $value): string
     {
         if ($value instanceof LeadStatus) {
@@ -360,5 +291,21 @@ class LeadForm
         }
 
         return 'Not set';
+    }
+
+    private static function formatEstimatedValue(string $currency, mixed $estimatedValue): string
+    {
+        if ($estimatedValue === null || $estimatedValue === '') {
+            return 'No estimate';
+        }
+
+        $numericValue = (float) $estimatedValue;
+        $formattedValue = number_format($numericValue, 0, '.', ' ');
+
+        return match (strtoupper($currency)) {
+            'EUR' => '€ '.$formattedValue,
+            'USD' => '$ '.$formattedValue,
+            default => $formattedValue.' Kč',
+        };
     }
 }

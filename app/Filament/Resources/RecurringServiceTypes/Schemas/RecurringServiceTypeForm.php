@@ -45,7 +45,7 @@ class RecurringServiceTypeForm
                                     ])
                                     ->columnSpanFull(),
                             ])
-                            ->columns(2),
+                            ->columns(1),
                     ])
                     ->columnSpan([
                         'lg' => 8,

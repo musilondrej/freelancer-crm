@@ -64,7 +64,7 @@ class ClientContactForm
                                                     ->maxLength(255),
                                                 DateTimePicker::make('last_contacted_at'),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                                 Tab::make('Role')
                                     ->icon(Heroicon::OutlinedIdentification)
@@ -76,7 +76,7 @@ class ClientContactForm
                                                 Toggle::make('is_billing_contact')
                                                     ->default(false),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                             ]),
                     ])

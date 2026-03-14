@@ -60,7 +60,7 @@ class ProjectActivityStatusOptionForm
                                     ->default(10)
                                     ->minValue(0),
                             ])
-                            ->columns(2),
+                            ->columns(1),
                         Section::make('Behavior Flags')
                             ->schema([
                                 Toggle::make('is_default')
@@ -85,7 +85,7 @@ class ProjectActivityStatusOptionForm
                                     ->disabled()
                                     ->inline(false),
                             ])
-                            ->columns(2),
+                            ->columns(1),
                     ])
                     ->columnSpan([
                         'lg' => 8,

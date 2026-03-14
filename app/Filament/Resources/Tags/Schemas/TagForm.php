@@ -47,7 +47,7 @@ class TagForm
                                                     ->unique(Tag::class, 'slug', ignoreRecord: true)
                                                     ->columnSpanFull(),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                                 Tab::make('Visual')
                                     ->icon(Heroicon::OutlinedSwatch)
@@ -62,7 +62,7 @@ class TagForm
                                                     ->minValue(0)
                                                     ->default(0),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                             ]),
                     ])

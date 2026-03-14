@@ -88,14 +88,14 @@ class EditProfile extends BaseEditProfile
                                                 $this->getNameFormComponent(),
                                                 $this->getEmailFormComponent(),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                         Section::make('Password Update')
                                             ->schema([
                                                 $this->getPasswordFormComponent(),
                                                 $this->getPasswordConfirmationFormComponent(),
                                                 $this->getCurrentPasswordFormComponent(),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                                 Tab::make('Billing')
                                     ->icon(Heroicon::OutlinedCreditCard)
@@ -117,7 +117,7 @@ class EditProfile extends BaseEditProfile
                                                     ->suffix('/ h')
                                                     ->placeholder('0'),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                                 Tab::make('Time Tracking')
                                     ->icon(Heroicon::OutlinedClock)
@@ -160,7 +160,7 @@ class EditProfile extends BaseEditProfile
                                                     ->required()
                                                     ->visible(fn (Get $get): bool => (bool) $get('preferences.time_tracking.rounding.enabled')),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                                 Tab::make('Interface')
                                     ->icon(Heroicon::OutlinedComputerDesktop)
@@ -194,7 +194,7 @@ class EditProfile extends BaseEditProfile
                                                     ])
                                                     ->required(),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                             ])
                             ->columnSpanFull(),

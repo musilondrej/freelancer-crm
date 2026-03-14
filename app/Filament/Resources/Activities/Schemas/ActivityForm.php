@@ -57,7 +57,7 @@ class ActivityForm
                                                     ->rows(4)
                                                     ->columnSpanFull(),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                                 Tab::make('Billing')
                                     ->icon(Heroicon::OutlinedCreditCard)
@@ -78,7 +78,7 @@ class ActivityForm
                                                     ->default(0)
                                                     ->minValue(0),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                             ]),
                     ])

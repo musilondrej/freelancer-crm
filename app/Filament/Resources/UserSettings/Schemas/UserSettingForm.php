@@ -15,7 +15,7 @@ class UserSettingForm
         return $schema
             ->components([
                 Section::make('Time Tracking')
-                    ->columns(2)
+                    ->columns(1)
                     ->schema([
                         Toggle::make('preferences.time_tracking.rounding.enabled')
                             ->label('Enable rounding')
@@ -55,7 +55,7 @@ class UserSettingForm
                             ->required(),
                     ]),
                 Section::make('Interface')
-                    ->columns(2)
+                    ->columns(1)
                     ->schema([
                         Select::make('preferences.ui.locale')
                             ->label('Locale')

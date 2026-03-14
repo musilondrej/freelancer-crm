@@ -114,7 +114,7 @@ class Dashboard extends BaseDashboard
                     CheckboxList::make('dashboard_widgets')
                         ->label('Visible metrics')
                         ->options(DashboardMetricsBoard::metricOptions())
-                        ->columns(2)
+                        ->columns(1)
                         ->bulkToggleable()
                         ->required(),
                 ])

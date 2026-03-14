@@ -3,10 +3,10 @@
 namespace App\Filament\Resources\Customers\Schemas;
 
 use App\Enums\CustomerStatus;
+use App\Filament\Resources\Notes\Schemas\NoteRepeater;
+use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Customer;
-use App\Models\Tag;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\KeyValue;
@@ -73,7 +73,7 @@ class CustomerForm
                                                     ->rows(5)
                                                     ->columnSpanFull(),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                                 Tab::make('Billing')
                                     ->icon(Heroicon::OutlinedCreditCard)
@@ -111,7 +111,7 @@ class CustomerForm
                                                     ->minValue(0)
                                                     ->suffix(fn (Get $get): string => (string) ($get('billing_currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
                                             ])
-                                            ->columns(2),
+                                            ->columns(1),
                                     ]),
                                 Tab::make('Contacts')
                                     ->icon(Heroicon::OutlinedUserGroup)
@@ -143,7 +143,7 @@ class CustomerForm
                                                         KeyValue::make('meta')
                                                             ->columnSpanFull(),
                                                     ])
-                                                    ->columns(2)
+                                                    ->columns(1)
                                                     ->addActionLabel('Add contact')
                                                     ->defaultItems(0)
                                                     ->collapsed()
@@ -151,92 +151,11 @@ class CustomerForm
                                                     ->itemLabel(fn (array $state): string => Str::limit((string) ($state['full_name'] ?? 'Contact'), 64)),
                                             ]),
                                     ]),
-                                Tab::make('Notes')
-                                    ->icon(Heroicon::OutlinedChatBubbleBottomCenterText)
-                                    ->schema([
-                                        Section::make('Quick Notes')
-                                            ->description('Inline relationship CRUD for fast account context.')
-                                            ->schema([
-                                                Repeater::make('notes')
-                                                    ->relationship('notes')
-                                                    ->schema([
-                                                        Hidden::make('owner_id')
-                                                            ->default($ownerId),
-                                                        Toggle::make('is_pinned')
-                                                            ->default(false),
-                                                        DateTimePicker::make('noted_at')
-                                                            ->default(now()),
-                                                        Textarea::make('body')
-                                                            ->required()
-                                                            ->rows(3)
-                                                            ->columnSpanFull(),
-                                                        KeyValue::make('meta')
-                                                            ->columnSpanFull(),
-                                                    ])
-                                                    ->columns(2)
-                                                    ->addActionLabel('Add note')
-                                                    ->defaultItems(0)
-                                                    ->collapsed()
-                                                    ->reorderable(false)
-                                                    ->itemLabel(fn (array $state): string => Str::limit((string) ($state['body'] ?? 'Note'), 64)),
-                                            ]),
-                                        Section::make('Tags')
-                                            ->description('WordPress-like tag picker: search existing tags or create one inline.')
-                                            ->schema([
-                                                Select::make('tags')
-                                                    ->multiple()
-                                                    ->relationship(
-                                                        name: 'tags',
-                                                        titleAttribute: 'name',
-                                                        modifyQueryUsing: fn ($query) => $ownerId !== null
-                                                            ? $query->where('owner_id', $ownerId)->orderBy('sort_order')->orderBy('name')
-                                                            : $query->orderBy('name'),
-                                                    )
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->native(false)
-                                                    ->createOptionForm([
-                                                        TextInput::make('name')
-                                                            ->required()
-                                                            ->maxLength(255),
-                                                        ColorPicker::make('color')
-                                                            ->default('#f59e0b'),
-                                                    ])
-                                                    ->createOptionUsing(function (array $data) use ($ownerId): int {
-                                                        $resolvedOwnerId = (int) ($ownerId ?? Filament::auth()->id());
-                                                        $name = trim((string) ($data['name'] ?? ''));
-                                                        $slug = Str::slug($name);
-
-                                                        if ($slug === '') {
-                                                            $slug = 'tag';
-                                                        }
-
-                                                        $existingTag = Tag::query()
-                                                            ->where('owner_id', $resolvedOwnerId)
-                                                            ->where('slug', $slug)
-                                                            ->first();
-
-                                                        if ($existingTag instanceof Tag) {
-                                                            return $existingTag->id;
-                                                        }
-
-                                                        $nextSortOrder = (int) (Tag::query()
-                                                            ->where('owner_id', $resolvedOwnerId)
-                                                            ->max('sort_order') ?? 0) + 10;
-
-                                                        $tag = Tag::query()->create([
-                                                            'owner_id' => $resolvedOwnerId,
-                                                            'name' => $name,
-                                                            'slug' => $slug,
-                                                            'color' => $data['color'] ?? null,
-                                                            'sort_order' => $nextSortOrder,
-                                                        ]);
-
-                                                        return $tag->id;
-                                                    })
-                                                    ->columnSpanFull(),
-                                            ]),
-                                    ]),
+                            ]),
+                        Section::make('Quick Notes')
+                            ->description('Inline relationship CRUD for fast account context.')
+                            ->schema([
+                                NoteRepeater::make($ownerId),
                             ]),
                     ])
                     ->columnSpan([
@@ -244,6 +163,11 @@ class CustomerForm
                     ]),
                 Group::make()
                     ->schema([
+                        Section::make('Tags')
+                            ->schema([
+                                TagsSelect::make($ownerId),
+                            ]),
+
                         Section::make('Lifecycle')
                             ->schema([
                                 Select::make('status')
@@ -265,12 +189,6 @@ class CustomerForm
                                     ->state(fn (?Customer $record): ?string => $record?->updated_at?->diffForHumans()),
                             ])
                             ->hidden(fn (?Customer $record): bool => ! $record instanceof Customer),
-                        Section::make('Technical Metadata')
-                            ->schema([
-                                KeyValue::make('meta')
-                                    ->columnSpanFull(),
-                            ])
-                            ->collapsed(),
                     ])
                     ->columnSpan([
                         'lg' => 4,

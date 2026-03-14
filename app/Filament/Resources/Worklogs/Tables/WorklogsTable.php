@@ -7,7 +7,6 @@ use App\Filament\Resources\Worklogs\WorklogResource;
 use App\Models\ProjectActivityStatusOption;
 use App\Models\UserSetting;
 use App\Models\Worklog;
-use App\Support\Filament\WorklogStatus;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -18,9 +17,6 @@ use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Enums\FiltersLayout;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\QueryException;
 
@@ -92,24 +88,6 @@ class WorklogsTable
                     ->dateTime($dateTimeFormat, timezone: $timezone)
                     ->sortable(),
             ])
-            ->filters([
-                SelectFilter::make('status')
-                    ->label('Status')
-                    ->options(fn (): array => WorklogStatus::options($ownerId))
-                    ->multiple(),
-                SelectFilter::make('project_id')
-                    ->relationship('project', 'name')
-                    ->label('Project')
-                    ->searchable()
-                    ->preload(),
-                SelectFilter::make('backlog_item_id')
-                    ->relationship('backlogItem', 'title')
-                    ->label('Backlog item')
-                    ->searchable()
-                    ->preload(),
-                TrashedFilter::make(),
-            ], layout: FiltersLayout::AboveContent)
-            ->filtersFormColumns(4)
             ->recordActions([
                 Action::make('start_timer')
                     ->label('Start timer')

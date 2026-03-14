@@ -60,7 +60,6 @@ class DashboardMetricsBoard extends BaseWidget
             'revenue_today' => 'Revenue today',
             'unbilled_done' => 'Unbilled done work',
             'money_in_flight' => 'Money in flight',
-            'effective_hourly_rate_month' => 'Effective hourly rate (month)',
             'utilization_month' => 'Billable utilization (month)',
             'billable_hours_month' => 'Billable hours (month)',
             'worked_hours_month' => 'Worked hours (month)',
@@ -81,7 +80,6 @@ class DashboardMetricsBoard extends BaseWidget
             'revenue_today',
             'unbilled_done',
             'money_in_flight',
-            'effective_hourly_rate_month',
             'utilization_month',
             'overdue_activities',
         ];
@@ -140,9 +138,6 @@ class DashboardMetricsBoard extends BaseWidget
             'money_in_flight' => Stat::make('Money In Flight', $this->formatMoneyMetric($snapshot['money_in_flight']))
                 ->icon('heroicon-o-cloud')
                 ->color('warning'),
-            'effective_hourly_rate_month' => Stat::make('Effective Hourly Rate', $this->formatMoneyMetric($snapshot['effective_hourly_rate_month']))
-                ->icon('heroicon-o-chart-bar')
-                ->color('success'),
             'utilization_month' => Stat::make('Billable Utilization', $this->formatPercentageMetric($snapshot['utilization_month']))
                 ->icon('heroicon-o-chart-pie')
                 ->color('info'),
@@ -219,7 +214,6 @@ class DashboardMetricsBoard extends BaseWidget
         $revenueMonth = 0.0;
         $unbilledDone = 0.0;
         $moneyInFlight = 0.0;
-        $hourlyRevenueMonth = 0.0;
         $workedHoursMonth = 0.0;
         $billableHoursMonth = 0.0;
 
@@ -237,7 +231,6 @@ class DashboardMetricsBoard extends BaseWidget
             &$revenueToday,
             &$revenueWeek,
             &$revenueMonth,
-            &$hourlyRevenueMonth,
             &$billableHoursMonth,
         ): void {
             $finishedAt = $this->resolvedActivityDate($activity->getAttribute('finished_at'));
@@ -259,7 +252,6 @@ class DashboardMetricsBoard extends BaseWidget
                     $hours = $this->resolvedHourlyAmount($activity);
 
                     if ($hours > 0) {
-                        $hourlyRevenueMonth += $amount;
                         $billableHoursMonth += $hours;
                     }
                 }
@@ -303,9 +295,6 @@ class DashboardMetricsBoard extends BaseWidget
         $utilization = $workedHoursMonth > 0
             ? ($billableHoursMonth / $workedHoursMonth) * 100
             : null;
-        $effectiveHourlyRate = $billableHoursMonth > 0
-            ? $hourlyRevenueMonth / $billableHoursMonth
-            : null;
 
         return [
             'display_currency' => $displayCurrency,
@@ -317,7 +306,6 @@ class DashboardMetricsBoard extends BaseWidget
             'worked_hours_month' => $workedHoursMonth,
             'billable_hours_month' => $billableHoursMonth,
             'utilization_month' => $utilization,
-            'effective_hourly_rate_month' => $effectiveHourlyRate,
             'open_projects' => $this->openProjectsCount($ownerId),
             'open_leads' => $this->openLeadsCount($ownerId),
             'overdue_activities' => $this->overdueActivitiesCount($ownerId),
@@ -339,7 +327,6 @@ class DashboardMetricsBoard extends BaseWidget
             'worked_hours_month' => 0.0,
             'billable_hours_month' => 0.0,
             'utilization_month' => null,
-            'effective_hourly_rate_month' => null,
             'open_projects' => 0,
             'open_leads' => 0,
             'overdue_activities' => 0,

@@ -6,6 +6,7 @@ use App\Filament\Widgets\DashboardMetricsBoard;
 use App\Filament\Widgets\OverdueActivitiesTable;
 use App\Filament\Widgets\RevenueTrendChart;
 use App\Filament\Widgets\UnbilledDoneWorkTable;
+use App\Filament\Widgets\UpcomingRevenueTable;
 use App\Filament\Widgets\WorkHoursTimelineChart;
 use App\Models\User;
 use Filament\Actions\Action;
@@ -58,6 +59,7 @@ class Dashboard extends BaseDashboard
             RevenueTrendChart::class,
             WorkHoursTimelineChart::class,
             UnbilledDoneWorkTable::class,
+            UpcomingRevenueTable::class,
             OverdueActivitiesTable::class,
         ];
     }

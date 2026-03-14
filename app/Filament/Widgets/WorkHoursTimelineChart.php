@@ -80,7 +80,7 @@ class WorkHoursTimelineChart extends ChartWidget
                 'y' => [
                     'beginAtZero' => true,
                     'ticks' => [
-                        'precision' => 0,
+                        'precision' => 1,
                     ],
                 ],
             ],
@@ -148,12 +148,7 @@ class WorkHoursTimelineChart extends ChartWidget
                 ->whereNotNull('finished_at')
                 ->whereBetween('finished_at', [$rangeStart, $rangeEnd])
                 ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
-                ->with([
-                    'project:id,owner_id,client_id,currency,hourly_rate',
-                    'project.customer:id,owner_id,billing_currency,hourly_rate',
-                    'project.customer.owner:id,default_currency,default_hourly_rate',
-                ])
-                ->select(['finished_at', 'tracked_minutes', 'quantity', 'currency', 'project_id'])
+                ->select(['finished_at', 'tracked_minutes', 'quantity'])
                 ->get()
                 ->each(function (ProjectActivity $activity) use (&$points, $bucket): void {
                     $rawFinishedAt = $activity->getAttribute('finished_at');
@@ -191,7 +186,7 @@ class WorkHoursTimelineChart extends ChartWidget
                     $points,
                 )),
                 'values' => array_values(array_map(
-                    fn (array $point): float => round($point['hours']),
+                    fn (array $point): float => round($point['hours'], 2),
                     $points,
                 )),
             ];

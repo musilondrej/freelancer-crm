@@ -113,11 +113,11 @@ class Project extends Model
     }
 
     /**
-     * @return HasMany<ProjectActivity, $this>
+     * @return HasMany<Worklog, $this>
      */
     public function activities(): HasMany
     {
-        return $this->hasMany(ProjectActivity::class);
+        return $this->hasMany(Worklog::class);
     }
 
     /**

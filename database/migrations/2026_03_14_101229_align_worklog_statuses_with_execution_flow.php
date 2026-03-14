@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::table('project_activities')
+        DB::table('worklogs')
             ->where('status', 'planned')
             ->update(['status' => 'in_progress']);
 
@@ -62,7 +62,7 @@ return new class extends Migration
                 ]);
         }
 
-        DB::statement("ALTER TABLE project_activities ALTER COLUMN status SET DEFAULT 'in_progress'");
+        DB::statement("ALTER TABLE worklogs ALTER COLUMN status SET DEFAULT 'in_progress'");
     }
 
     /**
@@ -70,9 +70,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE project_activities ALTER COLUMN status SET DEFAULT 'planned'");
+        DB::statement("ALTER TABLE worklogs ALTER COLUMN status SET DEFAULT 'planned'");
 
-        DB::table('project_activities')
+        DB::table('worklogs')
             ->where('status', 'in_progress')
             ->update(['status' => 'planned']);
     }

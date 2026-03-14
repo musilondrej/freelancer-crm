@@ -7,9 +7,9 @@ use App\Enums\ProjectActivityType;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
 use App\Models\Lead;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\ProjectActivityStatusOption;
 use App\Models\ProjectStatusOption;
+use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Filament\Facades\Filament;
@@ -223,7 +223,7 @@ class DashboardMetricsBoard extends BaseWidget
             $now,
         );
 
-        $yearlyBillableActivities->each(function (ProjectActivity $activity) use (
+        $yearlyBillableActivities->each(function (Worklog $activity) use (
             $displayCurrency,
             $startOfDay,
             $startOfWeek,
@@ -267,7 +267,7 @@ class DashboardMetricsBoard extends BaseWidget
         });
 
         $this->loadReadyToInvoiceActivities($ownerId)
-            ->each(function (ProjectActivity $activity) use ($displayCurrency, &$unbilledDone): void {
+            ->each(function (Worklog $activity) use ($displayCurrency, &$unbilledDone): void {
                 $amount = $this->resolvedConvertedAmount($activity, $displayCurrency);
 
                 if ($amount !== null) {
@@ -275,7 +275,7 @@ class DashboardMetricsBoard extends BaseWidget
                 }
             });
 
-        $this->loadPipelineActivities($ownerId)->each(function (ProjectActivity $activity) use ($displayCurrency, &$moneyInFlight): void {
+        $this->loadPipelineActivities($ownerId)->each(function (Worklog $activity) use ($displayCurrency, &$moneyInFlight): void {
             $amount = $this->resolvedConvertedAmount($activity, $displayCurrency);
 
             if ($amount !== null) {
@@ -284,7 +284,7 @@ class DashboardMetricsBoard extends BaseWidget
         });
 
         $this->loadWorkedHourlyActivitiesForRange($ownerId, $startOfMonth, $now)
-            ->each(function (ProjectActivity $activity) use (&$workedHoursMonth): void {
+            ->each(function (Worklog $activity) use (&$workedHoursMonth): void {
                 $hours = $this->resolvedHourlyAmount($activity);
 
                 if ($hours > 0) {
@@ -370,7 +370,7 @@ class DashboardMetricsBoard extends BaseWidget
     }
 
     /**
-     * @return EloquentCollection<int, ProjectActivity>
+     * @return EloquentCollection<int, Worklog>
      */
     private function loadBillableDoneActivitiesForRange(
         int $ownerId,
@@ -386,7 +386,7 @@ class DashboardMetricsBoard extends BaseWidget
     }
 
     /**
-     * @return EloquentCollection<int, ProjectActivity>
+     * @return EloquentCollection<int, Worklog>
      */
     private function loadReadyToInvoiceActivities(int $ownerId): EloquentCollection
     {
@@ -397,7 +397,7 @@ class DashboardMetricsBoard extends BaseWidget
     }
 
     /**
-     * @return EloquentCollection<int, ProjectActivity>
+     * @return EloquentCollection<int, Worklog>
      */
     private function loadPipelineActivities(int $ownerId): EloquentCollection
     {
@@ -408,14 +408,14 @@ class DashboardMetricsBoard extends BaseWidget
     }
 
     /**
-     * @return EloquentCollection<int, ProjectActivity>
+     * @return EloquentCollection<int, Worklog>
      */
     private function loadWorkedHourlyActivitiesForRange(
         int $ownerId,
         CarbonImmutable $startDate,
         CarbonImmutable $endDate,
     ): EloquentCollection {
-        return ProjectActivity::query()
+        return Worklog::query()
             ->where('owner_id', $ownerId)
             ->whereIn('status', $this->doneActivityStatusCodes($ownerId))
             ->where('type', ProjectActivityType::Hourly->value)
@@ -432,11 +432,11 @@ class DashboardMetricsBoard extends BaseWidget
     }
 
     /**
-     * @return Builder<ProjectActivity>
+     * @return Builder<Worklog>
      */
     private function amountActivityQuery(int $ownerId): Builder
     {
-        return ProjectActivity::query()
+        return Worklog::query()
             ->where('owner_id', $ownerId)
             ->with([
                 'project:id,owner_id,client_id,currency,hourly_rate',
@@ -460,7 +460,7 @@ class DashboardMetricsBoard extends BaseWidget
             ]);
     }
 
-    private function resolvedConvertedAmount(ProjectActivity $activity, string $displayCurrency): ?float
+    private function resolvedConvertedAmount(Worklog $activity, string $displayCurrency): ?float
     {
         $amount = $activity->calculatedAmount();
         $currency = $activity->effectiveCurrency();
@@ -489,7 +489,7 @@ class DashboardMetricsBoard extends BaseWidget
         return CarbonImmutable::parse((string) $rawDate);
     }
 
-    private function isHourlyActivity(ProjectActivity $activity): bool
+    private function isHourlyActivity(Worklog $activity): bool
     {
         $type = $activity->getAttribute('type');
 
@@ -500,7 +500,7 @@ class DashboardMetricsBoard extends BaseWidget
         return (string) $type === ProjectActivityType::Hourly->value;
     }
 
-    private function resolvedHourlyAmount(ProjectActivity $activity): float
+    private function resolvedHourlyAmount(Worklog $activity): float
     {
         if (! $this->isHourlyActivity($activity)) {
             return 0.0;
@@ -540,7 +540,7 @@ class DashboardMetricsBoard extends BaseWidget
 
     private function overdueActivitiesCount(int $ownerId): int
     {
-        return ProjectActivity::query()
+        return Worklog::query()
             ->where('owner_id', $ownerId)
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', now()->toDateString())

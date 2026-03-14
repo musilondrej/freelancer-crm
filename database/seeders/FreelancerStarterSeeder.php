@@ -18,7 +18,6 @@ use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\Note;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\ProjectActivityStatusOption;
 use App\Models\ProjectStatusOption;
 use App\Models\RecurringService;
@@ -26,6 +25,7 @@ use App\Models\RecurringServiceType;
 use App\Models\Tag;
 use App\Models\User;
 use App\Models\UserSetting;
+use App\Models\Worklog;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -459,7 +459,7 @@ class FreelancerStarterSeeder extends Seeder
             $startedAt = $entry['started_at'];
             $finishedAt = $entry['finished_at'];
 
-            ProjectActivity::query()->updateOrCreate(
+            Worklog::query()->updateOrCreate(
                 [
                     'owner_id' => $owner->id,
                     'project_id' => $project->id,

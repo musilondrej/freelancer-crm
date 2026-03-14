@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Tags\RelationManagers;
 
 use App\Enums\ProjectActivityType;
-use App\Models\ProjectActivity;
+use App\Models\Worklog;
 use App\Support\Filament\Currency;
 use App\Support\Filament\WorklogStatus;
 use Filament\Actions\AttachAction;
@@ -97,8 +97,8 @@ class ProjectActivitiesRelationManager extends RelationManager
                     ->searchable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (ProjectActivity $record): string => $record->resolvedStatusLabel())
-                    ->color(fn (ProjectActivity $record): string => $record->resolvedStatusColor())
+                    ->formatStateUsing(fn (Worklog $record): string => $record->resolvedStatusLabel())
+                    ->color(fn (Worklog $record): string => $record->resolvedStatusColor())
                     ->searchable(),
                 IconColumn::make('is_billable')
                     ->boolean(),

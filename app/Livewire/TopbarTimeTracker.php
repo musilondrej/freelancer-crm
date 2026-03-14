@@ -6,9 +6,9 @@ use App\Enums\ProjectActivityType;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\ProjectActivityStatusOption;
 use App\Models\ProjectStatusOption;
+use App\Models\Worklog;
 use App\Support\TimeTrackingRounding;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
@@ -40,7 +40,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     use InteractsWithActions;
     use InteractsWithSchemas;
 
-    private ?ProjectActivity $cachedActiveSession = null;
+    private ?Worklog $cachedActiveSession = null;
 
     private bool $hasCachedActiveSession = false;
 
@@ -260,7 +260,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                 $ownerId,
             );
 
-            ProjectActivity::query()->create([
+            Worklog::query()->create([
                 ...$basePayload,
                 'status' => $this->doneActivityStatusCode(),
                 'is_running' => false,
@@ -313,7 +313,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             return;
         }
 
-        $runningSessions = ProjectActivity::query()
+        $runningSessions = Worklog::query()
             ->where('owner_id', $ownerId)
             ->where('type', ProjectActivityType::Hourly->value)
             ->where('is_running', true)
@@ -382,7 +382,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     public function render(): View
     {
         return view('livewire.topbar-time-tracker', [
-            'hasActiveSession' => $this->activeSession() instanceof ProjectActivity,
+            'hasActiveSession' => $this->activeSession() instanceof Worklog,
         ]);
     }
 
@@ -394,7 +394,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         $now = CarbonImmutable::now();
         $activeSession = $this->activeSession();
 
-        if (! $activeSession instanceof ProjectActivity) {
+        if (! $activeSession instanceof Worklog) {
             return [
                 'started_at' => $now->format('Y-m-d H:i'),
                 'finished_at' => null,
@@ -428,7 +428,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         return $normalizedDescription !== '' ? $normalizedDescription : null;
     }
 
-    private function activeSession(): ?ProjectActivity
+    private function activeSession(): ?Worklog
     {
         if ($this->hasCachedActiveSession) {
             return $this->cachedActiveSession;
@@ -443,7 +443,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             return null;
         }
 
-        $this->cachedActiveSession = ProjectActivity::query()
+        $this->cachedActiveSession = Worklog::query()
             ->where('owner_id', $ownerId)
             ->where('type', ProjectActivityType::Hourly->value)
             ->where('is_running', true)
@@ -665,7 +665,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             return DB::transaction(function () use ($basePayload, $project): bool {
                 $ownerId = (int) $basePayload['owner_id'];
 
-                $hasRunningSession = ProjectActivity::query()
+                $hasRunningSession = Worklog::query()
                     ->where('owner_id', $ownerId)
                     ->where('type', ProjectActivityType::Hourly->value)
                     ->where('is_running', true)
@@ -678,7 +678,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                     return false;
                 }
 
-                ProjectActivity::query()->create([
+                Worklog::query()->create([
                     ...$basePayload,
                     'status' => $this->runningActivityStatusCode(),
                     'is_running' => true,
@@ -702,7 +702,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     private function isRunningSessionUniqueViolation(QueryException $exception): bool
     {
         return $exception->getCode() === '23505'
-            && str_contains($exception->getMessage(), 'project_activities_owner_running_hourly_unique');
+            && str_contains($exception->getMessage(), 'worklogs_owner_running_hourly_unique');
     }
 
     private function formatTrackedTime(int $trackedMinutes): string
@@ -725,14 +725,14 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     {
         $activeSession = $this->activeSession();
 
-        if (! $activeSession instanceof ProjectActivity) {
+        if (! $activeSession instanceof Worklog) {
             return 'Stop';
         }
 
         return sprintf('Stop %s', $this->elapsedClockLabel($activeSession));
     }
 
-    private function elapsedClockLabel(ProjectActivity $activeSession): string
+    private function elapsedClockLabel(Worklog $activeSession): string
     {
         $startedAt = CarbonImmutable::make($activeSession->started_at);
 

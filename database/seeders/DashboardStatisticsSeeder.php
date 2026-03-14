@@ -12,10 +12,10 @@ use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\ProjectActivityStatusOption;
 use App\Models\ProjectStatusOption;
 use App\Models\User;
+use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
@@ -312,7 +312,7 @@ class DashboardStatisticsSeeder extends Seeder
     {
         $projectActivityStatusCodes = $this->resolveProjectActivityStatusCodes((int) $owner->id);
 
-        ProjectActivity::query()
+        Worklog::query()
             ->withTrashed()
             ->where('owner_id', $owner->id)
             ->where('title', 'like', '[Seed Stats]%')
@@ -328,7 +328,7 @@ class DashboardStatisticsSeeder extends Seeder
                 : null;
 
             if ($dailyMinutes > 0) {
-                ProjectActivity::factory()
+                Worklog::factory()
                     ->for($projects['retainer_cz'])
                     ->state([
                         'owner_id' => $owner->id,
@@ -357,7 +357,7 @@ class DashboardStatisticsSeeder extends Seeder
             }
 
             if ($day->isMonday() || $day->isThursday()) {
-                ProjectActivity::factory()
+                Worklog::factory()
                     ->for($projects['api_usd'])
                     ->state([
                         'owner_id' => $owner->id,
@@ -386,7 +386,7 @@ class DashboardStatisticsSeeder extends Seeder
             }
 
             if (in_array($day->day, [5, 20], true)) {
-                ProjectActivity::factory()
+                Worklog::factory()
                     ->for($projects['fixed_eur'])
                     ->state([
                         'owner_id' => $owner->id,
@@ -415,7 +415,7 @@ class DashboardStatisticsSeeder extends Seeder
             }
 
             if ($day->isTuesday()) {
-                ProjectActivity::factory()
+                Worklog::factory()
                     ->for($projects['retainer_cz'])
                     ->state([
                         'owner_id' => $owner->id,
@@ -445,7 +445,7 @@ class DashboardStatisticsSeeder extends Seeder
             ['title' => '[Seed Stats] Deploy API gateway', 'dueDaysAgo' => 6, 'status' => $projectActivityStatusCodes['in_progress'], 'project' => $projects['api_usd']],
             ['title' => '[Seed Stats] DNS migration', 'dueDaysAgo' => 12, 'status' => $projectActivityStatusCodes['planned'], 'project' => $projects['retainer_cz']],
         ])->each(function (array $item) use ($owner): void {
-            ProjectActivity::factory()
+            Worklog::factory()
                 ->for($item['project'])
                 ->state([
                     'owner_id' => $owner->id,

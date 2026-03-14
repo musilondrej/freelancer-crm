@@ -14,7 +14,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('project_activities', function (Blueprint $table): void {
+        Schema::create('worklogs', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('project_id');
@@ -63,8 +63,8 @@ return new class extends Migration
         });
 
         DB::statement("
-            CREATE UNIQUE INDEX project_activities_owner_running_hourly_unique
-                ON project_activities (owner_id)
+            CREATE UNIQUE INDEX worklogs_owner_running_hourly_unique
+                ON worklogs (owner_id)
                 WHERE deleted_at IS NULL
                   AND is_running = true
                   AND type = 'hourly'
@@ -78,6 +78,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('project_activities');
+        Schema::dropIfExists('worklogs');
     }
 };

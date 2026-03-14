@@ -24,7 +24,7 @@ return new class extends Migration
             $table->unsignedInteger('estimated_minutes')->nullable();
             $table->date('due_date')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
-            $table->foreignId('converted_to_worklog_id')->nullable()->constrained('project_activities')->nullOnDelete();
+            $table->foreignId('converted_to_worklog_id')->nullable()->constrained('worklogs')->nullOnDelete();
             $table->timestampTz('converted_at')->nullable();
             $table->jsonb('meta')->nullable();
             $table->timestampsTz();

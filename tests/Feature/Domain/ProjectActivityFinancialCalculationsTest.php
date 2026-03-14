@@ -6,8 +6,8 @@ use App\Enums\ProjectPricingModel;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\User;
+use App\Models\Worklog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -60,7 +60,7 @@ function buildActivityCalculationContext(): array
 it('calculates one-time amount from flat amount', function (): void {
     $context = buildActivityCalculationContext();
 
-    $activity = ProjectActivity::query()->create([
+    $activity = Worklog::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
         'activity_id' => $context['activity']->id,
@@ -77,7 +77,7 @@ it('calculates one-time amount from flat amount', function (): void {
 it('calculates one-time amount from unit rate and quantity when flat amount is missing', function (): void {
     $context = buildActivityCalculationContext();
 
-    $activity = ProjectActivity::query()->create([
+    $activity = Worklog::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
         'activity_id' => $context['activity']->id,
@@ -95,7 +95,7 @@ it('calculates one-time amount from unit rate and quantity when flat amount is m
 it('calculates hourly amount from explicit unit rate and tracked minutes', function (): void {
     $context = buildActivityCalculationContext();
 
-    $activity = ProjectActivity::query()->create([
+    $activity = Worklog::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
         'activity_id' => $context['activity']->id,
@@ -114,7 +114,7 @@ it('calculates hourly amount from explicit unit rate and tracked minutes', funct
 it('calculates hourly amount from explicit unit rate and quantity', function (): void {
     $context = buildActivityCalculationContext();
 
-    $activity = ProjectActivity::query()->create([
+    $activity = Worklog::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
         'activity_id' => $context['activity']->id,
@@ -137,7 +137,7 @@ it('falls back to activity default hourly rate when unit rate is missing', funct
         'default_hourly_rate' => 1600,
     ]);
 
-    $projectActivity = ProjectActivity::query()->create([
+    $projectActivity = Worklog::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
         'activity_id' => $context['activity']->id,
@@ -159,7 +159,7 @@ it('falls back to project, customer and owner rates in order', function (): void
     $context['customer']->update(['hourly_rate' => null]);
     $context['activity']->update(['default_hourly_rate' => null]);
 
-    $projectActivity = ProjectActivity::query()->create([
+    $projectActivity = Worklog::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
         'activity_id' => $context['activity']->id,
@@ -178,7 +178,7 @@ it('falls back to project, customer and owner rates in order', function (): void
 it('returns zero for non-billable activities', function (): void {
     $context = buildActivityCalculationContext();
 
-    $activity = ProjectActivity::query()->create([
+    $activity = Worklog::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
         'activity_id' => $context['activity']->id,
@@ -196,7 +196,7 @@ it('returns zero for non-billable activities', function (): void {
 it('returns null for hourly amount when no time quantity is available', function (): void {
     $context = buildActivityCalculationContext();
 
-    $activity = ProjectActivity::query()->create([
+    $activity = Worklog::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
         'activity_id' => $context['activity']->id,

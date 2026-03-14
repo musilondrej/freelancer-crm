@@ -85,19 +85,19 @@ class BacklogItem extends Model
     }
 
     /**
-     * @return BelongsTo<ProjectActivity, $this>
+     * @return BelongsTo<Worklog, $this>
      */
     public function convertedWorklog(): BelongsTo
     {
-        return $this->belongsTo(ProjectActivity::class, 'converted_to_worklog_id');
+        return $this->belongsTo(Worklog::class, 'converted_to_worklog_id');
     }
 
     /**
-     * @return HasMany<ProjectActivity, $this>
+     * @return HasMany<Worklog, $this>
      */
     public function worklogs(): HasMany
     {
-        return $this->hasMany(ProjectActivity::class, 'backlog_item_id');
+        return $this->hasMany(Worklog::class, 'backlog_item_id');
     }
 
     /**
@@ -148,7 +148,7 @@ class BacklogItem extends Model
         return BacklogItemPriority::tryFrom($this->resolvedPriorityValue())?->getColor() ?? 'info';
     }
 
-    public function convertToWorklog(): ProjectActivity
+    public function convertToWorklog(): Worklog
     {
         $project = $this->project;
 
@@ -160,7 +160,7 @@ class BacklogItem extends Model
 
         $existingWorklog = $this->convertedWorklog ?? $this->worklogs()->oldest('id')->first();
 
-        if ($existingWorklog instanceof ProjectActivity) {
+        if ($existingWorklog instanceof Worklog) {
             if ($existingWorklog->backlog_item_id !== $this->getKey()) {
                 $existingWorklog->update([
                     'backlog_item_id' => $this->getKey(),
@@ -180,7 +180,7 @@ class BacklogItem extends Model
         $isBillable = $activity instanceof Activity ? (bool) $activity->is_billable : true;
         $unitRate = $activity instanceof Activity ? $activity->default_hourly_rate : null;
 
-        $worklog = ProjectActivity::query()->create([
+        $worklog = Worklog::query()->create([
             'owner_id' => $this->owner_id,
             'project_id' => $this->project_id,
             'activity_id' => $this->activity_id,

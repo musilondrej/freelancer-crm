@@ -1,12 +1,11 @@
 <?php
 
-namespace App\Filament\Resources\ProjectActivities\Tables;
+namespace App\Filament\Resources\Worklogs\Tables;
 
 use App\Enums\ProjectActivityType;
-use App\Filament\Resources\ProjectActivities\ProjectActivityResource;
-use App\Models\ProjectActivity;
+use App\Filament\Resources\Worklogs\WorklogResource;
 use App\Models\ProjectActivityStatusOption;
-use App\Support\Filament\WorklogStatus;
+use App\Models\Worklog;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -17,13 +16,10 @@ use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Enums\FiltersLayout;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\QueryException;
 
-class ProjectActivitiesTable
+class WorklogsTable
 {
     public static function configure(Table $table): Table
     {
@@ -58,8 +54,8 @@ class ProjectActivitiesTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (ProjectActivity $record): string => $record->resolvedStatusLabel())
-                    ->color(fn (ProjectActivity $record): string => $record->resolvedStatusColor())
+                    ->formatStateUsing(fn (Worklog $record): string => $record->resolvedStatusLabel())
+                    ->color(fn (Worklog $record): string => $record->resolvedStatusColor())
                     ->sortable(),
                 IconColumn::make('is_billable')
                     ->boolean()
@@ -84,30 +80,13 @@ class ProjectActivitiesTable
                     ->dateTime()
                     ->sortable(),
             ])
-            ->filters([
-                SelectFilter::make('status')
-                    ->label('Status')
-                    ->options(fn (): array => WorklogStatus::options(Filament::auth()->id()))
-                    ->multiple(),
-                SelectFilter::make('project_id')
-                    ->relationship('project', 'name')
-                    ->label('Project')
-                    ->searchable()
-                    ->preload(),
-                SelectFilter::make('backlog_item_id')
-                    ->relationship('backlogItem', 'title')
-                    ->label('Backlog item')
-                    ->searchable()
-                    ->preload(),
-                TrashedFilter::make(),
-            ], layout: FiltersLayout::AboveContent)
             ->filtersFormColumns(4)
             ->recordActions([
                 Action::make('start_timer')
                     ->label('Start timer')
                     ->icon('heroicon-o-play-circle')
                     ->color('gray')
-                    ->visible(function (ProjectActivity $record): bool {
+                    ->visible(function (Worklog $record): bool {
                         $ownerId = Filament::auth()->id();
 
                         if ($ownerId === null || (bool) $record->is_running) {
@@ -122,14 +101,14 @@ class ProjectActivitiesTable
 
                         return in_array($record->resolvedStatusCode(), ProjectActivityStatusOption::openCodesForOwner($ownerId), true);
                     })
-                    ->action(function (ProjectActivity $record): void {
+                    ->action(function (Worklog $record): void {
                         $ownerId = Filament::auth()->id();
 
                         if ($ownerId === null) {
                             return;
                         }
 
-                        $alreadyRunningTimerExists = ProjectActivity::query()
+                        $alreadyRunningTimerExists = Worklog::query()
                             ->where('owner_id', $ownerId)
                             ->whereKeyNot($record->getKey())
                             ->where('type', ProjectActivityType::Hourly->value)
@@ -171,12 +150,12 @@ class ProjectActivitiesTable
                     ->label('Mark done')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (ProjectActivity $record): bool => ! in_array(
+                    ->visible(fn (Worklog $record): bool => ! in_array(
                         $record->resolvedStatusCode(),
                         ProjectActivityStatusOption::doneCodesForOwner(Filament::auth()->id()),
                         true,
                     ))
-                    ->action(function (ProjectActivity $record): void {
+                    ->action(function (Worklog $record): void {
                         $ownerId = Filament::auth()->id();
 
                         $doneStatusCode = ProjectActivityStatusOption::doneCodesForOwner($ownerId)[0]
@@ -197,8 +176,8 @@ class ProjectActivitiesTable
                     ->label('Mark invoiced')
                     ->icon('heroicon-o-banknotes')
                     ->color('info')
-                    ->visible(fn (ProjectActivity $record): bool => (bool) $record->is_billable && ! $record->isInvoiced() && $record->isReadyToInvoice(Filament::auth()->id()))
-                    ->action(function (ProjectActivity $record): void {
+                    ->visible(fn (Worklog $record): bool => (bool) $record->is_billable && ! $record->isInvoiced() && $record->isReadyToInvoice(Filament::auth()->id()))
+                    ->action(function (Worklog $record): void {
                         $record->update([
                             'is_invoiced' => true,
                             'invoiced_at' => $record->invoiced_at ?? now(),
@@ -225,12 +204,12 @@ class ProjectActivitiesTable
                 Action::make('create_worklog')
                     ->label('Create worklog')
                     ->icon('heroicon-o-plus')
-                    ->url(fn (): string => ProjectActivityResource::getUrl('create'))
+                    ->url(fn (): string => WorklogResource::getUrl('create'))
                     ->button(),
                 Action::make('start_timer')
                     ->label('Start timer')
                     ->icon('heroicon-o-play-circle')
-                    ->url(fn (): string => ProjectActivityResource::getUrl('create'))
+                    ->url(fn (): string => WorklogResource::getUrl('create'))
                     ->color('gray'),
             ]);
     }

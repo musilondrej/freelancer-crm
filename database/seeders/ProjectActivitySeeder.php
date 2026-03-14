@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Activity;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\ProjectActivityStatusOption;
+use App\Models\Worklog;
 use Illuminate\Database\Seeder;
 
 class ProjectActivitySeeder extends Seeder
@@ -41,7 +41,7 @@ class ProjectActivitySeeder extends Seeder
                     : null;
                 $isHourly = fake()->boolean(60);
 
-                $factory = ProjectActivity::factory()
+                $factory = Worklog::factory()
                     ->for($project)
                     ->state([
                         'owner_id' => $project->owner_id,

@@ -3,8 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\ProjectActivityType;
-use App\Models\ProjectActivity;
 use App\Models\ProjectActivityStatusOption;
+use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Filament\Facades\Filament;
@@ -142,7 +142,7 @@ class WorkHoursTimelineChart extends ChartWidget
                     : $cursor->addDay();
             }
 
-            ProjectActivity::query()
+            Worklog::query()
                 ->where('type', ProjectActivityType::Hourly->value)
                 ->whereIn('status', $doneStatuses)
                 ->whereNotNull('finished_at')
@@ -150,7 +150,7 @@ class WorkHoursTimelineChart extends ChartWidget
                 ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
                 ->select(['finished_at', 'tracked_minutes', 'quantity'])
                 ->get()
-                ->each(function (ProjectActivity $activity) use (&$points, $bucket): void {
+                ->each(function (Worklog $activity) use (&$points, $bucket): void {
                     $rawFinishedAt = $activity->getAttribute('finished_at');
 
                     if ($rawFinishedAt === null) {

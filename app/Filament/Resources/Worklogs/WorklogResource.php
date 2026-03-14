@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Filament\Resources\ProjectActivities;
+namespace App\Filament\Resources\Worklogs;
 
-use App\Filament\Resources\ProjectActivities\Pages\CreateProjectActivity;
-use App\Filament\Resources\ProjectActivities\Pages\EditProjectActivity;
-use App\Filament\Resources\ProjectActivities\Pages\ListProjectActivities;
-use App\Filament\Resources\ProjectActivities\Schemas\ProjectActivityForm;
-use App\Filament\Resources\ProjectActivities\Tables\ProjectActivitiesTable;
-use App\Models\ProjectActivity;
+use App\Filament\Resources\Worklogs\Pages\CreateWorklog;
+use App\Filament\Resources\Worklogs\Pages\EditWorklog;
+use App\Filament\Resources\Worklogs\Pages\ListWorklogs;
+use App\Filament\Resources\Worklogs\Schemas\WorklogForm;
+use App\Filament\Resources\Worklogs\Tables\WorklogsTable;
 use App\Models\ProjectActivityStatusOption;
+use App\Models\Worklog;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
@@ -19,9 +19,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
-class ProjectActivityResource extends Resource
+class WorklogResource extends Resource
 {
-    protected static ?string $model = ProjectActivity::class;
+    protected static ?string $model = Worklog::class;
 
     protected static ?string $modelLabel = 'Worklog';
 
@@ -39,12 +39,12 @@ class ProjectActivityResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return ProjectActivityForm::configure($schema);
+        return WorklogForm::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return ProjectActivitiesTable::configure($table);
+        return WorklogsTable::configure($table);
     }
 
     public static function getRelations(): array
@@ -57,7 +57,7 @@ class ProjectActivityResource extends Resource
         $ownerId = Filament::auth()->id();
         $openStatuses = ProjectActivityStatusOption::openCodesForOwner($ownerId);
 
-        $count = ProjectActivity::query()
+        $count = Worklog::query()
             ->whereIn('status', $openStatuses)
             ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
             ->count();
@@ -78,9 +78,9 @@ class ProjectActivityResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListProjectActivities::route('/'),
-            'create' => CreateProjectActivity::route('/create'),
-            'edit' => EditProjectActivity::route('/{record}/edit'),
+            'index' => ListWorklogs::route('/'),
+            'create' => CreateWorklog::route('/create'),
+            'edit' => EditWorklog::route('/{record}/edit'),
         ];
     }
 

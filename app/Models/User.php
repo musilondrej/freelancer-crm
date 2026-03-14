@@ -85,7 +85,7 @@ class User extends Authenticatable
 
     public function projectActivities(): HasMany
     {
-        return $this->hasMany(ProjectActivity::class, 'owner_id');
+        return $this->hasMany(Worklog::class, 'owner_id');
     }
 
     public function backlogItems(): HasMany

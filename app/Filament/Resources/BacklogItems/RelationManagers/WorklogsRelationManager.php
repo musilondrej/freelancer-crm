@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\BacklogItems\RelationManagers;
 
-use App\Filament\Resources\ProjectActivities\ProjectActivityResource;
+use App\Filament\Resources\Worklogs\WorklogResource;
 use App\Models\BacklogItem;
-use App\Models\ProjectActivity;
+use App\Models\Worklog;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -15,7 +15,7 @@ class WorklogsRelationManager extends RelationManager
 {
     protected static string $relationship = 'worklogs';
 
-    protected static ?string $relatedResource = ProjectActivityResource::class;
+    protected static ?string $relatedResource = WorklogResource::class;
 
     public function table(Table $table): Table
     {
@@ -30,8 +30,8 @@ class WorklogsRelationManager extends RelationManager
                     ->searchable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (ProjectActivity $record): string => $record->resolvedStatusLabel())
-                    ->color(fn (ProjectActivity $record): string => $record->resolvedStatusColor()),
+                    ->formatStateUsing(fn (Worklog $record): string => $record->resolvedStatusLabel())
+                    ->color(fn (Worklog $record): string => $record->resolvedStatusColor()),
                 TextColumn::make('tracked_minutes')
                     ->label('Tracked minutes')
                     ->numeric(),
@@ -44,7 +44,7 @@ class WorklogsRelationManager extends RelationManager
                 Action::make('create_worklog')
                     ->label('Create worklog')
                     ->icon('heroicon-o-plus')
-                    ->url(fn (): string => ProjectActivityResource::getUrl('create', [
+                    ->url(fn (): string => WorklogResource::getUrl('create', [
                         'project_id' => $ownerRecord->project_id,
                         'activity_id' => $ownerRecord->activity_id,
                         'backlog_item_id' => $ownerRecord->getKey(),

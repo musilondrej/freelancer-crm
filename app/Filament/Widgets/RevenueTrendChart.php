@@ -3,8 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
-use App\Models\ProjectActivity;
 use App\Models\ProjectActivityStatusOption;
+use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Filament\Facades\Filament;
@@ -142,7 +142,7 @@ class RevenueTrendChart extends ChartWidget
                 $labels[] = $currentStart->addDays($index)->format('d.m.');
             }
 
-            ProjectActivity::query()
+            Worklog::query()
                 ->where('is_billable', true)
                 ->whereIn('status', $doneStatuses)
                 ->whereNotNull('finished_at')
@@ -165,7 +165,7 @@ class RevenueTrendChart extends ChartWidget
                     'finished_at',
                 ])
                 ->get()
-                ->each(function (ProjectActivity $activity) use (
+                ->each(function (Worklog $activity) use (
                     $displayCurrency,
                     $currentStart,
                     $previousStart,

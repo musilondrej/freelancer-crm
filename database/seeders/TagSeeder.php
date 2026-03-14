@@ -6,10 +6,10 @@ use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\Note;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\RecurringService;
 use App\Models\Tag;
 use App\Models\User;
+use App\Models\Worklog;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -54,7 +54,7 @@ class TagSeeder extends Seeder
             $this->call(LeadSeeder::class);
         }
 
-        if (! ProjectActivity::query()->exists()) {
+        if (! Worklog::query()->exists()) {
             $this->call(ProjectActivitySeeder::class);
         }
 
@@ -119,9 +119,9 @@ class TagSeeder extends Seeder
                     }
                 });
 
-            ProjectActivity::query()
+            Worklog::query()
                 ->where('owner_id', $owner->id)
-                ->each(function (ProjectActivity $activity) use ($tagIds): void {
+                ->each(function (Worklog $activity) use ($tagIds): void {
                     if (fake()->boolean(55)) {
                         $activity->tags()->syncWithoutDetaching($tagIds->random(fake()->numberBetween(1, min(2, $tagIds->count())))->all());
                     }

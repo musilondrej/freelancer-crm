@@ -128,7 +128,7 @@ class ProjectActivityStatusOption extends Model
             $previousCode = $statusOption->previousCodeBeforeSave;
 
             if ($previousCode !== null && $previousCode !== $statusOption->code) {
-                ProjectActivity::query()
+                Worklog::query()
                     ->where('owner_id', (int) $statusOption->owner_id)
                     ->where('status', $previousCode)
                     ->update(['status' => (string) $statusOption->code]);
@@ -161,7 +161,7 @@ class ProjectActivityStatusOption extends Model
 
     public function activitiesUsingStatusCount(): int
     {
-        return ProjectActivity::query()
+        return Worklog::query()
             ->where('owner_id', (int) $this->owner_id)
             ->where('status', (string) $this->code)
             ->count();

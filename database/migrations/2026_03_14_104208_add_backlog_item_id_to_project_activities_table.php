@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('project_activities', function (Blueprint $table): void {
+        Schema::table('worklogs', function (Blueprint $table): void {
             $table->foreignId('backlog_item_id')
                 ->nullable()
                 ->after('activity_id')
@@ -27,7 +27,7 @@ return new class extends Migration
             ->orderBy('id')
             ->chunkById(200, function ($items): void {
                 foreach ($items as $item) {
-                    DB::table('project_activities')
+                    DB::table('worklogs')
                         ->where('id', $item->converted_to_worklog_id)
                         ->whereNull('backlog_item_id')
                         ->update([
@@ -43,8 +43,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('project_activities', function (Blueprint $table): void {
-            $table->dropIndex('project_activities_owner_id_backlog_item_id_index');
+        Schema::table('worklogs', function (Blueprint $table): void {
+            $table->dropIndex('worklogs_owner_id_backlog_item_id_index');
             $table->dropConstrainedForeignId('backlog_item_id');
         });
     }

@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Filament\Resources\ProjectActivities\Pages;
+namespace App\Filament\Resources\Worklogs\Pages;
 
-use App\Filament\Resources\ProjectActivities\ProjectActivityResource;
+use App\Filament\Resources\Worklogs\WorklogResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
-class EditProjectActivity extends EditRecord
+class EditWorklog extends EditRecord
 {
-    protected static string $resource = ProjectActivityResource::class;
+    protected static string $resource = WorklogResource::class;
 
     protected function getHeaderActions(): array
     {

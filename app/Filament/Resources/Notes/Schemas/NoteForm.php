@@ -7,9 +7,9 @@ use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\Note;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\RecurringService;
 use App\Models\Tag;
+use App\Models\Worklog;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -65,7 +65,7 @@ class NoteForm
                                                             ->modifyOptionsQueryUsing(fn (Builder $query): Builder => $ownerId !== null
                                                                 ? $query->where('owner_id', $ownerId)
                                                                 : $query),
-                                                        Type::make(ProjectActivity::class)
+                                                        Type::make(Worklog::class)
                                                             ->titleAttribute('title')
                                                             ->modifyOptionsQueryUsing(fn (Builder $query): Builder => $ownerId !== null
                                                                 ? $query->where('owner_id', $ownerId)

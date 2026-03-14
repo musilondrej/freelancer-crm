@@ -2,9 +2,9 @@
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Resources\ProjectActivities\ProjectActivityResource;
+use App\Filament\Resources\Worklogs\WorklogResource;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
-use App\Models\ProjectActivity;
+use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -29,7 +29,7 @@ class UnbilledDoneWorkTable extends TableWidget
         $ownerId = Filament::auth()->id();
 
         return $table
-            ->query(fn (): Builder => ProjectActivity::query()
+            ->query(fn (): Builder => Worklog::query()
                 ->readyToInvoice($ownerId)
                 ->whereNotNull('finished_at')
                 ->when(
@@ -57,7 +57,7 @@ class UnbilledDoneWorkTable extends TableWidget
                     ->limit(40),
                 TextColumn::make('amount')
                     ->label('Amount')
-                    ->state(function (ProjectActivity $record): string {
+                    ->state(function (Worklog $record): string {
                         $amount = $record->calculatedAmount();
                         $currency = $record->effectiveCurrency();
 
@@ -78,7 +78,7 @@ class UnbilledDoneWorkTable extends TableWidget
                 Action::make('open')
                     ->label('Open')
                     ->icon('heroicon-o-arrow-top-right-on-square')
-                    ->url(fn (ProjectActivity $record): string => ProjectActivityResource::getUrl('edit', ['record' => $record])),
+                    ->url(fn (Worklog $record): string => WorklogResource::getUrl('edit', ['record' => $record])),
             ])
             ->defaultSort('finished_at', 'desc')
             ->paginated([5, 10, 25]);

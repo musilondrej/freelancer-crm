@@ -5,13 +5,13 @@ namespace Database\Factories;
 use App\Enums\ProjectActivityType;
 use App\Models\Activity;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\ProjectActivityStatusOption;
+use App\Models\Worklog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<ProjectActivity>
+ * @extends Factory<Worklog>
  */
 class ProjectActivityFactory extends Factory
 {

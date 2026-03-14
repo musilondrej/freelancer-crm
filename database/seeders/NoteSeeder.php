@@ -7,8 +7,8 @@ use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\Note;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\RecurringService;
+use App\Models\Worklog;
 use Illuminate\Database\Seeder;
 
 class NoteSeeder extends Seeder
@@ -30,7 +30,7 @@ class NoteSeeder extends Seeder
             $this->call(ProjectSeeder::class);
         }
 
-        if (! ProjectActivity::query()->exists()) {
+        if (! Worklog::query()->exists()) {
             $this->call(ProjectActivitySeeder::class);
         }
 
@@ -92,7 +92,7 @@ class NoteSeeder extends Seeder
             }
         });
 
-        ProjectActivity::query()->each(function (ProjectActivity $activity): void {
+        Worklog::query()->each(function (Worklog $activity): void {
             $notes = Note::factory()
                 ->count(fake()->numberBetween(0, 1))
                 ->for($activity, 'noteable')

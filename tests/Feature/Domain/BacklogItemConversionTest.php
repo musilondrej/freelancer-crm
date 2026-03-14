@@ -5,8 +5,8 @@ use App\Models\Activity;
 use App\Models\BacklogItem;
 use App\Models\Customer;
 use App\Models\Project;
-use App\Models\ProjectActivity;
 use App\Models\User;
+use App\Models\Worklog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -49,7 +49,7 @@ it('converts a backlog item into a worklog and marks it as converted', function 
 
     $worklog = $backlogItem->convertToWorklog();
 
-    expect($worklog)->toBeInstanceOf(ProjectActivity::class)
+    expect($worklog)->toBeInstanceOf(Worklog::class)
         ->and($worklog->owner_id)->toBe($owner->id)
         ->and($worklog->project_id)->toBe($project->id)
         ->and($worklog->activity_id)->toBe($activity->id)
@@ -62,9 +62,9 @@ it('converts a backlog item into a worklog and marks it as converted', function 
         ->and($backlogItem->converted_to_worklog_id)->toBe($worklog->id)
         ->and($backlogItem->converted_at)->not()->toBeNull();
 
-    $worklogCountBeforeSecondCall = ProjectActivity::query()->count();
+    $worklogCountBeforeSecondCall = Worklog::query()->count();
     $worklogFromSecondCall = $backlogItem->convertToWorklog();
-    $worklogCountAfterSecondCall = ProjectActivity::query()->count();
+    $worklogCountAfterSecondCall = Worklog::query()->count();
 
     expect($worklogFromSecondCall->id)->toBe($worklog->id)
         ->and($worklogCountAfterSecondCall)->toBe($worklogCountBeforeSecondCall);
@@ -89,7 +89,7 @@ it('reuses an already linked worklog when converting again', function (): void {
             'converted_at' => null,
         ]);
 
-    $existingWorklog = ProjectActivity::factory()
+    $existingWorklog = Worklog::factory()
         ->for($owner, 'owner')
         ->for($project, 'project')
         ->create([
@@ -102,7 +102,7 @@ it('reuses an already linked worklog when converting again', function (): void {
     $backlogItem->refresh();
 
     expect($resultWorklog->id)->toBe($existingWorklog->id)
-        ->and(ProjectActivity::query()->where('backlog_item_id', $backlogItem->id)->count())->toBe(1)
+        ->and(Worklog::query()->where('backlog_item_id', $backlogItem->id)->count())->toBe(1)
         ->and($backlogItem->converted_to_worklog_id)->toBe($existingWorklog->id)
         ->and($backlogItem->status)->toBe(BacklogItemStatus::Done);
 });

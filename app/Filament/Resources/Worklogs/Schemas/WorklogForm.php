@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Filament\Resources\ProjectActivities\Schemas;
+namespace App\Filament\Resources\Worklogs\Schemas;
 
 use App\Enums\ProjectActivityType;
 use App\Models\Activity;
 use App\Models\BacklogItem;
-use App\Models\ProjectActivity;
 use App\Models\Tag;
+use App\Models\Worklog;
 use App\Support\Filament\Currency;
 use App\Support\Filament\WorklogStatus;
 use Filament\Facades\Filament;
@@ -33,7 +33,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 
-class ProjectActivityForm
+class WorklogForm
 {
     public static function configure(Schema $schema): Schema
     {
@@ -292,12 +292,12 @@ class ProjectActivityForm
                             ->schema([
                                 TextEntry::make('created_at')
                                     ->label('Created')
-                                    ->state(fn (?ProjectActivity $record): ?string => $record?->created_at?->diffForHumans()),
+                                    ->state(fn (?Worklog $record): ?string => $record?->created_at?->diffForHumans()),
                                 TextEntry::make('updated_at')
                                     ->label('Last modified')
-                                    ->state(fn (?ProjectActivity $record): ?string => $record?->updated_at?->diffForHumans()),
+                                    ->state(fn (?Worklog $record): ?string => $record?->updated_at?->diffForHumans()),
                             ])
-                            ->hidden(fn (?ProjectActivity $record): bool => ! $record instanceof ProjectActivity),
+                            ->hidden(fn (?Worklog $record): bool => ! $record instanceof Worklog),
                         Section::make('Technical Metadata')
                             ->schema([
                                 KeyValue::make('meta')

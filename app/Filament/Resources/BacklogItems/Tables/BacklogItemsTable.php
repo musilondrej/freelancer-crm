@@ -4,7 +4,7 @@ namespace App\Filament\Resources\BacklogItems\Tables;
 
 use App\Enums\BacklogItemStatus;
 use App\Filament\Resources\BacklogItems\BacklogItemResource;
-use App\Filament\Resources\ProjectActivities\ProjectActivityResource;
+use App\Filament\Resources\Worklogs\WorklogResource;
 use App\Models\BacklogItem;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -97,7 +97,7 @@ class BacklogItemsTable
                 Action::make('open_worklogs')
                     ->label('Open worklogs')
                     ->icon('heroicon-o-arrow-top-right-on-square')
-                    ->url(fn (BacklogItem $record): string => ProjectActivityResource::getUrl('index', [
+                    ->url(fn (BacklogItem $record): string => WorklogResource::getUrl('index', [
                         'tableFilters' => [
                             'backlog_item_id' => [
                                 'value' => $record->getKey(),

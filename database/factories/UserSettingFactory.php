@@ -33,6 +33,8 @@ class UserSettingFactory extends Factory
                     'locale' => fake()->randomElement(['cs', 'en']),
                     'timezone' => fake()->randomElement(['Europe/Prague', 'UTC']),
                     'week_starts_on' => fake()->randomElement(['monday', 'sunday']),
+                    'date_format' => fake()->randomElement(['d.m.Y', 'Y-m-d', 'm/d/Y', 'd/m/Y']),
+                    'time_format' => fake()->randomElement(['H:i', 'H:i:s', 'h:i A']),
                 ],
             ],
         ];

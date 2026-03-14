@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Worklogs\Tables;
 use App\Enums\ProjectActivityType;
 use App\Filament\Resources\Worklogs\WorklogResource;
 use App\Models\ProjectActivityStatusOption;
+use App\Models\UserSetting;
 use App\Models\Worklog;
 use App\Support\Filament\WorklogStatus;
 use Filament\Actions\Action;
@@ -27,6 +28,11 @@ class WorklogsTable
 {
     public static function configure(Table $table): Table
     {
+        $ownerId = Filament::auth()->id();
+        $dateFormat = UserSetting::dateFormatForUser($ownerId);
+        $dateTimeFormat = UserSetting::dateTimeFormatForUser($ownerId);
+        $timezone = UserSetting::timezoneForUser($ownerId);
+
         return $table
             ->queryStringIdentifier('worklogs')
             ->persistFiltersInSession()
@@ -78,18 +84,18 @@ class WorklogsTable
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('due_date')
-                    ->date()
+                    ->date($dateFormat)
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->label('Created')
-                    ->dateTime()
+                    ->dateTime($dateTimeFormat, timezone: $timezone)
                     ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('status')
                     ->label('Status')
-                    ->options(fn (): array => WorklogStatus::options(Filament::auth()->id()))
+                    ->options(fn (): array => WorklogStatus::options($ownerId))
                     ->multiple(),
                 SelectFilter::make('project_id')
                     ->relationship('project', 'name')
@@ -109,9 +115,7 @@ class WorklogsTable
                     ->label('Start timer')
                     ->icon('heroicon-o-play-circle')
                     ->color('gray')
-                    ->visible(function (Worklog $record): bool {
-                        $ownerId = Filament::auth()->id();
-
+                    ->visible(function (Worklog $record) use ($ownerId): bool {
                         if ($ownerId === null || (bool) $record->is_running) {
                             return false;
                         }
@@ -124,9 +128,7 @@ class WorklogsTable
 
                         return in_array($record->resolvedStatusCode(), ProjectActivityStatusOption::openCodesForOwner($ownerId), true);
                     })
-                    ->action(function (Worklog $record): void {
-                        $ownerId = Filament::auth()->id();
-
+                    ->action(function (Worklog $record) use ($ownerId): void {
                         if ($ownerId === null) {
                             return;
                         }
@@ -175,12 +177,10 @@ class WorklogsTable
                     ->color('success')
                     ->visible(fn (Worklog $record): bool => ! in_array(
                         $record->resolvedStatusCode(),
-                        ProjectActivityStatusOption::doneCodesForOwner(Filament::auth()->id()),
+                        ProjectActivityStatusOption::doneCodesForOwner($ownerId),
                         true,
                     ))
-                    ->action(function (Worklog $record): void {
-                        $ownerId = Filament::auth()->id();
-
+                    ->action(function (Worklog $record) use ($ownerId): void {
                         $doneStatusCode = ProjectActivityStatusOption::doneCodesForOwner($ownerId)[0]
                             ?? ProjectActivityStatusOption::defaultCodeForOwner($ownerId);
 
@@ -199,7 +199,7 @@ class WorklogsTable
                     ->label('Mark invoiced')
                     ->icon('heroicon-o-banknotes')
                     ->color('info')
-                    ->visible(fn (Worklog $record): bool => (bool) $record->is_billable && ! $record->isInvoiced() && $record->isReadyToInvoice(Filament::auth()->id()))
+                    ->visible(fn (Worklog $record): bool => (bool) $record->is_billable && ! $record->isInvoiced() && $record->isReadyToInvoice($ownerId))
                     ->action(function (Worklog $record): void {
                         $record->update([
                             'is_invoiced' => true,

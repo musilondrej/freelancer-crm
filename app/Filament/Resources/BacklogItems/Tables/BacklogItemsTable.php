@@ -6,12 +6,14 @@ use App\Enums\BacklogItemStatus;
 use App\Filament\Resources\BacklogItems\BacklogItemResource;
 use App\Filament\Resources\Worklogs\WorklogResource;
 use App\Models\BacklogItem;
+use App\Models\UserSetting;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -21,6 +23,11 @@ class BacklogItemsTable
 {
     public static function configure(Table $table): Table
     {
+        $ownerId = Filament::auth()->id();
+        $dateFormat = UserSetting::dateFormatForUser($ownerId);
+        $dateTimeFormat = UserSetting::dateTimeFormatForUser($ownerId);
+        $timezone = UserSetting::timezoneForUser($ownerId);
+
         return $table
             ->queryStringIdentifier('backlog')
             ->persistFiltersInSession()
@@ -63,11 +70,11 @@ class BacklogItemsTable
                     ->sortable(),
                 TextColumn::make('due_date')
                     ->label('Due')
-                    ->date()
+                    ->date($dateFormat)
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->label('Created')
-                    ->dateTime()
+                    ->dateTime($dateTimeFormat, timezone: $timezone)
                     ->sortable(),
             ])
             ->recordActions([

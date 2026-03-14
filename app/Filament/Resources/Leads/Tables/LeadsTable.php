@@ -5,11 +5,13 @@ namespace App\Filament\Resources\Leads\Tables;
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use App\Models\Lead;
+use App\Models\UserSetting;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -20,6 +22,9 @@ class LeadsTable
 {
     public static function configure(Table $table): Table
     {
+        $ownerId = Filament::auth()->id();
+        $dateFormat = UserSetting::dateFormatForUser($ownerId);
+
         return $table
             ->defaultSort('last_activity_at', 'desc')
             ->columns([
@@ -53,7 +58,7 @@ class LeadsTable
                     )
                     ->toggleable(),
                 TextColumn::make('expected_close_date')
-                    ->date('d.m.Y')
+                    ->date($dateFormat)
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('last_activity_at')

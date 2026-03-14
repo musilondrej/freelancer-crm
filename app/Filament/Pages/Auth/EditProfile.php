@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Auth;
 
 use App\Models\UserSetting;
+use Carbon\CarbonImmutable;
 use Filament\Auth\Pages\EditProfile as BaseEditProfile;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -177,6 +178,14 @@ class EditProfile extends BaseEditProfile
                                                     ->label('Timezone')
                                                     ->maxLength(64)
                                                     ->required(),
+                                                Select::make('preferences.ui.date_format')
+                                                    ->label('Date format')
+                                                    ->options($this->dateFormatOptions())
+                                                    ->required(),
+                                                Select::make('preferences.ui.time_format')
+                                                    ->label('Time format')
+                                                    ->options($this->timeFormatOptions())
+                                                    ->required(),
                                                 Select::make('preferences.ui.week_starts_on')
                                                     ->label('Week starts on')
                                                     ->options([
@@ -212,6 +221,19 @@ class EditProfile extends BaseEditProfile
                                 Placeholder::make('snapshot_timezone')
                                     ->label('Timezone')
                                     ->content(fn (Get $get): string => (string) ($get('preferences.ui.timezone') ?: 'Not set')),
+                                Placeholder::make('snapshot_datetime_preview')
+                                    ->label('Date/time preview')
+                                    ->content(function (Get $get): string {
+                                        $timezone = (string) ($get('preferences.ui.timezone') ?: config('app.timezone', 'UTC'));
+                                        $dateFormat = (string) ($get('preferences.ui.date_format') ?: 'd.m.Y');
+                                        $timeFormat = (string) ($get('preferences.ui.time_format') ?: 'H:i');
+
+                                        if (! in_array($timezone, timezone_identifiers_list(), true)) {
+                                            $timezone = (string) config('app.timezone', 'UTC');
+                                        }
+
+                                        return CarbonImmutable::now($timezone)->format(sprintf('%s %s', $dateFormat, $timeFormat));
+                                    }),
                             ]),
                     ])
                     ->columnSpan([
@@ -231,5 +253,30 @@ class EditProfile extends BaseEditProfile
         }
 
         return number_format((float) $value, 0, '.', ' ').' / h';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function dateFormatOptions(): array
+    {
+        return [
+            'd.m.Y' => '31.12.2026',
+            'Y-m-d' => '2026-12-31',
+            'm/d/Y' => '12/31/2026',
+            'd/m/Y' => '31/12/2026',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function timeFormatOptions(): array
+    {
+        return [
+            'H:i' => '14:30 (24h)',
+            'H:i:s' => '14:30:25 (24h + sec)',
+            'h:i A' => '02:30 PM (12h)',
+        ];
     }
 }

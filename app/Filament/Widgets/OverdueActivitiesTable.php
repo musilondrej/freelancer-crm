@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\ProjectActivityStatusOption;
+use App\Models\UserSetting;
 use App\Models\Worklog;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
@@ -20,6 +21,7 @@ class OverdueActivitiesTable extends TableWidget
     {
         $ownerId = Filament::auth()->id();
         $openStatuses = ProjectActivityStatusOption::openCodesForOwner($ownerId);
+        $dateFormat = UserSetting::dateFormatForUser($ownerId);
 
         return $table
             ->query(fn (): Builder => Worklog::query()
@@ -40,7 +42,7 @@ class OverdueActivitiesTable extends TableWidget
                     ->placeholder('-'),
                 TextColumn::make('due_date')
                     ->label('Due')
-                    ->date('d.m.Y')
+                    ->date($dateFormat)
                     ->sortable(),
                 TextColumn::make('status')
                     ->badge(),

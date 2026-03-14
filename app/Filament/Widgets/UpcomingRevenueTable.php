@@ -7,6 +7,7 @@ use App\Enums\RecurringServiceStatus;
 use App\Filament\Resources\RecurringServices\RecurringServiceResource;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
 use App\Models\RecurringService;
+use App\Models\UserSetting;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -29,6 +30,7 @@ class UpcomingRevenueTable extends TableWidget
     {
         [$rangeStart, $rangeEnd] = $this->resolvedRange();
         $ownerId = Filament::auth()->id();
+        $dateFormat = UserSetting::dateFormatForUser($ownerId);
 
         return $table
             ->query(fn (): Builder => RecurringService::query()
@@ -45,7 +47,7 @@ class UpcomingRevenueTable extends TableWidget
                     'project:id,name,owner_id,client_id,currency,hourly_rate',
                     'owner:id,default_currency,default_hourly_rate',
                 ]))
-            ->heading($this->headingForRange($rangeStart, $rangeEnd))
+            ->heading($this->headingForRange($rangeStart, $rangeEnd, $dateFormat))
             ->columns([
                 TextColumn::make('name')
                     ->label('Service')
@@ -63,7 +65,7 @@ class UpcomingRevenueTable extends TableWidget
                     ->limit(36),
                 TextColumn::make('next_due_on')
                     ->label('Due')
-                    ->date('d.m.Y')
+                    ->date($dateFormat)
                     ->sortable(),
                 TextColumn::make('amount')
                     ->label('Expected')
@@ -103,12 +105,12 @@ class UpcomingRevenueTable extends TableWidget
         return [$startDate, $endDate];
     }
 
-    private function headingForRange(CarbonImmutable $rangeStart, CarbonImmutable $rangeEnd): string
+    private function headingForRange(CarbonImmutable $rangeStart, CarbonImmutable $rangeEnd, string $dateFormat): string
     {
         return sprintf(
             'Upcoming Revenue (%s - %s)',
-            $rangeStart->format('d.m.Y'),
-            $rangeEnd->format('d.m.Y'),
+            $rangeStart->format($dateFormat),
+            $rangeEnd->format($dateFormat),
         );
     }
 

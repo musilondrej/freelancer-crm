@@ -70,6 +70,25 @@ class UserSettingForm
                             ->default((string) config('app.timezone', 'UTC'))
                             ->required()
                             ->maxLength(64),
+                        Select::make('preferences.ui.date_format')
+                            ->label('Date format')
+                            ->options([
+                                'd.m.Y' => '31.12.2026',
+                                'Y-m-d' => '2026-12-31',
+                                'm/d/Y' => '12/31/2026',
+                                'd/m/Y' => '31/12/2026',
+                            ])
+                            ->default('d.m.Y')
+                            ->required(),
+                        Select::make('preferences.ui.time_format')
+                            ->label('Time format')
+                            ->options([
+                                'H:i' => '14:30 (24h)',
+                                'H:i:s' => '14:30:25 (24h + sec)',
+                                'h:i A' => '02:30 PM (12h)',
+                            ])
+                            ->default('H:i')
+                            ->required(),
                         Select::make('preferences.ui.week_starts_on')
                             ->label('Week starts on')
                             ->options([

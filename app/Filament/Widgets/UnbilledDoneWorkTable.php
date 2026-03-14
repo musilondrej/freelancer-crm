@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Resources\Worklogs\WorklogResource;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
+use App\Models\UserSetting;
 use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
@@ -27,6 +28,8 @@ class UnbilledDoneWorkTable extends TableWidget
     {
         [$startDate, $endDate] = $this->resolvedDateRange();
         $ownerId = Filament::auth()->id();
+        $dateTimeFormat = UserSetting::dateTimeFormatForUser($ownerId);
+        $timezone = UserSetting::timezoneForUser($ownerId);
 
         return $table
             ->query(fn (): Builder => Worklog::query()
@@ -71,7 +74,7 @@ class UnbilledDoneWorkTable extends TableWidget
                     }),
                 TextColumn::make('finished_at')
                     ->label('Done at')
-                    ->date('d.m.Y')
+                    ->dateTime($dateTimeFormat, timezone: $timezone)
                     ->sortable(),
             ])
             ->recordActions([

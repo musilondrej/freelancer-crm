@@ -65,3 +65,69 @@ it('merges custom rounding preferences with defaults', function (): void {
         'minimum_minutes' => 1,
     ]);
 });
+
+it('returns configured ui defaults when user id is null', function (): void {
+    config()->set('app.locale', 'cs');
+    config()->set('app.timezone', 'Europe/Prague');
+
+    $ui = UserSetting::uiForUser(null);
+
+    expect($ui)->toMatchArray([
+        'locale' => 'cs',
+        'timezone' => 'Europe/Prague',
+        'week_starts_on' => 'monday',
+        'date_format' => 'd.m.Y',
+        'time_format' => 'H:i',
+    ]);
+});
+
+it('merges ui preferences and falls back for invalid values', function (): void {
+    config()->set('app.locale', 'en');
+    config()->set('app.timezone', 'UTC');
+
+    $user = User::factory()->create();
+
+    UserSetting::query()
+        ->where('user_id', $user->id)
+        ->update([
+            'preferences' => [
+                'ui' => [
+                    'locale' => 'cs',
+                    'timezone' => 'Europe/Prague',
+                    'week_starts_on' => 'sunday',
+                    'date_format' => 'Y-m-d',
+                    'time_format' => 'h:i A',
+                ],
+            ],
+        ]);
+
+    expect(UserSetting::uiForUser($user->id))->toMatchArray([
+        'locale' => 'cs',
+        'timezone' => 'Europe/Prague',
+        'week_starts_on' => 'sunday',
+        'date_format' => 'Y-m-d',
+        'time_format' => 'h:i A',
+    ]);
+
+    UserSetting::query()
+        ->where('user_id', $user->id)
+        ->update([
+            'preferences' => [
+                'ui' => [
+                    'locale' => 'de',
+                    'timezone' => 'Invalid/Timezone',
+                    'week_starts_on' => 'friday',
+                    'date_format' => 'j.n.Y',
+                    'time_format' => 'g:i a',
+                ],
+            ],
+        ]);
+
+    expect(UserSetting::uiForUser($user->id))->toMatchArray([
+        'locale' => 'en',
+        'timezone' => 'UTC',
+        'week_starts_on' => 'monday',
+        'date_format' => 'd.m.Y',
+        'time_format' => 'H:i',
+    ]);
+});

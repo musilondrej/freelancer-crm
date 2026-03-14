@@ -8,6 +8,7 @@ use App\Enums\RecurringServiceStatus;
 use App\Models\RecurringService;
 use App\Models\RecurringServiceType as RecurringServiceTypeModel;
 use App\Models\Tag;
+use App\Models\UserSetting;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\ColorPicker;
@@ -300,7 +301,9 @@ class RecurringServiceForm
                                 TextEntry::make('last_reminded_for_due_on')
                                     ->label('Last reminder due date')
                                     ->state(fn (?RecurringService $record): string => $record?->last_reminded_for_due_on !== null
-                                        ? Date::parse($record->last_reminded_for_due_on)->format('d.m.Y')
+                                        ? Date::parse($record->last_reminded_for_due_on)->format(
+                                            UserSetting::dateFormatForUser(Filament::auth()->id()),
+                                        )
                                         : '-'),
                             ])
                             ->hidden(fn (?RecurringService $record): bool => ! $record instanceof RecurringService),

@@ -13,7 +13,6 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Notifications\Notification;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Validation\ValidationException;
@@ -50,14 +49,17 @@ class BacklogItemsTable
                     ->sortable(),
                 TextColumn::make('priority')
                     ->badge()
+                    ->formatStateUsing(fn (BacklogItem $record): string => $record->resolvedPriorityLabel())
+                    ->color(fn (BacklogItem $record): string => $record->resolvedPriorityColor())
                     ->sortable(),
                 TextColumn::make('estimated_minutes')
                     ->label('Estimated')
                     ->state(fn (?int $state): string => $state !== null ? sprintf('%d min', $state) : '-')
                     ->sortable(),
-                IconColumn::make('converted_to_worklog_id')
-                    ->label('Converted')
-                    ->boolean()
+                TextColumn::make('worklogs_count')
+                    ->counts('worklogs')
+                    ->label('Worklogs')
+                    ->badge()
                     ->sortable(),
                 TextColumn::make('due_date')
                     ->label('Due')
@@ -92,13 +94,17 @@ class BacklogItemsTable
                             ->success()
                             ->send();
                     }),
-                Action::make('open_worklog')
-                    ->label('Open worklog')
+                Action::make('open_worklogs')
+                    ->label('Open worklogs')
                     ->icon('heroicon-o-arrow-top-right-on-square')
-                    ->url(fn (BacklogItem $record): ?string => $record->convertedWorklog !== null
-                        ? ProjectActivityResource::getUrl('edit', ['record' => $record->convertedWorklog])
-                        : null)
-                    ->visible(fn (BacklogItem $record): bool => $record->convertedWorklog !== null),
+                    ->url(fn (BacklogItem $record): string => ProjectActivityResource::getUrl('index', [
+                        'tableFilters' => [
+                            'backlog_item_id' => [
+                                'value' => $record->getKey(),
+                            ],
+                        ],
+                    ]))
+                    ->visible(fn (BacklogItem $record): bool => $record->worklogs()->exists()),
                 EditAction::make(),
             ])
             ->toolbarActions([

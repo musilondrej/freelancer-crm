@@ -5,6 +5,7 @@ namespace App\Filament\Resources\BacklogItems;
 use App\Filament\Resources\BacklogItems\Pages\CreateBacklogItem;
 use App\Filament\Resources\BacklogItems\Pages\EditBacklogItem;
 use App\Filament\Resources\BacklogItems\Pages\ListBacklogItems;
+use App\Filament\Resources\BacklogItems\RelationManagers\WorklogsRelationManager;
 use App\Filament\Resources\BacklogItems\Schemas\BacklogItemForm;
 use App\Filament\Resources\BacklogItems\Tables\BacklogItemsTable;
 use App\Models\BacklogItem;
@@ -47,7 +48,7 @@ class BacklogItemResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            WorklogsRelationManager::class,
         ];
     }
 

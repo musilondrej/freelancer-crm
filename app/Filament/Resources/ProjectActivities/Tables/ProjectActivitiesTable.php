@@ -6,6 +6,7 @@ use App\Enums\ProjectActivityType;
 use App\Filament\Resources\ProjectActivities\ProjectActivityResource;
 use App\Models\ProjectActivity;
 use App\Models\ProjectActivityStatusOption;
+use App\Support\Filament\WorklogStatus;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -17,11 +18,9 @@ use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
-use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 
 class ProjectActivitiesTable
@@ -48,6 +47,11 @@ class ProjectActivitiesTable
                     ->placeholder('-')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('backlogItem.title')
+                    ->label('Backlog item')
+                    ->placeholder('-')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('type')
                     ->badge()
                     ->sortable()
@@ -81,57 +85,23 @@ class ProjectActivitiesTable
                     ->sortable(),
             ])
             ->filters([
-                Filter::make('today')
-                    ->label('Today')
-                    ->toggle()
-                    ->query(fn (Builder $query): Builder => $query->where(function (Builder $builder): void {
-                        $builder
-                            ->whereDate('started_at', today()->toDateString())
-                            ->orWhere(function (Builder $orBuilder): void {
-                                $orBuilder
-                                    ->whereNull('started_at')
-                                    ->whereDate('created_at', today()->toDateString());
-                            });
-                    })),
-                Filter::make('this_week')
-                    ->label('This week')
-                    ->toggle()
-                    ->query(fn (Builder $query): Builder => $query->where(function (Builder $builder): void {
-                        $builder
-                            ->whereBetween('started_at', [today()->startOfWeek(), today()->endOfWeek()])
-                            ->orWhere(function (Builder $orBuilder): void {
-                                $orBuilder
-                                    ->whereNull('started_at')
-                                    ->whereBetween('created_at', [today()->startOfWeek(), today()->endOfWeek()]);
-                            });
-                    })),
-                Filter::make('overdue')
-                    ->label('Overdue')
-                    ->toggle()
-                    ->query(fn (Builder $query): Builder => $query
-                        ->whereNotNull('due_date')
-                        ->whereDate('due_date', '<', today()->toDateString())
-                        ->whereIn('status', ProjectActivityStatusOption::openCodesForOwner(Filament::auth()->id()))),
                 SelectFilter::make('status')
                     ->label('Status')
-                    ->options(fn (): array => self::worklogStatusOptions(Filament::auth()->id()))
+                    ->options(fn (): array => WorklogStatus::options(Filament::auth()->id()))
                     ->multiple(),
                 SelectFilter::make('project_id')
                     ->relationship('project', 'name')
                     ->label('Project')
                     ->searchable()
                     ->preload(),
-                Filter::make('ready_to_invoice')
-                    ->label('Ready to Invoice')
-                    ->query(fn (Builder $query): Builder => $query
-                        ->whereIn('status', ProjectActivityStatusOption::doneCodesForOwner(Filament::auth()->id()))
-                        ->where('is_billable', true)
-                        ->where('is_invoiced', false)
-                        ->whereNull('invoice_reference')
-                        ->whereNull('invoiced_at')),
+                SelectFilter::make('backlog_item_id')
+                    ->relationship('backlogItem', 'title')
+                    ->label('Backlog item')
+                    ->searchable()
+                    ->preload(),
                 TrashedFilter::make(),
             ], layout: FiltersLayout::AboveContent)
-            ->filtersFormColumns(5)
+            ->filtersFormColumns(4)
             ->recordActions([
                 Action::make('start_timer')
                     ->label('Start timer')
@@ -263,21 +233,5 @@ class ProjectActivitiesTable
                     ->url(fn (): string => ProjectActivityResource::getUrl('create'))
                     ->color('gray'),
             ]);
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private static function worklogStatusOptions(?int $ownerId): array
-    {
-        $allowedStatusCodes = [
-            'in_progress',
-            'done',
-            'cancelled',
-        ];
-
-        return collect(ProjectActivityStatusOption::optionsForOwner($ownerId))
-            ->only($allowedStatusCodes)
-            ->all();
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BacklogItemPriority;
 use App\Enums\BacklogItemStatus;
 use App\Enums\ProjectActivityType;
 use App\Models\Concerns\EnforcesOwner;
@@ -9,6 +10,7 @@ use Database\Factories\BacklogItemFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -49,7 +51,7 @@ class BacklogItem extends Model
     {
         return [
             'status' => BacklogItemStatus::class,
-            'priority' => 'integer',
+            'priority' => BacklogItemPriority::class,
             'estimated_minutes' => 'integer',
             'due_date' => 'date',
             'sort_order' => 'integer',
@@ -91,6 +93,14 @@ class BacklogItem extends Model
     }
 
     /**
+     * @return HasMany<ProjectActivity, $this>
+     */
+    public function worklogs(): HasMany
+    {
+        return $this->hasMany(ProjectActivity::class, 'backlog_item_id');
+    }
+
+    /**
      * @return MorphMany<Note, $this>
      */
     public function notes(): MorphMany
@@ -123,6 +133,21 @@ class BacklogItem extends Model
         return BacklogItemStatus::tryFrom($this->resolvedStatusCode())?->getColor() ?? 'gray';
     }
 
+    public function resolvedPriorityValue(): int
+    {
+        return (int) ($this->getRawOriginal('priority') ?? BacklogItemPriority::Medium->value);
+    }
+
+    public function resolvedPriorityLabel(): string
+    {
+        return BacklogItemPriority::tryFrom($this->resolvedPriorityValue())?->getLabel() ?? 'Medium';
+    }
+
+    public function resolvedPriorityColor(): string
+    {
+        return BacklogItemPriority::tryFrom($this->resolvedPriorityValue())?->getColor() ?? 'info';
+    }
+
     public function convertToWorklog(): ProjectActivity
     {
         $project = $this->project;
@@ -133,9 +158,21 @@ class BacklogItem extends Model
             ]);
         }
 
-        $existingWorklog = $this->convertedWorklog;
+        $existingWorklog = $this->convertedWorklog ?? $this->worklogs()->oldest('id')->first();
 
         if ($existingWorklog instanceof ProjectActivity) {
+            if ($existingWorklog->backlog_item_id !== $this->getKey()) {
+                $existingWorklog->update([
+                    'backlog_item_id' => $this->getKey(),
+                ]);
+            }
+
+            $this->update([
+                'status' => BacklogItemStatus::Done,
+                'converted_to_worklog_id' => $existingWorklog->getKey(),
+                'converted_at' => $this->converted_at ?? now(),
+            ]);
+
             return $existingWorklog;
         }
 
@@ -147,6 +184,7 @@ class BacklogItem extends Model
             'owner_id' => $this->owner_id,
             'project_id' => $this->project_id,
             'activity_id' => $this->activity_id,
+            'backlog_item_id' => $this->getKey(),
             'title' => $this->title,
             'description' => $this->description,
             'type' => ProjectActivityType::Hourly,

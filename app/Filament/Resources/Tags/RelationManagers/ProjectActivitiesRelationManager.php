@@ -4,7 +4,8 @@ namespace App\Filament\Resources\Tags\RelationManagers;
 
 use App\Enums\ProjectActivityType;
 use App\Models\ProjectActivity;
-use App\Models\ProjectActivityStatusOption;
+use App\Support\Filament\Currency;
+use App\Support\Filament\WorklogStatus;
 use Filament\Actions\AttachAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -57,18 +58,8 @@ class ProjectActivitiesRelationManager extends RelationManager
                     ->default('hourly')
                     ->required(),
                 Select::make('status')
-                    ->options(fn (): array => $this->worklogStatusOptions())
-                    ->default(function (): string {
-                        $ownerId = Filament::auth()->id();
-                        $defaultCode = ProjectActivityStatusOption::defaultCodeForOwner($ownerId);
-                        $allowedStatuses = $this->worklogStatusOptions();
-
-                        if (array_key_exists($defaultCode, $allowedStatuses)) {
-                            return $defaultCode;
-                        }
-
-                        return 'in_progress';
-                    })
+                    ->options(fn (): array => WorklogStatus::options(Filament::auth()->id()))
+                    ->default(fn (): string => WorklogStatus::defaultCode(Filament::auth()->id()))
                     ->required(),
                 Toggle::make('is_billable')
                     ->required(),
@@ -77,10 +68,10 @@ class ProjectActivitiesRelationManager extends RelationManager
                     ->numeric(),
                 TextInput::make('unit_rate')
                     ->numeric()
-                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
+                    ->suffix(fn (Get $get): string => Currency::resolve($get)),
                 TextInput::make('flat_amount')
                     ->numeric()
-                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
+                    ->suffix(fn (Get $get): string => Currency::resolve($get)),
                 TextInput::make('tracked_minutes')
                     ->numeric(),
                 DatePicker::make('due_date'),
@@ -173,21 +164,5 @@ class ProjectActivitiesRelationManager extends RelationManager
                 ->withoutGlobalScopes([
                     SoftDeletingScope::class,
                 ]));
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function worklogStatusOptions(): array
-    {
-        $allowedStatusCodes = [
-            'in_progress',
-            'done',
-            'cancelled',
-        ];
-
-        return collect(ProjectActivityStatusOption::optionsForOwner(Filament::auth()->id()))
-            ->only($allowedStatusCodes)
-            ->all();
     }
 }

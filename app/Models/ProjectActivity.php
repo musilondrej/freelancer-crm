@@ -30,6 +30,7 @@ class ProjectActivity extends Model
         'owner_id',
         'project_id',
         'activity_id',
+        'backlog_item_id',
         'title',
         'description',
         'type',
@@ -117,6 +118,14 @@ class ProjectActivity extends Model
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);
+    }
+
+    /**
+     * @return BelongsTo<BacklogItem, $this>
+     */
+    public function backlogItem(): BelongsTo
+    {
+        return $this->belongsTo(BacklogItem::class);
     }
 
     /**

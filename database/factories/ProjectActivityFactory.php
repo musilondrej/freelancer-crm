@@ -29,6 +29,7 @@ class ProjectActivityFactory extends Factory
             'project_id' => Project::factory(),
             'owner_id' => fn (array $attributes): ?int => Project::query()->find($attributes['project_id'])?->owner_id,
             'activity_id' => fn (array $attributes): ?int => $this->resolveActivityForProject($attributes['project_id'] ?? null)?->id,
+            'backlog_item_id' => null,
             'title' => function (array $attributes): string {
                 $activityId = $attributes['activity_id'] ?? null;
                 $activity = Activity::query()->find($activityId);

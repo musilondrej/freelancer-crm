@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\BacklogItems\Schemas;
 
+use App\Enums\BacklogItemPriority;
 use App\Enums\BacklogItemStatus;
 use App\Models\Activity;
 use App\Models\BacklogItem;
@@ -83,14 +84,8 @@ class BacklogItemForm
                                                     ->default(BacklogItemStatus::Todo)
                                                     ->required(),
                                                 Select::make('priority')
-                                                    ->options([
-                                                        1 => '1',
-                                                        2 => '2',
-                                                        3 => '3',
-                                                        4 => '4',
-                                                        5 => '5',
-                                                    ])
-                                                    ->default(3)
+                                                    ->options(BacklogItemPriority::class)
+                                                    ->default(BacklogItemPriority::Medium->value)
                                                     ->required(),
                                                 DatePicker::make('due_date'),
                                                 TextInput::make('estimated_minutes')

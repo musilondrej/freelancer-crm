@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\BacklogItemPriority;
 use App\Enums\BacklogItemStatus;
 use App\Models\Activity;
 use App\Models\BacklogItem;
@@ -28,7 +29,7 @@ class BacklogItemFactory extends Factory
             'title' => ucfirst(fake()->words(4, true)),
             'description' => fake()->optional(0.7)->sentence(),
             'status' => fake()->randomElement(BacklogItemStatus::openValues()),
-            'priority' => fake()->numberBetween(1, 5),
+            'priority' => fake()->randomElement(BacklogItemPriority::values()),
             'estimated_minutes' => fake()->optional(0.8)->numberBetween(30, 720),
             'due_date' => fake()->optional(0.6)->dateTimeBetween('now', '+2 months'),
             'sort_order' => fake()->numberBetween(0, 200),

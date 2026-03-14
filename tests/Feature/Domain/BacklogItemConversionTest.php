@@ -53,6 +53,7 @@ it('converts a backlog item into a worklog and marks it as converted', function 
         ->and($worklog->owner_id)->toBe($owner->id)
         ->and($worklog->project_id)->toBe($project->id)
         ->and($worklog->activity_id)->toBe($activity->id)
+        ->and($worklog->backlog_item_id)->toBe($backlogItem->id)
         ->and($worklog->title)->toBe('Implement onboarding flow');
 
     $backlogItem->refresh();
@@ -67,4 +68,41 @@ it('converts a backlog item into a worklog and marks it as converted', function 
 
     expect($worklogFromSecondCall->id)->toBe($worklog->id)
         ->and($worklogCountAfterSecondCall)->toBe($worklogCountBeforeSecondCall);
+});
+
+it('reuses an already linked worklog when converting again', function (): void {
+    $owner = User::factory()->create();
+    $this->actingAs($owner);
+
+    $customer = Customer::factory()->for($owner, 'owner')->create();
+    $project = Project::factory()
+        ->for($owner, 'owner')
+        ->for($customer, 'customer')
+        ->create();
+
+    $backlogItem = BacklogItem::factory()
+        ->for($owner, 'owner')
+        ->for($project, 'project')
+        ->create([
+            'status' => BacklogItemStatus::Todo,
+            'converted_to_worklog_id' => null,
+            'converted_at' => null,
+        ]);
+
+    $existingWorklog = ProjectActivity::factory()
+        ->for($owner, 'owner')
+        ->for($project, 'project')
+        ->create([
+            'backlog_item_id' => $backlogItem->id,
+            'title' => 'Existing linked worklog',
+        ]);
+
+    $resultWorklog = $backlogItem->convertToWorklog();
+
+    $backlogItem->refresh();
+
+    expect($resultWorklog->id)->toBe($existingWorklog->id)
+        ->and(ProjectActivity::query()->where('backlog_item_id', $backlogItem->id)->count())->toBe(1)
+        ->and($backlogItem->converted_to_worklog_id)->toBe($existingWorklog->id)
+        ->and($backlogItem->status)->toBe(BacklogItemStatus::Done);
 });

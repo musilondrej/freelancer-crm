@@ -4,9 +4,11 @@ namespace App\Filament\Resources\ProjectActivities\Schemas;
 
 use App\Enums\ProjectActivityType;
 use App\Models\Activity;
+use App\Models\BacklogItem;
 use App\Models\ProjectActivity;
-use App\Models\ProjectActivityStatusOption;
 use App\Models\Tag;
+use App\Support\Filament\Currency;
+use App\Support\Filament\WorklogStatus;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DatePicker;
@@ -28,6 +30,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 
 class ProjectActivityForm
@@ -35,6 +38,12 @@ class ProjectActivityForm
     public static function configure(Schema $schema): Schema
     {
         $ownerId = Filament::auth()->id();
+        $requestedProjectId = request()->query('project_id');
+        $requestedActivityId = request()->query('activity_id');
+        $requestedBacklogItemId = request()->query('backlog_item_id');
+        $defaultProjectId = is_numeric($requestedProjectId) ? (int) $requestedProjectId : null;
+        $defaultActivityId = is_numeric($requestedActivityId) ? (int) $requestedActivityId : null;
+        $defaultBacklogItemId = is_numeric($requestedBacklogItemId) ? (int) $requestedBacklogItemId : null;
 
         return $schema
             ->components([
@@ -57,13 +66,18 @@ class ProjectActivityForm
                                                             ? $query->where('owner_id', $ownerId)
                                                             : $query,
                                                     )
+                                                    ->default($defaultProjectId)
                                                     ->required()
                                                     ->searchable()
                                                     ->preload()
                                                     ->live()
-                                                    ->afterStateUpdated(fn (Set $set): mixed => $set('activity_id', null)),
+                                                    ->afterStateUpdated(function (Set $set): void {
+                                                        $set('activity_id', null);
+                                                        $set('backlog_item_id', null);
+                                                    }),
                                                 Select::make('activity_id')
                                                     ->label('Activity template')
+                                                    ->default($defaultActivityId)
                                                     ->required()
                                                     ->options(fn (Get $get): array => self::activityOptions($ownerId, $get('project_id')))
                                                     ->searchable()
@@ -88,6 +102,21 @@ class ProjectActivityForm
                                                             $set('unit_rate', $activity->default_hourly_rate);
                                                         }
                                                     }),
+                                                Select::make('backlog_item_id')
+                                                    ->label('Backlog item')
+                                                    ->default($defaultBacklogItemId)
+                                                    ->options(fn (Get $get): array => self::backlogOptions($ownerId, $get('project_id')))
+                                                    ->searchable()
+                                                    ->preload()
+                                                    ->disabled(fn (Get $get): bool => ! is_numeric($get('project_id')))
+                                                    ->live()
+                                                    ->afterStateHydrated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
+                                                        self::syncFromBacklog($ownerId, $get, $set, $state);
+                                                    })
+                                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
+                                                        self::syncFromBacklog($ownerId, $get, $set, $state);
+                                                    })
+                                                    ->helperText('Optional link to planned work from backlog.'),
                                                 TextInput::make('title')
                                                     ->required()
                                                     ->maxLength(255)
@@ -145,11 +174,11 @@ class ProjectActivityForm
                                                 TextInput::make('unit_rate')
                                                     ->numeric()
                                                     ->minValue(0)
-                                                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
+                                                    ->suffix(fn (Get $get): string => Currency::resolve($get)),
                                                 TextInput::make('flat_amount')
                                                     ->numeric()
                                                     ->minValue(0)
-                                                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK'))))
+                                                    ->suffix(fn (Get $get): string => Currency::resolve($get))
                                                     ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::OneTime->value),
                                                 TextInput::make('invoice_reference')
                                                     ->maxLength(64)
@@ -162,17 +191,8 @@ class ProjectActivityForm
                                         Section::make('Workflow')
                                             ->schema([
                                                 Select::make('status')
-                                                    ->options(fn (): array => self::worklogStatusOptions($ownerId))
-                                                    ->default(function () use ($ownerId): string {
-                                                        $defaultCode = ProjectActivityStatusOption::defaultCodeForOwner($ownerId);
-                                                        $allowedStatuses = self::worklogStatusOptions($ownerId);
-
-                                                        if (array_key_exists($defaultCode, $allowedStatuses)) {
-                                                            return $defaultCode;
-                                                        }
-
-                                                        return 'in_progress';
-                                                    })
+                                                    ->options(fn (): array => WorklogStatus::options($ownerId))
+                                                    ->default(fn (): string => WorklogStatus::defaultCode($ownerId))
                                                     ->required(),
                                             ]),
                                     ]),
@@ -304,19 +324,52 @@ class ProjectActivityForm
         return (string) $value;
     }
 
-    /**
-     * @return array<string, string>
-     */
-    private static function worklogStatusOptions(?int $ownerId): array
+    private static function syncFromBacklog(?int $ownerId, Get $get, Set $set, mixed $state): void
     {
-        $allowedStatusCodes = [
-            'in_progress',
-            'done',
-            'cancelled',
-        ];
+        if ($ownerId === null || ! is_numeric($state)) {
+            return;
+        }
 
-        return collect(ProjectActivityStatusOption::optionsForOwner($ownerId))
-            ->only($allowedStatusCodes)
+        $backlogItem = BacklogItem::query()
+            ->where('owner_id', $ownerId)
+            ->find((int) $state);
+
+        if (! $backlogItem instanceof BacklogItem) {
+            return;
+        }
+
+        $set('project_id', $backlogItem->project_id);
+        $set('activity_id', $backlogItem->activity_id);
+
+        if (! is_string($get('title')) || trim($get('title')) === '') {
+            $set('title', $backlogItem->title);
+        }
+
+        if ((! is_string($get('description')) || trim($get('description')) === '') && $backlogItem->description !== null) {
+            $set('description', $backlogItem->description);
+        }
+
+        if ($get('due_date') === null && $backlogItem->due_date !== null) {
+            $set('due_date', Date::parse((string) $backlogItem->due_date)->toDateString());
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function backlogOptions(?int $ownerId, mixed $projectId): array
+    {
+        if ($ownerId === null || ! is_numeric($projectId)) {
+            return [];
+        }
+
+        return BacklogItem::query()
+            ->where('owner_id', $ownerId)
+            ->where('project_id', (int) $projectId)
+            ->orderByDesc('priority')
+            ->oldest('due_date')
+            ->orderBy('title')
+            ->pluck('title', 'id')
             ->all();
     }
 

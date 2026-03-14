@@ -199,10 +199,12 @@ class RecurringServiceForm
                                     ->numeric()
                                     ->minValue(1)
                                     ->default(1)
+                                    ->helperText('Cadence is the source of truth for schedule progression.')
                                     ->required(),
                                 DatePicker::make('starts_on')
                                     ->required(),
-                                DatePicker::make('next_due_on'),
+                                DatePicker::make('next_due_on')
+                                    ->helperText('One-time override. After cadence updates, this date is recalculated automatically.'),
                                 DatePicker::make('last_invoiced_on'),
                                 DatePicker::make('ends_on'),
                                 Select::make('status')

@@ -82,7 +82,8 @@ class RecurringServicesRelationManager extends RelationManager
                     ->default(1),
                 DatePicker::make('starts_on')
                     ->required(),
-                DatePicker::make('next_due_on'),
+                DatePicker::make('next_due_on')
+                    ->helperText('One-time override. Cadence changes recalculate this date.'),
                 DatePicker::make('last_invoiced_on'),
                 DatePicker::make('ends_on'),
                 Toggle::make('auto_renew')

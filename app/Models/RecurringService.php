@@ -6,6 +6,7 @@ use App\Enums\RecurringServiceBillingModel;
 use App\Enums\RecurringServiceCadenceUnit;
 use App\Enums\RecurringServiceStatus;
 use App\Models\Concerns\EnforcesOwner;
+use Carbon\CarbonImmutable;
 use Database\Factories\RecurringServiceFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -77,6 +78,23 @@ class RecurringService extends Model
             'remind_days_before' => 'array',
             'meta' => 'array',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $service): void {
+            $service->cadence_interval = max(1, (int) $service->cadence_interval);
+
+            if (! $service->shouldRecalculateNextDueOn()) {
+                return;
+            }
+
+            $resolvedNextDueOn = $service->resolveNextDueOnFromCadence();
+
+            if ($resolvedNextDueOn instanceof CarbonImmutable) {
+                $service->next_due_on = $resolvedNextDueOn->toDateString();
+            }
+        });
     }
 
     /**
@@ -179,5 +197,85 @@ class RecurringService extends Model
         $owner = $this->owner;
 
         return $owner?->default_currency;
+    }
+
+    private function shouldRecalculateNextDueOn(): bool
+    {
+        if ($this->next_due_on === null) {
+            return true;
+        }
+
+        if ($this->isDirty('next_due_on')) {
+            return false;
+        }
+
+        if ($this->isDirty('cadence_unit')) {
+            return true;
+        }
+
+        if ($this->isDirty('cadence_interval')) {
+            return true;
+        }
+
+        if ($this->isDirty('starts_on')) {
+            return true;
+        }
+
+        return $this->isDirty('last_invoiced_on');
+    }
+
+    private function resolveNextDueOnFromCadence(): ?CarbonImmutable
+    {
+        $today = CarbonImmutable::today();
+        $startsOn = $this->toImmutableDate($this->starts_on);
+        $lastInvoicedOn = $this->toImmutableDate($this->last_invoiced_on);
+
+        if (! $startsOn instanceof CarbonImmutable) {
+            return null;
+        }
+
+        $candidate = $lastInvoicedOn instanceof CarbonImmutable
+            ? $this->advanceByCadence($lastInvoicedOn)
+            : $startsOn;
+
+        while ($candidate->lessThan($today)) {
+            $candidate = $this->advanceByCadence($candidate);
+        }
+
+        return $candidate;
+    }
+
+    private function advanceByCadence(CarbonImmutable $date): CarbonImmutable
+    {
+        $interval = max(1, (int) $this->cadence_interval);
+        $cadenceUnit = $this->resolvedCadenceUnitValue();
+
+        return match ($cadenceUnit) {
+            RecurringServiceCadenceUnit::Week->value => $date->addWeeks($interval),
+            RecurringServiceCadenceUnit::Month->value => $date->addMonthsNoOverflow($interval),
+            RecurringServiceCadenceUnit::Quarter->value => $date->addMonthsNoOverflow(3 * $interval),
+            RecurringServiceCadenceUnit::Year->value => $date->addYearsNoOverflow($interval),
+            default => $date->addMonthsNoOverflow($interval),
+        };
+    }
+
+    private function resolvedCadenceUnitValue(): string
+    {
+        $cadenceUnit = $this->getAttribute('cadence_unit');
+
+        if ($cadenceUnit instanceof RecurringServiceCadenceUnit) {
+            return $cadenceUnit->value;
+        }
+
+        return (string) $cadenceUnit;
+    }
+
+    private function toImmutableDate(mixed $value): ?CarbonImmutable
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return CarbonImmutable::parse((string) $value)->startOfDay();
     }
 }

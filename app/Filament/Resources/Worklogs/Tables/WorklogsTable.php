@@ -8,6 +8,7 @@ use App\Models\ProjectActivityStatusOption;
 use App\Models\UserSetting;
 use App\Models\Worklog;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -45,7 +46,7 @@ class WorklogsTable
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('activity.name')
-                    ->label('Activity template')
+                    ->label('Activity')
                     ->placeholder('-')
                     ->searchable()
                     ->sortable(),
@@ -76,7 +77,6 @@ class WorklogsTable
                 TextColumn::make('tracked_minutes')
                     ->label('Tracked time')
                     ->state(fn (Worklog $record): string => $record->trackedDurationLabel())
-                    ->description(fn (Worklog $record): ?string => $record->tracked_minutes !== null ? $record->trackedMinutesWithSuffix() : null)
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('due_date')
@@ -89,107 +89,109 @@ class WorklogsTable
                     ->sortable(),
             ])
             ->recordActions([
-                Action::make('start_timer')
-                    ->label('Start timer')
-                    ->icon('heroicon-o-play-circle')
-                    ->color('gray')
-                    ->visible(function (Worklog $record) use ($ownerId): bool {
-                        if ($ownerId === null || (bool) $record->is_running) {
-                            return false;
-                        }
+                ActionGroup::make([
+                    Action::make('start_timer')
+                        ->label('Start timer')
+                        ->icon('heroicon-o-play-circle')
+                        ->color('gray')
+                        ->visible(function (Worklog $record) use ($ownerId): bool {
+                            if ($ownerId === null || (bool) $record->is_running) {
+                                return false;
+                            }
 
-                        $resolvedType = (string) $record->getRawOriginal('type');
+                            $resolvedType = (string) $record->getRawOriginal('type');
 
-                        if ($resolvedType !== ProjectActivityType::Hourly->value) {
-                            return false;
-                        }
+                            if ($resolvedType !== ProjectActivityType::Hourly->value) {
+                                return false;
+                            }
 
-                        return in_array($record->resolvedStatusCode(), ProjectActivityStatusOption::openCodesForOwner($ownerId), true);
-                    })
-                    ->action(function (Worklog $record) use ($ownerId): void {
-                        if ($ownerId === null) {
-                            return;
-                        }
+                            return in_array($record->resolvedStatusCode(), ProjectActivityStatusOption::openCodesForOwner($ownerId), true);
+                        })
+                        ->action(function (Worklog $record) use ($ownerId): void {
+                            if ($ownerId === null) {
+                                return;
+                            }
 
-                        $alreadyRunningTimerExists = Worklog::query()
-                            ->where('owner_id', $ownerId)
-                            ->whereKeyNot($record->getKey())
-                            ->where('type', ProjectActivityType::Hourly->value)
-                            ->where('is_running', true)
-                            ->whereNull('finished_at')
-                            ->exists();
+                            $alreadyRunningTimerExists = Worklog::query()
+                                ->where('owner_id', $ownerId)
+                                ->whereKeyNot($record->getKey())
+                                ->where('type', ProjectActivityType::Hourly->value)
+                                ->where('is_running', true)
+                                ->whereNull('finished_at')
+                                ->exists();
 
-                        if ($alreadyRunningTimerExists) {
+                            if ($alreadyRunningTimerExists) {
+                                Notification::make()
+                                    ->title('You already have a running timer. Stop it first.')
+                                    ->danger()
+                                    ->send();
+
+                                return;
+                            }
+
+                            try {
+                                $record->update([
+                                    'status' => ProjectActivityStatusOption::runningCodeForOwner($ownerId),
+                                    'is_running' => true,
+                                    'started_at' => $record->started_at ?? now(),
+                                    'finished_at' => null,
+                                ]);
+                            } catch (QueryException) {
+                                Notification::make()
+                                    ->title('Unable to start timer for this worklog.')
+                                    ->danger()
+                                    ->send();
+
+                                return;
+                            }
+
                             Notification::make()
-                                ->title('You already have a running timer. Stop it first.')
-                                ->danger()
+                                ->title('Timer started')
+                                ->success()
                                 ->send();
+                        }),
+                    Action::make('mark_done')
+                        ->label('Mark done')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->visible(fn (Worklog $record): bool => ! in_array(
+                            $record->resolvedStatusCode(),
+                            ProjectActivityStatusOption::doneCodesForOwner($ownerId),
+                            true,
+                        ))
+                        ->action(function (Worklog $record) use ($ownerId): void {
+                            $doneStatusCode = ProjectActivityStatusOption::doneCodesForOwner($ownerId)[0]
+                                ?? ProjectActivityStatusOption::defaultCodeForOwner($ownerId);
 
-                            return;
-                        }
-
-                        try {
                             $record->update([
-                                'status' => ProjectActivityStatusOption::runningCodeForOwner($ownerId),
-                                'is_running' => true,
-                                'started_at' => $record->started_at ?? now(),
-                                'finished_at' => null,
+                                'status' => $doneStatusCode,
+                                'is_running' => false,
+                                'finished_at' => $record->finished_at ?? now(),
                             ]);
-                        } catch (QueryException) {
+
                             Notification::make()
-                                ->title('Unable to start timer for this worklog.')
-                                ->danger()
+                                ->title('Worklog marked as done')
+                                ->success()
                                 ->send();
+                        }),
+                    Action::make('mark_invoiced')
+                        ->label('Mark invoiced')
+                        ->icon('heroicon-o-banknotes')
+                        ->color('info')
+                        ->visible(fn (Worklog $record): bool => (bool) $record->is_billable && ! $record->isInvoiced() && $record->isReadyToInvoice($ownerId))
+                        ->action(function (Worklog $record): void {
+                            $record->update([
+                                'is_invoiced' => true,
+                                'invoiced_at' => $record->invoiced_at ?? now(),
+                            ]);
 
-                            return;
-                        }
-
-                        Notification::make()
-                            ->title('Timer started')
-                            ->success()
-                            ->send();
-                    }),
-                Action::make('mark_done')
-                    ->label('Mark done')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(fn (Worklog $record): bool => ! in_array(
-                        $record->resolvedStatusCode(),
-                        ProjectActivityStatusOption::doneCodesForOwner($ownerId),
-                        true,
-                    ))
-                    ->action(function (Worklog $record) use ($ownerId): void {
-                        $doneStatusCode = ProjectActivityStatusOption::doneCodesForOwner($ownerId)[0]
-                            ?? ProjectActivityStatusOption::defaultCodeForOwner($ownerId);
-
-                        $record->update([
-                            'status' => $doneStatusCode,
-                            'is_running' => false,
-                            'finished_at' => $record->finished_at ?? now(),
-                        ]);
-
-                        Notification::make()
-                            ->title('Worklog marked as done')
-                            ->success()
-                            ->send();
-                    }),
-                Action::make('mark_invoiced')
-                    ->label('Mark invoiced')
-                    ->icon('heroicon-o-banknotes')
-                    ->color('info')
-                    ->visible(fn (Worklog $record): bool => (bool) $record->is_billable && ! $record->isInvoiced() && $record->isReadyToInvoice($ownerId))
-                    ->action(function (Worklog $record): void {
-                        $record->update([
-                            'is_invoiced' => true,
-                            'invoiced_at' => $record->invoiced_at ?? now(),
-                        ]);
-
-                        Notification::make()
-                            ->title('Worklog marked as invoiced')
-                            ->success()
-                            ->send();
-                    }),
-                EditAction::make(),
+                            Notification::make()
+                                ->title('Worklog marked as invoiced')
+                                ->success()
+                                ->send();
+                        }),
+                    EditAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

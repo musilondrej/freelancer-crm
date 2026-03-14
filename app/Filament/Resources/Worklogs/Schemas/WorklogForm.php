@@ -92,6 +92,26 @@ class WorklogForm
                                             $set('unit_rate', $activity->default_hourly_rate);
                                         }
                                     }),
+                                Select::make('type')
+                                    ->options(ProjectActivityType::class)
+                                    ->default(ProjectActivityType::Hourly)
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                        $resolvedType = self::resolveActivityTypeValue($state);
+
+                                        if ($resolvedType === ProjectActivityType::Hourly->value) {
+                                            $set('flat_amount', null);
+
+                                            return;
+                                        }
+
+                                        if ($resolvedType === ProjectActivityType::OneTime->value) {
+                                            $set('quantity', null);
+                                            $set('unit_rate', null);
+                                            $set('tracked_minutes', null);
+                                        }
+                                    }),
                                 Select::make('backlog_item_id')
                                     ->label('Backlog item')
                                     ->default($defaultBacklogItemId)
@@ -105,8 +125,7 @@ class WorklogForm
                                     })
                                     ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
                                         self::syncFromBacklog($ownerId, $get, $set, $state);
-                                    })
-                                    ->helperText('Optional link to planned work from backlog.'),
+                                    }),
                                 TextInput::make('title')
                                     ->required()
                                     ->maxLength(255)
@@ -115,16 +134,37 @@ class WorklogForm
                                 Textarea::make('description')
                                     ->rows(7)
                                     ->columnSpanFull(),
-                                Select::make('type')
-                                    ->options(ProjectActivityType::class)
-                                    ->default(ProjectActivityType::Hourly)
-                                    ->required()
-                                    ->live(),
                             ])
                             ->columns(1),
 
                         Section::make('Billing')
                             ->schema([
+                                Select::make('currency')
+                                    ->options([
+                                        'CZK' => 'CZK (Kč)',
+                                        'EUR' => 'EUR (€)',
+                                        'USD' => 'USD ($)',
+                                    ]),
+                                TextInput::make('quantity')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::Hourly->value),
+                                TextInput::make('unit_rate')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->suffix(fn (Get $get): string => Currency::resolve($get))
+                                    ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::Hourly->value),
+                                TextInput::make('flat_amount')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->suffix(fn (Get $get): string => Currency::resolve($get))
+                                    ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::OneTime->value),
+                                TextInput::make('invoice_reference')
+                                    ->maxLength(64)
+                                    ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
+                                DateTimePicker::make('invoiced_at')
+                                    ->seconds(false)
+                                    ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
                                 Toggle::make('is_billable')
                                     ->default(true),
                                 Toggle::make('is_invoiced')
@@ -140,30 +180,6 @@ class WorklogForm
 
                                         $set('invoiced_at', now());
                                     }),
-                                Select::make('currency')
-                                    ->options([
-                                        'CZK' => 'CZK (Kč)',
-                                        'EUR' => 'EUR (€)',
-                                        'USD' => 'USD ($)',
-                                    ]),
-                                TextInput::make('quantity')
-                                    ->numeric()
-                                    ->minValue(0),
-                                TextInput::make('unit_rate')
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->suffix(fn (Get $get): string => Currency::resolve($get)),
-                                TextInput::make('flat_amount')
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->suffix(fn (Get $get): string => Currency::resolve($get))
-                                    ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::OneTime->value),
-                                TextInput::make('invoice_reference')
-                                    ->maxLength(64)
-                                    ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
-                                DateTimePicker::make('invoiced_at')
-                                    ->seconds(false)
-                                    ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
                             ])
                             ->columns(1),
 

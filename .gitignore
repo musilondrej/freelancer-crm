@@ -25,15 +25,12 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+# AI tools - local/personal settings
+.claude/settings.local.json
 /.agents/
 /.ai/
-/.claude/
-/.codex/
+.codex/settings.local.json
 /.gemini/
 /.junie/
-/GEMINI.md
-/CLAUDE.md
 /boost.json
-/.mcp.json
 /opencode.json
-/AGENTS.md

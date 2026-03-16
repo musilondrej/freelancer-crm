@@ -47,14 +47,14 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     public function trackTimeAction(): Action
     {
         return Action::make('trackTime')
-            ->label('Track time')
+            ->label(__('Track time'))
             ->icon(Heroicon::OutlinedPlayCircle)
             ->color('gray')
-            ->modalHeading('Create Time Entry')
+            ->modalHeading(__('Create Time Entry'))
             ->modalIcon(Heroicon::OutlinedClock)
             ->modalWidth('5xl')
-            ->modalSubmitActionLabel('Save')
-            ->modalCancelActionLabel('Close')
+            ->modalSubmitActionLabel(__('Save'))
+            ->modalCancelActionLabel(__('Close'))
             ->stickyModalHeader()
             ->stickyModalFooter()
             ->fillForm(fn (): array => $this->defaultFormData())
@@ -67,24 +67,24 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                         ])
                             ->schema([
                                 DateTimePicker::make('started_at')
-                                    ->label('From')
+                                    ->label(__('From'))
                                     ->required()
                                     ->seconds(false)
                                     ->native(false),
                                 DateTimePicker::make('finished_at')
-                                    ->label('To')
+                                    ->label(__('To'))
                                     ->seconds(false)
-                                    ->helperText('Leave empty to start a running timer.'),
+                                    ->helperText(__('Leave empty to start a running timer.')),
                             ]),
                         Select::make('customer_id')
-                            ->label('Customer')
+                            ->label(__('Customer'))
                             ->options(fn (): array => $this->customerOptions())
                             ->searchable()
                             ->preload()
                             ->live()
                             ->afterStateUpdated(fn (Set $set): mixed => $set('project_id', null)),
                         Select::make('project_id')
-                            ->label('Project')
+                            ->label(__('Project'))
                             ->required()
                             ->options(fn (Get $get): array => $this->projectOptions($get('customer_id')))
                             ->getOptionLabelUsing(fn (mixed $value): ?string => $this->projectOptionLabel($value))
@@ -93,7 +93,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                             ->live()
                             ->afterStateUpdated(fn (Set $set): mixed => $set('activity_id', null)),
                         Select::make('activity_id')
-                            ->label('Activity template')
+                            ->label(__('Activity template'))
                             ->required()
                             ->options(fn (Get $get): array => $this->activityOptions($get('project_id')))
                             ->getOptionLabelUsing(fn (mixed $value): ?string => $this->activityOptionLabel($value))
@@ -115,17 +115,17 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                             ->rows(4),
                     ])
                     ->columns(1),
-                Section::make('Advanced settings')
+                Section::make(__('Advanced settings'))
                     ->schema([
                         TextInput::make('unit_rate')
-                            ->label('Hourly rate override')
+                            ->label(__('Hourly rate override'))
                             ->numeric()
                             ->minValue(0)
                             ->suffix(fn (Get $get): string => $this->unitRateCurrencySuffix($get('project_id')))
                             ->helperText(fn (Get $get): string => $this->rateHelperText($get('project_id'), $get('activity_id')))
                             ->columnSpanFull(),
                         Toggle::make('is_billable')
-                            ->label('Billable')
+                            ->label(__('Billable'))
                             ->default(true)
                             ->formatStateUsing(fn (mixed $state): bool => $state === null ? true : (bool) $state)
                             ->inline(false),
@@ -170,7 +170,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
             if ($finishedAt->lessThanOrEqualTo($startedAt)) {
                 Notification::make()
-                    ->title('End date and time must be after start')
+                    ->title(__('End date and time must be after start'))
                     ->danger()
                     ->send();
 
@@ -179,7 +179,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
             if ($finishedAt->greaterThan(CarbonImmutable::now()->addMinute())) {
                 Notification::make()
-                    ->title('End date and time cannot be in the future')
+                    ->title(__('End date and time cannot be in the future'))
                     ->danger()
                     ->send();
 
@@ -189,7 +189,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
         if (! $isManualEntry && $startedAt->greaterThan(CarbonImmutable::now()->addMinute())) {
             Notification::make()
-                ->title('Start date and time cannot be in the future')
+                ->title(__('Start date and time cannot be in the future'))
                 ->danger()
                 ->send();
 
@@ -207,7 +207,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
         if ($project === null) {
             Notification::make()
-                ->title('Project is not available')
+                ->title(__('Project is not available'))
                 ->danger()
                 ->send();
 
@@ -222,7 +222,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
         if (! $activity instanceof Activity) {
             Notification::make()
-                ->title('Activity is not available')
+                ->title(__('Activity is not available'))
                 ->danger()
                 ->send();
 
@@ -274,8 +274,8 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             ]);
 
             Notification::make()
-                ->title('Time entry saved')
-                ->body(sprintf('Logged %s.', $this->formatTrackedTime($trackedMinutes)))
+                ->title(__('Time entry saved'))
+                ->body(__('Logged :duration.', ['duration' => $this->formatTrackedTime($trackedMinutes)]))
                 ->success()
                 ->send();
 
@@ -288,8 +288,8 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
         if (! $sessionStarted) {
             Notification::make()
-                ->title('A timer is already running')
-                ->body('Stop the current timer first.')
+                ->title(__('A timer is already running'))
+                ->body(__('Stop the current timer first.'))
                 ->warning()
                 ->send();
 
@@ -299,7 +299,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         }
 
         Notification::make()
-            ->title('Tracker started')
+            ->title(__('Tracker started'))
             ->success()
             ->send();
         $this->clearActiveSessionCache();
@@ -324,7 +324,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
         if ($runningSessions->isEmpty()) {
             Notification::make()
-                ->title('No running timer')
+                ->title(__('No running timer'))
                 ->warning()
                 ->send();
 
@@ -362,7 +362,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
         if ($totalTrackedMinutes === 0) {
             Notification::make()
-                ->title('No valid running timer found')
+                ->title(__('No valid running timer found'))
                 ->warning()
                 ->send();
 
@@ -372,8 +372,8 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         }
 
         Notification::make()
-            ->title('Time logged')
-            ->body(sprintf('Logged %s.', $this->formatTrackedTime($totalTrackedMinutes)))
+            ->title(__('Time logged'))
+            ->body(__('Logged :duration.', ['duration' => $this->formatTrackedTime($totalTrackedMinutes)]))
             ->success()
             ->send();
         $this->clearActiveSessionCache();
@@ -558,17 +558,17 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         $activity = $this->resolveActivityById($activityId);
 
         if ($activity instanceof Activity && $activity->default_hourly_rate !== null) {
-            return sprintf('Default activity rate: %s / h', Number::format((float) $activity->default_hourly_rate, precision: 2));
+            return __('Default activity rate: :rate / h', ['rate' => Number::format((float) $activity->default_hourly_rate, precision: 2)]);
         }
 
         if (! is_numeric($projectId)) {
-            return 'Leave empty to use the project hourly rate.';
+            return __('Leave empty to use the project hourly rate.');
         }
 
         $ownerId = Filament::auth()->id();
 
         if ($ownerId === null) {
-            return 'Leave empty to use the project hourly rate.';
+            return __('Leave empty to use the project hourly rate.');
         }
 
         $project = Project::query()
@@ -576,21 +576,20 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             ->find((int) $projectId);
 
         if (! $project instanceof Project) {
-            return 'Leave empty to use the project hourly rate.';
+            return __('Leave empty to use the project hourly rate.');
         }
 
         $projectHourlyRate = $project->effectiveHourlyRate();
         $currency = $project->effectiveCurrency();
 
         if ($projectHourlyRate === null) {
-            return sprintf('No default project rate set (%s).', $currency);
+            return __('No default project rate set (:currency).', ['currency' => $currency]);
         }
 
-        return sprintf(
-            'Default project rate: %s %s / h',
-            Number::format($projectHourlyRate, precision: 2),
-            $currency,
-        );
+        return __('Default project rate: :rate :currency / h', [
+            'rate' => Number::format($projectHourlyRate, precision: 2),
+            'currency' => $currency,
+        ]);
     }
 
     private function unitRateCurrencySuffix(mixed $projectId): string
@@ -726,10 +725,10 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         $activeSession = $this->activeSession();
 
         if (! $activeSession instanceof Worklog) {
-            return 'Stop';
+            return __('Stop');
         }
 
-        return sprintf('Stop %s', $this->elapsedClockLabel($activeSession));
+        return __('Stop :elapsed', ['elapsed' => $this->elapsedClockLabel($activeSession)]);
     }
 
     private function elapsedClockLabel(Worklog $activeSession): string

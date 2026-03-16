@@ -14,64 +14,64 @@ class UserSettingForm
     {
         return $schema
             ->components([
-                Section::make('Time Tracking')
+                Section::make(__('Time Tracking'))
                     ->columns(1)
                     ->schema([
                         Toggle::make('preferences.time_tracking.rounding.enabled')
-                            ->label('Enable rounding')
+                            ->label(__('Enable rounding'))
                             ->default((bool) config('crm.time_tracking.rounding.enabled', true))
                             ->inline(false)
                             ->columnSpanFull(),
                         Select::make('preferences.time_tracking.rounding.mode')
-                            ->label('Rounding mode')
+                            ->label(__('Rounding mode'))
                             ->options([
-                                'ceil' => 'Round up',
-                                'nearest' => 'Round to nearest',
-                                'floor' => 'Round down',
+                                'ceil' => __('Round up'),
+                                'nearest' => __('Round to nearest'),
+                                'floor' => __('Round down'),
                             ])
                             ->default((string) config('crm.time_tracking.rounding.mode', 'ceil'))
                             ->required(),
                         Select::make('preferences.time_tracking.rounding.interval_minutes')
-                            ->label('Interval (minutes)')
+                            ->label(__('Interval (minutes)'))
                             ->options([
-                                1 => '1 min',
-                                5 => '5 min',
-                                6 => '6 min',
-                                10 => '10 min',
-                                12 => '12 min',
-                                15 => '15 min',
-                                20 => '20 min',
-                                30 => '30 min',
-                                60 => '60 min',
+                                1 => __('1 min'),
+                                5 => __('5 min'),
+                                6 => __('6 min'),
+                                10 => __('10 min'),
+                                12 => __('12 min'),
+                                15 => __('15 min'),
+                                20 => __('20 min'),
+                                30 => __('30 min'),
+                                60 => __('60 min'),
                             ])
                             ->default((int) config('crm.time_tracking.rounding.interval_minutes', 15))
                             ->required(),
                         TextInput::make('preferences.time_tracking.rounding.minimum_minutes')
-                            ->label('Minimum billable minutes')
+                            ->label(__('Minimum billable minutes'))
                             ->integer()
                             ->minValue(0)
                             ->maxValue(240)
                             ->default((int) config('crm.time_tracking.rounding.minimum_minutes', 1))
                             ->required(),
                     ]),
-                Section::make('Interface')
+                Section::make(__('Interface'))
                     ->columns(1)
                     ->schema([
                         Select::make('preferences.ui.locale')
-                            ->label('Locale')
+                            ->label(__('Locale'))
                             ->options([
-                                'en' => 'English',
-                                'cs' => 'Czech',
+                                'en' => __('English'),
+                                'cs' => __('Czech'),
                             ])
                             ->default((string) config('app.locale', 'en'))
                             ->required(),
                         TextInput::make('preferences.ui.timezone')
-                            ->label('Timezone')
+                            ->label(__('Timezone'))
                             ->default((string) config('app.timezone', 'UTC'))
                             ->required()
                             ->maxLength(64),
                         Select::make('preferences.ui.date_format')
-                            ->label('Date format')
+                            ->label(__('Date format'))
                             ->options([
                                 'd.m.Y' => '31.12.2026',
                                 'Y-m-d' => '2026-12-31',
@@ -81,7 +81,7 @@ class UserSettingForm
                             ->default('d.m.Y')
                             ->required(),
                         Select::make('preferences.ui.time_format')
-                            ->label('Time format')
+                            ->label(__('Time format'))
                             ->options([
                                 'H:i' => '14:30 (24h)',
                                 'H:i:s' => '14:30:25 (24h + sec)',
@@ -90,10 +90,10 @@ class UserSettingForm
                             ->default('H:i')
                             ->required(),
                         Select::make('preferences.ui.week_starts_on')
-                            ->label('Week starts on')
+                            ->label(__('Week starts on'))
                             ->options([
-                                'monday' => 'Monday',
-                                'sunday' => 'Sunday',
+                                'monday' => __('Monday'),
+                                'sunday' => __('Sunday'),
                             ])
                             ->default('monday')
                             ->required(),

@@ -50,30 +50,30 @@ class UpcomingRevenueTable extends TableWidget
             ->heading($this->headingForRange($rangeStart, $rangeEnd, $dateFormat))
             ->columns([
                 TextColumn::make('name')
-                    ->label('Service')
+                    ->label(__('Service'))
                     ->searchable()
                     ->limit(50),
                 TextColumn::make('customer.name')
-                    ->label('Customer')
+                    ->label(__('Customer'))
                     ->searchable()
-                    ->placeholder('-')
+                    ->placeholder(__('N/A'))
                     ->limit(36),
                 TextColumn::make('project.name')
-                    ->label('Project')
+                    ->label(__('Project'))
                     ->searchable()
-                    ->placeholder('-')
+                    ->placeholder(__('N/A'))
                     ->limit(36),
                 TextColumn::make('next_due_on')
-                    ->label('Due')
+                    ->label(__('Due'))
                     ->date($dateFormat)
                     ->sortable(),
                 TextColumn::make('amount')
-                    ->label('Expected')
+                    ->label(__('Expected'))
                     ->state(fn (RecurringService $record): string => $this->formattedExpectedAmount($record)),
             ])
             ->recordActions([
                 Action::make('open')
-                    ->label('Open')
+                    ->label(__('Open'))
                     ->icon('heroicon-o-arrow-top-right-on-square')
                     ->url(fn (RecurringService $record): string => RecurringServiceResource::getUrl('edit', ['record' => $record])),
             ])
@@ -107,11 +107,10 @@ class UpcomingRevenueTable extends TableWidget
 
     private function headingForRange(CarbonImmutable $rangeStart, CarbonImmutable $rangeEnd, string $dateFormat): string
     {
-        return sprintf(
-            'Upcoming Revenue (%s - %s)',
-            $rangeStart->format($dateFormat),
-            $rangeEnd->format($dateFormat),
-        );
+        return __('Upcoming Revenue (:start - :end)', [
+            'start' => $rangeStart->format($dateFormat),
+            'end' => $rangeEnd->format($dateFormat),
+        ]);
     }
 
     private function formattedExpectedAmount(RecurringService $service): string
@@ -119,7 +118,7 @@ class UpcomingRevenueTable extends TableWidget
         $amount = $this->expectedAmount($service);
 
         if ($amount === null) {
-            return '-';
+            return __('N/A');
         }
 
         $currency = $service->effectiveCurrency();

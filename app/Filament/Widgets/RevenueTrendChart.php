@@ -42,7 +42,7 @@ class RevenueTrendChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Current period',
+                    'label' => __('Current period'),
                     'data' => $series['current'],
                     'borderColor' => '#3b82f6',
                     'backgroundColor' => 'rgba(59, 130, 246, 0.18)',
@@ -52,7 +52,7 @@ class RevenueTrendChart extends ChartWidget
                     'pointHoverRadius' => 4,
                 ],
                 [
-                    'label' => 'Previous period',
+                    'label' => __('Previous period'),
                     'data' => $series['previous'],
                     'borderColor' => '#94a3b8',
                     'backgroundColor' => 'rgba(148, 163, 184, 0.1)',
@@ -68,7 +68,7 @@ class RevenueTrendChart extends ChartWidget
 
     public function getHeading(): ?string
     {
-        return 'Revenue Trend ('.$this->resolveDisplayCurrency().')';
+        return __('Revenue Trend (:currency)', ['currency' => $this->resolveDisplayCurrency()]);
     }
 
     protected function getType(): string

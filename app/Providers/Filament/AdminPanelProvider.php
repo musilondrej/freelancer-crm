@@ -33,7 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->profile(EditProfile::class, isSimple: false)
             ->userMenuItems([
-                'profile' => fn (Action $action): Action => $action->label('Profile & Preferences'),
+                'profile' => fn (Action $action): Action => $action->label(__('Profile & Preferences')),
             ])
             ->colors([
                 'primary' => Color::Blue,
@@ -48,13 +48,13 @@ class AdminPanelProvider extends PanelProvider
             )
             ->navigationGroups([
                 NavigationGroup::make()
-                    ->label('Work Log'),
+                    ->label(__('Work Log')),
                 NavigationGroup::make()
-                    ->label('Sales'),
+                    ->label(__('Sales')),
                 NavigationGroup::make()
-                    ->label('CRM'),
+                    ->label(__('CRM')),
                 NavigationGroup::make()
-                    ->label('Setup'),
+                    ->label(__('Setup')),
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->middleware([

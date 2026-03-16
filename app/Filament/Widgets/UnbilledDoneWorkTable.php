@@ -46,26 +46,26 @@ class UnbilledDoneWorkTable extends TableWidget
                 ]))
             ->columns([
                 TextColumn::make('title')
-                    ->label('Worklog')
+                    ->label(__('Worklog'))
                     ->searchable()
                     ->limit(60),
                 TextColumn::make('project.name')
-                    ->label('Project')
+                    ->label(__('Project'))
                     ->searchable()
                     ->limit(40),
                 TextColumn::make('project.customer.name')
-                    ->label('Customer')
+                    ->label(__('Customer'))
                     ->searchable()
-                    ->placeholder('-')
+                    ->placeholder(__('N/A'))
                     ->limit(40),
                 TextColumn::make('amount')
-                    ->label('Amount')
+                    ->label(__('Amount'))
                     ->state(function (Worklog $record): string {
                         $amount = $record->calculatedAmount();
                         $currency = $record->effectiveCurrency();
 
                         if ($amount === null || $currency === null) {
-                            return '-';
+                            return __('N/A');
                         }
 
                         $converted = $this->convertAmount($amount, $currency);
@@ -73,13 +73,13 @@ class UnbilledDoneWorkTable extends TableWidget
                         return $this->formatAmountWithCurrency($converted);
                     }),
                 TextColumn::make('finished_at')
-                    ->label('Done at')
+                    ->label(__('Done at'))
                     ->dateTime($dateTimeFormat, timezone: $timezone)
                     ->sortable(),
             ])
             ->recordActions([
                 Action::make('open')
-                    ->label('Open')
+                    ->label(__('Open'))
                     ->icon('heroicon-o-arrow-top-right-on-square')
                     ->url(fn (Worklog $record): string => WorklogResource::getUrl('edit', ['record' => $record])),
             ])
@@ -89,7 +89,7 @@ class UnbilledDoneWorkTable extends TableWidget
 
     public function getHeading(): ?string
     {
-        return 'Unbilled Done Worklogs';
+        return __('Unbilled Done Worklogs');
     }
 
     /**

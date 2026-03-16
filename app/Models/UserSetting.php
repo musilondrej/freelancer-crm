@@ -63,6 +63,14 @@ class UserSetting extends Model
         ];
     }
 
+    /**
+     * @return list<string>
+     */
+    public static function allowedLocales(): array
+    {
+        return ['en', 'cs'];
+    }
+
     public static function ensureForUser(int $userId): self
     {
         return static::query()->firstOrCreate(
@@ -105,7 +113,7 @@ class UserSetting extends Model
         $defaultTimeFormat = (string) ($defaults['time_format'] ?? 'H:i');
 
         $resolvedLocale = (string) data_get($preferences, 'ui.locale', $defaultLocale);
-        if (! in_array($resolvedLocale, ['en', 'cs'], true)) {
+        if (! in_array($resolvedLocale, self::allowedLocales(), true)) {
             $resolvedLocale = $defaultLocale;
         }
 

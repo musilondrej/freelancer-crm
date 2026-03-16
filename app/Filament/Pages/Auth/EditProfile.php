@@ -22,6 +22,15 @@ class EditProfile extends BaseEditProfile
 {
     protected static ?string $title = 'Profile & Preferences';
 
+    protected ?string $localeBeforeSave = null;
+
+    protected bool $shouldForceReload = false;
+
+    public function getTitle(): string
+    {
+        return __('Profile & Preferences');
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -46,6 +55,8 @@ class EditProfile extends BaseEditProfile
             $storedPreferences,
         );
 
+        $this->localeBeforeSave = (string) data_get($data, 'preferences.ui.locale', config('app.locale', 'en'));
+
         return $data;
     }
 
@@ -55,6 +66,8 @@ class EditProfile extends BaseEditProfile
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         $preferences = $data['preferences'] ?? [];
+        $newLocale = (string) data_get($preferences, 'ui.locale', config('app.locale', 'en'));
+        $this->shouldForceReload = $this->localeBeforeSave !== null && $newLocale !== $this->localeBeforeSave;
         unset($data['preferences']);
 
         $record = parent::handleRecordUpdate($record, $data);
@@ -72,24 +85,33 @@ class EditProfile extends BaseEditProfile
         return $record;
     }
 
+    protected function afterSave(): void
+    {
+        if (! $this->shouldForceReload) {
+            return;
+        }
+
+        $this->redirect(request()->fullUrl(), navigate: false);
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
             ->components([
                 Group::make()
                     ->schema([
-                        Tabs::make('Profile Workspace')
+                        Tabs::make(__('Profile Workspace'))
                             ->tabs([
-                                Tab::make('Account')
+                                Tab::make(__('Account'))
                                     ->icon(Heroicon::OutlinedUserCircle)
                                     ->schema([
-                                        Section::make('Account Identity')
+                                        Section::make(__('Account Identity'))
                                             ->schema([
                                                 $this->getNameFormComponent(),
                                                 $this->getEmailFormComponent(),
                                             ])
                                             ->columns(1),
-                                        Section::make('Password Update')
+                                        Section::make(__('Password Update'))
                                             ->schema([
                                                 $this->getPasswordFormComponent(),
                                                 $this->getPasswordConfirmationFormComponent(),
@@ -97,13 +119,13 @@ class EditProfile extends BaseEditProfile
                                             ])
                                             ->columns(1),
                                     ]),
-                                Tab::make('Billing')
+                                Tab::make(__('Billing'))
                                     ->icon(Heroicon::OutlinedCreditCard)
                                     ->schema([
-                                        Section::make('Billing Defaults')
+                                        Section::make(__('Billing Defaults'))
                                             ->schema([
                                                 Select::make('default_currency')
-                                                    ->label('Default currency')
+                                                    ->label(__('Default currency'))
                                                     ->options([
                                                         'CZK' => 'CZK (Kc)',
                                                         'EUR' => 'EUR (EUR)',
@@ -111,7 +133,7 @@ class EditProfile extends BaseEditProfile
                                                     ])
                                                     ->required(),
                                                 TextInput::make('default_hourly_rate')
-                                                    ->label('Default hourly rate')
+                                                    ->label(__('Default hourly rate'))
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->suffix('/ h')
@@ -119,41 +141,41 @@ class EditProfile extends BaseEditProfile
                                             ])
                                             ->columns(1),
                                     ]),
-                                Tab::make('Time Tracking')
+                                Tab::make(__('Time Tracking'))
                                     ->icon(Heroicon::OutlinedClock)
                                     ->schema([
-                                        Section::make('Rounding Rules')
+                                        Section::make(__('Rounding Rules'))
                                             ->schema([
                                                 Toggle::make('preferences.time_tracking.rounding.enabled')
-                                                    ->label('Enable rounding')
+                                                    ->label(__('Enable rounding'))
                                                     ->inline(false)
                                                     ->live(),
                                                 Select::make('preferences.time_tracking.rounding.mode')
-                                                    ->label('Rounding mode')
+                                                    ->label(__('Rounding mode'))
                                                     ->options([
-                                                        'ceil' => 'Round up',
-                                                        'nearest' => 'Round to nearest',
-                                                        'floor' => 'Round down',
+                                                        'ceil' => __('Round up'),
+                                                        'nearest' => __('Round to nearest'),
+                                                        'floor' => __('Round down'),
                                                     ])
                                                     ->required()
                                                     ->visible(fn (Get $get): bool => (bool) $get('preferences.time_tracking.rounding.enabled')),
                                                 Select::make('preferences.time_tracking.rounding.interval_minutes')
-                                                    ->label('Rounding interval')
+                                                    ->label(__('Rounding interval'))
                                                     ->options([
-                                                        1 => '1 min',
-                                                        5 => '5 min',
-                                                        6 => '6 min',
-                                                        10 => '10 min',
-                                                        12 => '12 min',
-                                                        15 => '15 min',
-                                                        20 => '20 min',
-                                                        30 => '30 min',
-                                                        60 => '60 min',
+                                                        1 => __('1 min'),
+                                                        5 => __('5 min'),
+                                                        6 => __('6 min'),
+                                                        10 => __('10 min'),
+                                                        12 => __('12 min'),
+                                                        15 => __('15 min'),
+                                                        20 => __('20 min'),
+                                                        30 => __('30 min'),
+                                                        60 => __('60 min'),
                                                     ])
                                                     ->required()
                                                     ->visible(fn (Get $get): bool => (bool) $get('preferences.time_tracking.rounding.enabled')),
                                                 TextInput::make('preferences.time_tracking.rounding.minimum_minutes')
-                                                    ->label('Minimum billable minutes')
+                                                    ->label(__('Minimum billable minutes'))
                                                     ->integer()
                                                     ->minValue(0)
                                                     ->maxValue(240)
@@ -162,35 +184,36 @@ class EditProfile extends BaseEditProfile
                                             ])
                                             ->columns(1),
                                     ]),
-                                Tab::make('Interface')
+                                Tab::make(__('Interface'))
                                     ->icon(Heroicon::OutlinedComputerDesktop)
                                     ->schema([
-                                        Section::make('UI Preferences')
+                                        Section::make(__('UI Preferences'))
                                             ->schema([
                                                 Select::make('preferences.ui.locale')
-                                                    ->label('Locale')
+                                                    ->label(__('Locale'))
                                                     ->options([
-                                                        'en' => 'English',
-                                                        'cs' => 'Czech',
+                                                        'en' => __('English'),
+                                                        'cs' => __('Czech'),
                                                     ])
+                                                    ->default((string) config('app.locale', 'en'))
                                                     ->required(),
                                                 TextInput::make('preferences.ui.timezone')
-                                                    ->label('Timezone')
+                                                    ->label(__('Timezone'))
                                                     ->maxLength(64)
                                                     ->required(),
                                                 Select::make('preferences.ui.date_format')
-                                                    ->label('Date format')
+                                                    ->label(__('Date format'))
                                                     ->options($this->dateFormatOptions())
                                                     ->required(),
                                                 Select::make('preferences.ui.time_format')
-                                                    ->label('Time format')
+                                                    ->label(__('Time format'))
                                                     ->options($this->timeFormatOptions())
                                                     ->required(),
                                                 Select::make('preferences.ui.week_starts_on')
-                                                    ->label('Week starts on')
+                                                    ->label(__('Week starts on'))
                                                     ->options([
-                                                        'monday' => 'Monday',
-                                                        'sunday' => 'Sunday',
+                                                        'monday' => __('Monday'),
+                                                        'sunday' => __('Sunday'),
                                                     ])
                                                     ->required(),
                                             ])
@@ -204,25 +227,25 @@ class EditProfile extends BaseEditProfile
                     ]),
                 Group::make()
                     ->schema([
-                        Section::make('Profile Snapshot')
+                        Section::make(__('Profile Snapshot'))
                             ->schema([
                                 Placeholder::make('snapshot_currency')
-                                    ->label('Default currency')
-                                    ->content(fn (Get $get): string => (string) ($get('default_currency') ?: 'Not set')),
+                                    ->label(__('Default currency'))
+                                    ->content(fn (Get $get): string => (string) ($get('default_currency') ?: __('Not set'))),
                                 Placeholder::make('snapshot_hourly_rate')
-                                    ->label('Default hourly rate')
+                                    ->label(__('Default hourly rate'))
                                     ->content(fn (Get $get): string => $this->formatHourlyRate($get('default_hourly_rate'))),
                                 Placeholder::make('snapshot_rounding')
-                                    ->label('Rounding')
-                                    ->content(fn (Get $get): string => (bool) $get('preferences.time_tracking.rounding.enabled') ? 'Enabled' : 'Disabled'),
+                                    ->label(__('Rounding'))
+                                    ->content(fn (Get $get): string => (bool) $get('preferences.time_tracking.rounding.enabled') ? __('Enabled') : __('Disabled')),
                                 Placeholder::make('snapshot_locale')
-                                    ->label('Locale')
-                                    ->content(fn (Get $get): string => (string) ($get('preferences.ui.locale') ?: 'Not set')),
+                                    ->label(__('Locale'))
+                                    ->content(fn (Get $get): string => (string) ($get('preferences.ui.locale') ?: __('Not set'))),
                                 Placeholder::make('snapshot_timezone')
-                                    ->label('Timezone')
-                                    ->content(fn (Get $get): string => (string) ($get('preferences.ui.timezone') ?: 'Not set')),
+                                    ->label(__('Timezone'))
+                                    ->content(fn (Get $get): string => (string) ($get('preferences.ui.timezone') ?: __('Not set'))),
                                 Placeholder::make('snapshot_datetime_preview')
-                                    ->label('Date/time preview')
+                                    ->label(__('Date/time preview'))
                                     ->content(function (Get $get): string {
                                         $timezone = (string) ($get('preferences.ui.timezone') ?: config('app.timezone', 'UTC'));
                                         $dateFormat = (string) ($get('preferences.ui.date_format') ?: 'd.m.Y');
@@ -249,7 +272,7 @@ class EditProfile extends BaseEditProfile
     private function formatHourlyRate(mixed $value): string
     {
         if ($value === null || $value === '') {
-            return 'Not set';
+            return __('Not set');
         }
 
         return number_format((float) $value, 0, '.', ' ').' / h';

@@ -27,6 +27,11 @@ class WorkHoursTimelineChart extends ChartWidget
 
     protected ?string $heading = 'Work Hours';
 
+    public function getHeading(): ?string
+    {
+        return __('Work Hours');
+    }
+
     protected ?string $maxHeight = '360px';
 
     protected ?string $pollingInterval = '90s';
@@ -41,7 +46,7 @@ class WorkHoursTimelineChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Worked hours',
+                    'label' => __('Worked hours'),
                     'data' => $series['values'],
                     'backgroundColor' => '#22c55e',
                     'borderColor' => '#4ade80',

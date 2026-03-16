@@ -30,18 +30,18 @@ class OverdueActivitiesTable extends TableWidget
                 ->whereIn('status', $openStatuses)
                 ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
                 ->with(['project:id,name']))
-            ->heading('Overdue Worklogs')
+            ->heading(__('Overdue Worklogs'))
             ->columns([
                 TextColumn::make('title')
-                    ->label('Worklog')
+                    ->label(__('Worklog'))
                     ->searchable()
                     ->limit(45),
                 TextColumn::make('project.name')
-                    ->label('Project')
+                    ->label(__('Project'))
                     ->searchable()
-                    ->placeholder('-'),
+                    ->placeholder(__('N/A')),
                 TextColumn::make('due_date')
-                    ->label('Due')
+                    ->label(__('Due'))
                     ->date($dateFormat)
                     ->sortable(),
                 TextColumn::make('status')

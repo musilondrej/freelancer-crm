@@ -28,6 +28,11 @@ class Dashboard extends BaseDashboard
 
     protected static ?string $title = 'Dashboard';
 
+    public function getTitle(): string
+    {
+        return __('Dashboard');
+    }
+
     protected ?Alignment $headerActionsAlignment = Alignment::End;
 
     /**
@@ -71,18 +76,18 @@ class Dashboard extends BaseDashboard
                 Section::make()
                     ->schema([
                         DatePicker::make('startDate')
-                            ->label('Start date')
+                            ->label(__('Start date'))
                             ->default(now()->startOfMonth())
                             ->maxDate(fn (Get $get): mixed => $get('endDate') ?: now())
                             ->native(false),
                         DatePicker::make('endDate')
-                            ->label('End date')
+                            ->label(__('End date'))
                             ->default(now())
                             ->minDate(fn (Get $get): mixed => $get('startDate') ?: now()->startOfMonth())
                             ->maxDate(now())
                             ->native(false),
                         Select::make('currency')
-                            ->label('Display currency')
+                            ->label(__('Display currency'))
                             ->options([
                                 'CZK' => 'CZK (Kč)',
                                 'EUR' => 'EUR (€)',
@@ -102,7 +107,7 @@ class Dashboard extends BaseDashboard
     {
         return [
             Action::make('customizeDashboard')
-                ->label('Customize')
+                ->label(__('Customize'))
                 ->icon(Heroicon::OutlinedAdjustmentsHorizontal)
                 ->slideOver()
                 ->stickyModalHeader()
@@ -112,7 +117,7 @@ class Dashboard extends BaseDashboard
                 ])
                 ->schema([
                     CheckboxList::make('dashboard_widgets')
-                        ->label('Visible metrics')
+                        ->label(__('Visible metrics'))
                         ->options(DashboardMetricsBoard::metricOptions())
                         ->columns(1)
                         ->bulkToggleable()
@@ -133,7 +138,7 @@ class Dashboard extends BaseDashboard
                     $this->activeMetricKeys = array_values($data['dashboard_widgets'] ?? DashboardMetricsBoard::defaultMetricKeys());
                     $this->redirect(self::getUrl(), navigate: false);
                 })
-                ->successNotificationTitle('Dashboard updated'),
+                ->successNotificationTitle(__('Dashboard updated')),
         ];
     }
 

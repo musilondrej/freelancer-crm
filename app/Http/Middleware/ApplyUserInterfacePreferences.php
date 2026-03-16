@@ -25,8 +25,10 @@ class ApplyUserInterfacePreferences
             is_numeric($userId) ? (int) $userId : null,
         );
 
-        App::setLocale($ui['locale']);
-        Date::setLocale($ui['locale']);
+        $locale = $ui['locale'];
+
+        App::setLocale($locale);
+        Date::setLocale($locale);
         date_default_timezone_set($ui['timezone']);
         FilamentTimezone::set($ui['timezone']);
 

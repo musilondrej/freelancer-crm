@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Worklogs\Schemas;
 
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
@@ -9,7 +10,6 @@ use App\Models\Activity;
 use App\Models\BacklogItem;
 use App\Models\Worklog;
 use App\Support\Filament\Currency;
-use App\Support\Filament\WorklogStatus;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -197,8 +197,8 @@ class WorklogForm
                         Section::make('Workflow')
                             ->schema([
                                 Select::make('status')
-                                    ->options(fn (): array => WorklogStatus::options($ownerId))
-                                    ->default(fn (): string => WorklogStatus::defaultCode($ownerId))
+                                    ->options(ProjectActivityStatus::class)
+                                    ->default(ProjectActivityStatus::defaultCase())
                                     ->required(),
                             ]),
 
@@ -261,10 +261,6 @@ class WorklogForm
         return Activity::query()
             ->where('owner_id', $ownerId)
             ->where('is_active', true)
-            ->where(function (Builder $query) use ($projectId): void {
-                $query->whereNull('project_id')
-                    ->orWhere('project_id', (int) $projectId);
-            })
             ->orderBy('sort_order')
             ->orderBy('name')
             ->pluck('name', 'id')

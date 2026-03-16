@@ -7,7 +7,6 @@ use App\Enums\BacklogItemStatus;
 use App\Models\Activity;
 use App\Models\BacklogItem;
 use App\Models\Project;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -25,7 +24,7 @@ class BacklogItemFactory extends Factory
         return [
             'project_id' => Project::factory(),
             'owner_id' => fn (array $attributes): ?int => Project::query()->find($attributes['project_id'])?->owner_id,
-            'activity_id' => fn (array $attributes): ?int => $this->resolveActivityForProject($attributes['project_id'] ?? null)?->id,
+            'activity_id' => fn (array $attributes): ?int => $this->resolveActivityForOwner($attributes['owner_id'] ?? null)?->id,
             'title' => ucfirst(fake()->words(4, true)),
             'description' => fake()->optional(0.7)->sentence(),
             'status' => fake()->randomElement(BacklogItemStatus::openValues()),
@@ -41,25 +40,15 @@ class BacklogItemFactory extends Factory
         ];
     }
 
-    private function resolveActivityForProject(mixed $projectId): ?Activity
+    private function resolveActivityForOwner(mixed $ownerId): ?Activity
     {
-        if (! is_numeric($projectId)) {
-            return null;
-        }
-
-        $project = Project::query()->find((int) $projectId);
-
-        if (! $project instanceof Project) {
+        if (! is_numeric($ownerId)) {
             return null;
         }
 
         return Activity::query()
-            ->where('owner_id', $project->owner_id)
+            ->where('owner_id', (int) $ownerId)
             ->where('is_active', true)
-            ->where(function (Builder $query) use ($project): void {
-                $query->whereNull('project_id')
-                    ->orWhere('project_id', $project->id);
-            })
             ->inRandomOrder()
             ->first();
     }

@@ -57,8 +57,6 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::created(function (self $user): void {
-            ProjectStatusOption::ensureDefaultsForOwner($user->id);
-            ProjectActivityStatusOption::ensureDefaultsForOwner($user->id);
             UserSetting::ensureForUser($user->id);
         });
     }
@@ -126,15 +124,5 @@ class User extends Authenticatable
     public function userSetting(): HasOne
     {
         return $this->hasOne(UserSetting::class);
-    }
-
-    public function projectStatusOptions(): HasMany
-    {
-        return $this->hasMany(ProjectStatusOption::class, 'owner_id');
-    }
-
-    public function projectActivityStatusOptions(): HasMany
-    {
-        return $this->hasMany(ProjectActivityStatusOption::class, 'owner_id');
     }
 }

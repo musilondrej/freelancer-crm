@@ -20,7 +20,6 @@ use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
@@ -60,10 +59,9 @@ class BacklogItemForm
                                                     ->live(),
                                                 Select::make('activity_id')
                                                     ->label('Activity template')
-                                                    ->options(fn (Get $get): array => self::activityOptions($ownerId, $get('project_id')))
+                                                    ->options(fn (): array => self::activityOptions($ownerId))
                                                     ->searchable()
-                                                    ->preload()
-                                                    ->disabled(fn (Get $get): bool => ! is_numeric($get('project_id'))),
+                                                    ->preload(),
                                                 TextInput::make('title')
                                                     ->required()
                                                     ->maxLength(255)
@@ -151,19 +149,15 @@ class BacklogItemForm
     /**
      * @return array<int, string>
      */
-    private static function activityOptions(?int $ownerId, mixed $projectId): array
+    private static function activityOptions(?int $ownerId): array
     {
-        if ($ownerId === null || ! is_numeric($projectId)) {
+        if ($ownerId === null) {
             return [];
         }
 
         return Activity::query()
             ->where('owner_id', $ownerId)
             ->where('is_active', true)
-            ->where(function (Builder $query) use ($projectId): void {
-                $query->whereNull('project_id')
-                    ->orWhere('project_id', (int) $projectId);
-            })
             ->orderBy('sort_order')
             ->orderBy('name')
             ->pluck('name', 'id')

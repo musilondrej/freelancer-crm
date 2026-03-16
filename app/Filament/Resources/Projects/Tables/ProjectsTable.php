@@ -2,14 +2,13 @@
 
 namespace App\Filament\Resources\Projects\Tables;
 
+use App\Enums\ProjectStatus;
 use App\Models\Project;
-use App\Models\ProjectStatusOption;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -49,7 +48,7 @@ class ProjectsTable
             ->filters([
                 SelectFilter::make('status')
                     ->label('Status')
-                    ->options(fn (): array => ProjectStatusOption::optionsForOwner(Filament::auth()->id()))
+                    ->options(ProjectStatus::class)
                     ->multiple(),
                 SelectFilter::make('client_id')
                     ->relationship('customer', 'name')

@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources\Worklogs;
 
+use App\Enums\ProjectActivityStatus;
 use App\Filament\Resources\Worklogs\Pages\CreateWorklog;
 use App\Filament\Resources\Worklogs\Pages\EditWorklog;
 use App\Filament\Resources\Worklogs\Pages\ListWorklogs;
 use App\Filament\Resources\Worklogs\Schemas\WorklogForm;
 use App\Filament\Resources\Worklogs\Tables\WorklogsTable;
-use App\Models\ProjectActivityStatusOption;
 use App\Models\Worklog;
 use BackedEnum;
 use Filament\Facades\Filament;
@@ -55,10 +55,9 @@ class WorklogResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         $ownerId = Filament::auth()->id();
-        $openStatuses = ProjectActivityStatusOption::openCodesForOwner($ownerId);
 
         $count = Worklog::query()
-            ->whereIn('status', $openStatuses)
+            ->whereIn('status', ProjectActivityStatus::openValues())
             ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
             ->count();
 

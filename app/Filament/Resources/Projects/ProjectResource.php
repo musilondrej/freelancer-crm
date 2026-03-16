@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Projects;
 
+use App\Enums\ProjectStatus;
 use App\Filament\Resources\Projects\Pages\CreateProject;
 use App\Filament\Resources\Projects\Pages\EditProject;
 use App\Filament\Resources\Projects\Pages\ListProjects;
@@ -10,7 +11,6 @@ use App\Filament\Resources\Projects\RelationManagers\RecurringServicesRelationMa
 use App\Filament\Resources\Projects\Schemas\ProjectForm;
 use App\Filament\Resources\Projects\Tables\ProjectsTable;
 use App\Models\Project;
-use App\Models\ProjectStatusOption;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Resources\RelationManagers\RelationGroup;
@@ -57,10 +57,9 @@ class ProjectResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         $ownerId = Filament::auth()->id();
-        $openStatuses = ProjectStatusOption::openCodesForOwner($ownerId);
 
         $count = Project::query()
-            ->whereIn('status', $openStatuses)
+            ->whereIn('status', ProjectStatus::openValues())
             ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
             ->count();
 

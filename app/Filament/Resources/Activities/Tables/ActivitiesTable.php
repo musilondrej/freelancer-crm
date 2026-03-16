@@ -22,11 +22,6 @@ class ActivitiesTable
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('project.name')
-                    ->label('Project')
-                    ->placeholder('Global')
-                    ->searchable()
-                    ->sortable(),
                 TextColumn::make('default_hourly_rate')
                     ->label('Default hourly rate')
                     ->numeric(decimalPlaces: 2)

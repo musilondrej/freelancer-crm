@@ -2,12 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use App\Models\Activity;
 use App\Models\Project;
-use App\Models\ProjectActivityStatusOption;
 use App\Models\Worklog;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -28,7 +27,7 @@ class ProjectActivityFactory extends Factory
         return [
             'project_id' => Project::factory(),
             'owner_id' => fn (array $attributes): ?int => Project::query()->find($attributes['project_id'])?->owner_id,
-            'activity_id' => fn (array $attributes): ?int => $this->resolveActivityForProject($attributes['project_id'] ?? null)?->id,
+            'activity_id' => fn (array $attributes): ?int => $this->resolveActivityForOwner($attributes['owner_id'] ?? null)?->id,
             'backlog_item_id' => null,
             'title' => function (array $attributes): string {
                 $activityId = $attributes['activity_id'] ?? null;
@@ -42,22 +41,7 @@ class ProjectActivityFactory extends Factory
             },
             'description' => fake()->optional(0.7)->sentence(),
             'type' => $type,
-            'status' => function (array $attributes): string {
-                $ownerId = $attributes['owner_id'] ?? null;
-
-                if (is_numeric($ownerId)) {
-                    $statusCodes = collect(ProjectActivityStatusOption::definitionsForOwner((int) $ownerId))
-                        ->pluck('code')
-                        ->values()
-                        ->all();
-
-                    if ($statusCodes !== []) {
-                        return (string) fake()->randomElement($statusCodes);
-                    }
-                }
-
-                return ProjectActivityStatusOption::defaultCodeForOwner(is_numeric($ownerId) ? (int) $ownerId : null);
-            },
+            'status' => fake()->randomElement(ProjectActivityStatus::cases()),
             'is_running' => false,
             'is_billable' => function (array $attributes): bool {
                 $activityId = $attributes['activity_id'] ?? null;
@@ -100,11 +84,11 @@ class ProjectActivityFactory extends Factory
                     return null;
                 }
 
-                $doneCodes = ProjectActivityStatusOption::doneCodesForOwner(
-                    is_numeric($ownerId) ? (int) $ownerId : null,
-                );
+                $resolvedStatus = $status instanceof ProjectActivityStatus
+                    ? $status
+                    : ProjectActivityStatus::tryFrom($status);
 
-                if (! in_array($status, $doneCodes, true)) {
+                if ($resolvedStatus === null || ! $resolvedStatus->isDone()) {
                     return null;
                 }
 
@@ -116,25 +100,15 @@ class ProjectActivityFactory extends Factory
         ];
     }
 
-    private function resolveActivityForProject(mixed $projectId): ?Activity
+    private function resolveActivityForOwner(mixed $ownerId): ?Activity
     {
-        if (! is_numeric($projectId)) {
-            return null;
-        }
-
-        $project = Project::query()->find((int) $projectId);
-
-        if (! $project instanceof Project) {
+        if (! is_numeric($ownerId)) {
             return null;
         }
 
         return Activity::query()
-            ->where('owner_id', $project->owner_id)
+            ->where('owner_id', (int) $ownerId)
             ->where('is_active', true)
-            ->where(function (Builder $query) use ($project): void {
-                $query->whereNull('project_id')
-                    ->orWhere('project_id', $project->id);
-            })
             ->inRandomOrder()
             ->first();
     }

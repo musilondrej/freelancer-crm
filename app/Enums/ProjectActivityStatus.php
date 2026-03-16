@@ -41,6 +41,52 @@ enum ProjectActivityStatus: string implements HasColor, HasIcon, HasLabel
         };
     }
 
+    public function isDone(): bool
+    {
+        return $this === self::Done;
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this === self::Cancelled;
+    }
+
+    public function isOpen(): bool
+    {
+        return $this === self::InProgress;
+    }
+
+    public function isRunning(): bool
+    {
+        return $this === self::InProgress;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function doneValues(): array
+    {
+        return [self::Done->value];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function openValues(): array
+    {
+        return [self::InProgress->value];
+    }
+
+    public static function defaultCase(): self
+    {
+        return self::InProgress;
+    }
+
+    public static function runningCase(): self
+    {
+        return self::InProgress;
+    }
+
     public static function values(): array
     {
         return array_column(self::cases(), 'value');

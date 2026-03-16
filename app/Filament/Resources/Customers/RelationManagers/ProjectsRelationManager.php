@@ -4,8 +4,8 @@ namespace App\Filament\Resources\Customers\RelationManagers;
 
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
+use App\Enums\ProjectStatus;
 use App\Models\Project;
-use App\Models\ProjectStatusOption;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -44,8 +44,8 @@ class ProjectsRelationManager extends RelationManager
                 TextInput::make('name')
                     ->required(),
                 Select::make('status')
-                    ->options(fn (): array => ProjectStatusOption::optionsForOwner(Filament::auth()->id()))
-                    ->default(fn (): string => ProjectStatusOption::defaultCodeForOwner(Filament::auth()->id()))
+                    ->options(ProjectStatus::class)
+                    ->default(ProjectStatus::defaultCase())
                     ->required(),
                 Select::make('pipeline_stage')
                     ->options(ProjectPipelineStage::class)

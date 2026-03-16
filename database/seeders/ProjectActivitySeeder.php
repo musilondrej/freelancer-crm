@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ProjectActivityStatus;
 use App\Models\Activity;
 use App\Models\Project;
-use App\Models\ProjectActivityStatusOption;
 use App\Models\Worklog;
 use Illuminate\Database\Seeder;
 
@@ -25,7 +25,7 @@ class ProjectActivitySeeder extends Seeder
 
         Project::query()->each(function (Project $project): void {
             $entriesCount = fake()->numberBetween(6, 14);
-            $statusCodes = $this->resolveStatusCodesForOwner((int) $project->owner_id);
+            $statusCodes = $this->resolveStatusCodesForOwner();
             $activityPool = Activity::query()
                 ->where('owner_id', $project->owner_id)
                 ->where(function ($query) use ($project): void {
@@ -70,21 +70,8 @@ class ProjectActivitySeeder extends Seeder
     /**
      * @return list<string>
      */
-    private function resolveStatusCodesForOwner(int $ownerId): array
+    private function resolveStatusCodesForOwner(): array
     {
-        $definitions = collect(ProjectActivityStatusOption::definitionsForOwner($ownerId));
-
-        $preferred = $definitions
-            ->filter(static fn (array $definition): bool => $definition['is_done'] || $definition['is_cancelled'] || $definition['is_open'])
-            ->pluck('code')
-            ->unique()
-            ->values()
-            ->all();
-
-        if ($preferred !== []) {
-            return $preferred;
-        }
-
-        return [ProjectActivityStatusOption::defaultCodeForOwner($ownerId)];
+        return ProjectActivityStatus::values();
     }
 }

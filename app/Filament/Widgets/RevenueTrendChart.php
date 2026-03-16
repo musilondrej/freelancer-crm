@@ -2,8 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\ProjectActivityStatus;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
-use App\Models\ProjectActivityStatusOption;
 use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -117,7 +117,7 @@ class RevenueTrendChart extends ChartWidget
         [$currentStart, $currentEnd] = $this->resolvedCurrentRange();
         $displayCurrency = $this->resolveDisplayCurrency();
         $ownerId = Filament::auth()->id();
-        $doneStatuses = ProjectActivityStatusOption::doneCodesForOwner($ownerId);
+        $doneStatuses = ProjectActivityStatus::doneValues();
         $cacheKey = sprintf(
             'dashboard.revenue-trend.owner.%s.start.%s.end.%s.currency.%s.statuses.%s',
             $ownerId ?? 'guest',

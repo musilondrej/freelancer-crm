@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
+use App\Enums\ProjectStatus;
 use App\Models\Concerns\EnforcesOwner;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -15,6 +16,9 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property ProjectStatus $status
+ */
 class Project extends Model
 {
     use EnforcesOwner;
@@ -56,6 +60,7 @@ class Project extends Model
     protected function casts(): array
     {
         return [
+            'status' => ProjectStatus::class,
             'priority' => 'integer',
             'pipeline_stage' => ProjectPipelineStage::class,
             'pricing_model' => ProjectPricingModel::class,
@@ -121,14 +126,6 @@ class Project extends Model
     }
 
     /**
-     * @return HasMany<Activity, $this>
-     */
-    public function trackingActivities(): HasMany
-    {
-        return $this->hasMany(Activity::class);
-    }
-
-    /**
      * @return HasMany<BacklogItem, $this>
      */
     public function backlogItems(): HasMany
@@ -180,18 +177,13 @@ class Project extends Model
         return $this->currency ?? $customer?->effectiveCurrency();
     }
 
-    public function resolvedStatusCode(): string
-    {
-        return (string) $this->getRawOriginal('status');
-    }
-
     public function resolvedStatusLabel(): string
     {
-        return ProjectStatusOption::labelFor($this->owner_id, $this->resolvedStatusCode());
+        return $this->status->getLabel();
     }
 
     public function resolvedStatusColor(): string
     {
-        return ProjectStatusOption::colorFor($this->owner_id, $this->resolvedStatusCode());
+        return $this->status->getColor();
     }
 }

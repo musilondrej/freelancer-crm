@@ -49,6 +49,43 @@ enum ProjectStatus: string implements HasColor, HasIcon, HasLabel
         };
     }
 
+    public function isOpen(): bool
+    {
+        return in_array($this, [self::Planned, self::InProgress, self::Blocked], true);
+    }
+
+    public function isTrackable(): bool
+    {
+        return $this !== self::Cancelled;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function openValues(): array
+    {
+        return array_values(array_map(
+            fn (self $case): string => $case->value,
+            array_filter(self::cases(), fn (self $case): bool => $case->isOpen()),
+        ));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function trackableValues(): array
+    {
+        return array_values(array_map(
+            fn (self $case): string => $case->value,
+            array_filter(self::cases(), fn (self $case): bool => $case->isTrackable()),
+        ));
+    }
+
+    public static function defaultCase(): self
+    {
+        return self::Planned;
+    }
+
     public static function values(): array
     {
         return array_column(self::cases(), 'value');

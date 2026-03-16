@@ -3,10 +3,10 @@
 namespace App\Filament\Resources\Projects\Schemas;
 
 use App\Enums\ProjectPricingModel;
+use App\Enums\ProjectStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\ClientContact;
-use App\Models\ProjectStatusOption;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -118,8 +118,8 @@ class ProjectForm
                         Section::make('Execution')
                             ->schema([
                                 Select::make('status')
-                                    ->options(fn (): array => ProjectStatusOption::optionsForOwner($ownerId))
-                                    ->default(fn (): string => ProjectStatusOption::defaultCodeForOwner($ownerId))
+                                    ->options(ProjectStatus::class)
+                                    ->default(ProjectStatus::defaultCase())
                                     ->required(),
                                 DatePicker::make('start_date'),
                                 DatePicker::make('target_end_date'),

@@ -5,15 +5,15 @@ namespace Database\Seeders;
 use App\Enums\CustomerStatus;
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
+use App\Enums\ProjectStatus;
 use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\Project;
-use App\Models\ProjectActivityStatusOption;
-use App\Models\ProjectStatusOption;
 use App\Models\User;
 use App\Models\Worklog;
 use Carbon\CarbonImmutable;
@@ -40,9 +40,6 @@ class DashboardStatisticsSeeder extends Seeder
         );
 
         User::query()->each(function (User $owner): void {
-            ProjectStatusOption::ensureDefaultsForOwner((int) $owner->id);
-            ProjectActivityStatusOption::ensureDefaultsForOwner((int) $owner->id);
-
             $leadSources = $this->seedLeadSources($owner);
             $customers = $this->seedCustomers($owner);
             $projects = $this->seedProjects($owner, $customers);
@@ -188,7 +185,7 @@ class DashboardStatisticsSeeder extends Seeder
      */
     private function seedProjects(User $owner, array $customers): array
     {
-        $projectStatusCodes = $this->resolveProjectStatusCodes((int) $owner->id);
+        $projectStatusCodes = $this->resolveProjectStatusCodes();
 
         return [
             'retainer_cz' => $this->upsertProject($owner, $customers['cz'], [
@@ -307,7 +304,7 @@ class DashboardStatisticsSeeder extends Seeder
      */
     private function seedProjectActivities(User $owner, array $projects): void
     {
-        $projectActivityStatusCodes = $this->resolveProjectActivityStatusCodes((int) $owner->id);
+        $projectActivityStatusCodes = $this->resolveProjectActivityStatusCodes();
 
         Worklog::query()
             ->withTrashed()
@@ -522,64 +519,25 @@ class DashboardStatisticsSeeder extends Seeder
     /**
      * @return array{planned: string, in_progress: string, blocked_or_open: string, completed_or_done: string}
      */
-    private function resolveProjectStatusCodes(int $ownerId): array
+    private function resolveProjectStatusCodes(): array
     {
-        $definitions = collect(ProjectStatusOption::definitionsForOwner($ownerId));
-        $defaultCode = ProjectStatusOption::defaultCodeForOwner($ownerId);
-        $openCodes = $definitions
-            ->filter(static fn (array $definition): bool => $definition['is_open'])
-            ->pluck('code')
-            ->values();
-
-        $plannedCode = (string) ($openCodes->get(0) ?? $defaultCode);
-        $inProgressCode = (string) ($openCodes->get(1) ?? $plannedCode);
-        $blockedOrOpenCode = (string) ($openCodes->get(2) ?? $inProgressCode);
-
-        $closedCode = $definitions
-            ->first(static fn (array $definition): bool => ! ($definition['is_open']));
-
-        $completedOrDoneCode = is_array($closedCode)
-            ? (string) $closedCode['code']
-            : $plannedCode;
-
         return [
-            'planned' => $plannedCode,
-            'in_progress' => $inProgressCode,
-            'blocked_or_open' => $blockedOrOpenCode,
-            'completed_or_done' => $completedOrDoneCode,
+            'planned' => ProjectStatus::Planned->value,
+            'in_progress' => ProjectStatus::InProgress->value,
+            'blocked_or_open' => ProjectStatus::Blocked->value,
+            'completed_or_done' => ProjectStatus::Completed->value,
         ];
     }
 
     /**
      * @return array{planned: string, in_progress: string, done: string}
      */
-    private function resolveProjectActivityStatusCodes(int $ownerId): array
+    private function resolveProjectActivityStatusCodes(): array
     {
-        $definitions = collect(ProjectActivityStatusOption::definitionsForOwner($ownerId));
-        $defaultCode = ProjectActivityStatusOption::defaultCodeForOwner($ownerId);
-        $openCodes = $definitions
-            ->filter(static fn (array $definition): bool => $definition['is_open'])
-            ->pluck('code')
-            ->values();
-
-        $runningDefinition = $definitions
-            ->first(static fn (array $definition): bool => $definition['is_running']);
-
-        $doneDefinition = $definitions
-            ->first(static fn (array $definition): bool => $definition['is_done']);
-
-        $plannedCode = (string) ($openCodes->get(0) ?? $defaultCode);
-        $inProgressCode = is_array($runningDefinition)
-            ? (string) $runningDefinition['code']
-            : (string) ($openCodes->get(1) ?? $plannedCode);
-        $doneCode = is_array($doneDefinition)
-            ? (string) $doneDefinition['code']
-            : $plannedCode;
-
         return [
-            'planned' => $plannedCode,
-            'in_progress' => $inProgressCode,
-            'done' => $doneCode,
+            'planned' => ProjectActivityStatus::InProgress->value,
+            'in_progress' => ProjectActivityStatus::InProgress->value,
+            'done' => ProjectActivityStatus::Done->value,
         ];
     }
 

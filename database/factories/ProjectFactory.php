@@ -4,9 +4,9 @@ namespace Database\Factories;
 
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
+use App\Enums\ProjectStatus;
 use App\Models\Customer;
 use App\Models\Project;
-use App\Models\ProjectStatusOption;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -32,22 +32,7 @@ class ProjectFactory extends Factory
             'owner_id' => fn (array $attributes): ?int => Customer::query()->find($attributes['client_id'])?->owner_id,
             'primary_contact_id' => null,
             'name' => ucfirst(fake()->words(3, true)),
-            'status' => function (array $attributes): string {
-                $ownerId = $attributes['owner_id'] ?? null;
-
-                if (is_numeric($ownerId)) {
-                    $statusCodes = collect(ProjectStatusOption::definitionsForOwner((int) $ownerId))
-                        ->pluck('code')
-                        ->values()
-                        ->all();
-
-                    if ($statusCodes !== []) {
-                        return (string) fake()->randomElement($statusCodes);
-                    }
-                }
-
-                return ProjectStatusOption::defaultCodeForOwner(is_numeric($ownerId) ? (int) $ownerId : null);
-            },
+            'status' => fake()->randomElement(ProjectStatus::cases()),
             'pipeline_stage' => fake()->randomElement(ProjectPipelineStage::cases()),
             'pricing_model' => ProjectPricingModel::Fixed,
             'priority' => fake()->numberBetween(1, 5),

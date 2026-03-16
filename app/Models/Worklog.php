@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use App\Models\Concerns\EnforcesOwner;
 use Database\Factories\ProjectActivityFactory;
@@ -14,6 +15,10 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property ProjectActivityStatus $status
+ * @property ProjectActivityType $type
+ */
 class Worklog extends Model
 {
     use EnforcesOwner;
@@ -65,6 +70,7 @@ class Worklog extends Model
     {
         return [
             'type' => ProjectActivityType::class,
+            'status' => ProjectActivityStatus::class,
             'is_running' => 'boolean',
             'is_billable' => 'boolean',
             'is_invoiced' => 'boolean',
@@ -233,12 +239,10 @@ class Worklog extends Model
     #[Scope]
     protected function readyToInvoice(Builder $query, ?int $ownerId = null): Builder
     {
-        $doneStatusCodes = ProjectActivityStatusOption::doneCodesForOwner($ownerId);
-
         return $query
             ->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId))
             ->where('is_billable', true)
-            ->whereIn('status', $doneStatusCodes)
+            ->whereIn('status', ProjectActivityStatus::doneValues())
             ->where('is_invoiced', false)
             ->whereNull('invoice_reference')
             ->whereNull('invoiced_at');
@@ -257,16 +261,13 @@ class Worklog extends Model
         return $this->invoiced_at !== null;
     }
 
-    public function isReadyToInvoice(?int $ownerId = null): bool
+    public function isReadyToInvoice(): bool
     {
         if (! $this->is_billable || $this->isInvoiced()) {
             return false;
         }
 
-        $resolvedOwnerId = $ownerId ?? $this->owner_id;
-        $doneStatusCodes = ProjectActivityStatusOption::doneCodesForOwner($resolvedOwnerId);
-
-        return in_array($this->resolvedStatusCode(), $doneStatusCodes, true);
+        return $this->status->isDone();
     }
 
     public function trackedDurationLabel(): string
@@ -319,18 +320,13 @@ class Worklog extends Model
         return (string) $rawType;
     }
 
-    public function resolvedStatusCode(): string
-    {
-        return (string) $this->getRawOriginal('status');
-    }
-
     public function resolvedStatusLabel(): string
     {
-        return ProjectActivityStatusOption::labelFor($this->owner_id, $this->resolvedStatusCode());
+        return $this->status->getLabel();
     }
 
     public function resolvedStatusColor(): string
     {
-        return ProjectActivityStatusOption::colorFor($this->owner_id, $this->resolvedStatusCode());
+        return $this->status->getColor();
     }
 }

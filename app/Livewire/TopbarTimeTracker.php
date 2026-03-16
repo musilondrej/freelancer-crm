@@ -2,12 +2,12 @@
 
 namespace App\Livewire;
 
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
+use App\Enums\ProjectStatus;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Project;
-use App\Models\ProjectActivityStatusOption;
-use App\Models\ProjectStatusOption;
 use App\Models\Worklog;
 use App\Support\TimeTrackingRounding;
 use Carbon\CarbonImmutable;
@@ -262,7 +262,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
             Worklog::query()->create([
                 ...$basePayload,
-                'status' => $this->doneActivityStatusCode(),
+                'status' => ProjectActivityStatus::Done->value,
                 'is_running' => false,
                 'finished_at' => $finishedAt,
                 'tracked_minutes' => $trackedMinutes,
@@ -348,7 +348,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             $totalTrackedMinutes += $trackedMinutes;
 
             $runningSession->forceFill([
-                'status' => $this->doneActivityStatusCode(),
+                'status' => ProjectActivityStatus::Done->value,
                 'is_running' => false,
                 'finished_at' => $finishedAt,
                 'tracked_minutes' => $trackedMinutes,
@@ -534,10 +534,6 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         return Activity::query()
             ->where('owner_id', $ownerId)
             ->where('is_active', true)
-            ->where(function (Builder $query) use ($projectId): void {
-                $query->whereNull('project_id')
-                    ->orWhere('project_id', (int) $projectId);
-            })
             ->orderBy('sort_order')
             ->orderBy('name')
             ->pluck('name', 'id')
@@ -642,10 +638,6 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             ->where('owner_id', $ownerId)
             ->where('is_active', true)
             ->whereKey((int) $activityId)
-            ->where(function (Builder $query) use ($projectId): void {
-                $query->whereNull('project_id')
-                    ->orWhere('project_id', $projectId);
-            })
             ->first();
     }
 
@@ -679,7 +671,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
                 Worklog::query()->create([
                     ...$basePayload,
-                    'status' => $this->runningActivityStatusCode(),
+                    'status' => ProjectActivityStatus::runningCase()->value,
                     'is_running' => true,
                 ]);
 
@@ -747,22 +739,10 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     }
 
     /**
-     * @return array<int, string>
+     * @return list<string>
      */
     private function trackableProjectStatuses(): array
     {
-        return ProjectStatusOption::trackableCodesForOwner(Filament::auth()->id());
-    }
-
-    private function runningActivityStatusCode(): string
-    {
-        return ProjectActivityStatusOption::runningCodeForOwner(Filament::auth()->id());
-    }
-
-    private function doneActivityStatusCode(): string
-    {
-        $doneCodes = ProjectActivityStatusOption::doneCodesForOwner(Filament::auth()->id());
-
-        return $doneCodes[0] ?? ProjectActivityStatusOption::defaultCodeForOwner(Filament::auth()->id());
+        return ProjectStatus::trackableValues();
     }
 }

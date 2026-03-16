@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources\Projects\RelationManagers;
 
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use App\Models\Worklog;
 use App\Support\Filament\Currency;
-use App\Support\Filament\WorklogStatus;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -15,7 +15,6 @@ use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\KeyValue;
@@ -52,8 +51,8 @@ class ActivitiesRelationManager extends RelationManager
                     ->default('hourly')
                     ->required(),
                 Select::make('status')
-                    ->options(fn (): array => WorklogStatus::options(Filament::auth()->id()))
-                    ->default(fn (): string => WorklogStatus::defaultCode(Filament::auth()->id()))
+                    ->options(ProjectActivityStatus::class)
+                    ->default(ProjectActivityStatus::defaultCase())
                     ->required(),
                 Toggle::make('is_billable')
                     ->required(),

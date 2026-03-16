@@ -1,8 +1,10 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -62,7 +64,9 @@ return new class extends Migration
                 ]);
         }
 
-        DB::statement("ALTER TABLE worklogs ALTER COLUMN status SET DEFAULT 'in_progress'");
+        Schema::table('worklogs', function (Blueprint $table): void {
+            $table->string('status', 64)->default('in_progress')->change();
+        });
     }
 
     /**
@@ -70,7 +74,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE worklogs ALTER COLUMN status SET DEFAULT 'planned'");
+        Schema::table('worklogs', function (Blueprint $table): void {
+            $table->string('status', 64)->default('planned')->change();
+        });
 
         DB::table('worklogs')
             ->where('status', 'in_progress')

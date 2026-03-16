@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -25,8 +24,11 @@ return new class extends Migration
             $table->jsonb('meta')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
+            $table->unsignedBigInteger('project_unique_scope_key')->storedAs('coalesce(project_id, 0)');
+            $table->string('name_unique_key', 160)->nullable()->storedAs('case when deleted_at is null then lower(name) else null end');
 
             $table->unique(['owner_id', 'id']);
+            $table->unique(['owner_id', 'project_unique_scope_key', 'name_unique_key'], 'activities_owner_project_name_unique');
             $table->index(['owner_id', 'project_id']);
             $table->index(['owner_id', 'is_active']);
             $table->index(['owner_id', 'sort_order']);
@@ -36,12 +38,6 @@ return new class extends Migration
                 ->on('projects')
                 ->cascadeOnDelete();
         });
-
-        DB::statement('
-            CREATE UNIQUE INDEX activities_owner_project_name_unique
-                ON activities (owner_id, COALESCE(project_id, 0), lower(name))
-                WHERE deleted_at IS NULL
-        ');
     }
 
     /**
@@ -49,7 +45,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('DROP INDEX IF EXISTS activities_owner_project_name_unique');
         Schema::dropIfExists('activities');
     }
 };

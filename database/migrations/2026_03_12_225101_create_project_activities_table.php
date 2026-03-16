@@ -4,7 +4,6 @@ use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -39,7 +38,11 @@ return new class extends Migration
             $table->jsonb('meta')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
+            $table->unsignedBigInteger('running_hourly_owner_unique_key')
+                ->nullable()
+                ->storedAs("case when deleted_at is null and is_running = true and type = 'hourly' and finished_at is null and started_at is not null then owner_id else null end");
 
+            $table->unique('running_hourly_owner_unique_key', 'worklogs_owner_running_hourly_unique');
             $table->index(['owner_id', 'status']);
             $table->index(['project_id', 'status']);
             $table->index(['project_id', 'type']);
@@ -61,16 +64,6 @@ return new class extends Migration
                 ->on('activities')
                 ->restrictOnDelete();
         });
-
-        DB::statement("
-            CREATE UNIQUE INDEX worklogs_owner_running_hourly_unique
-                ON worklogs (owner_id)
-                WHERE deleted_at IS NULL
-                  AND is_running = true
-                  AND type = 'hourly'
-                  AND finished_at IS NULL
-                  AND started_at IS NOT NULL
-        ");
     }
 
     /**

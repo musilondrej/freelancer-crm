@@ -4,7 +4,6 @@ use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -36,7 +35,9 @@ return new class extends Migration
             $table->jsonb('meta')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
+            $table->string('email_unique_key')->nullable()->storedAs('case when deleted_at is null and email is not null then lower(email) else null end');
 
+            $table->unique(['owner_id', 'email_unique_key'], 'leads_owner_email_unique');
             $table->index(['owner_id', 'status']);
             $table->index(['owner_id', 'pipeline_stage']);
             $table->index(['owner_id', 'lead_source_id']);
@@ -54,13 +55,6 @@ return new class extends Migration
                 ->on('clients')
                 ->restrictOnDelete();
         });
-
-        DB::statement('
-            CREATE UNIQUE INDEX leads_owner_email_unique
-                ON leads (owner_id, lower(email))
-                WHERE deleted_at IS NULL
-                  AND email IS NOT NULL
-        ');
     }
 
     /**

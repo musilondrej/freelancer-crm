@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Worklogs\Tables;
 
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use App\Filament\Resources\Worklogs\WorklogResource;
-use App\Models\ProjectActivityStatusOption;
 use App\Models\UserSetting;
 use App\Models\Worklog;
 use Filament\Actions\Action;
@@ -94,18 +94,16 @@ class WorklogsTable
                         ->label('Start timer')
                         ->icon('heroicon-o-play-circle')
                         ->color('gray')
-                        ->visible(function (Worklog $record) use ($ownerId): bool {
-                            if ($ownerId === null || (bool) $record->is_running) {
+                        ->visible(function (Worklog $record): bool {
+                            if ((bool) $record->is_running) {
                                 return false;
                             }
 
-                            $resolvedType = (string) $record->getRawOriginal('type');
-
-                            if ($resolvedType !== ProjectActivityType::Hourly->value) {
+                            if ($record->type !== ProjectActivityType::Hourly) {
                                 return false;
                             }
 
-                            return in_array($record->resolvedStatusCode(), ProjectActivityStatusOption::openCodesForOwner($ownerId), true);
+                            return $record->status->isOpen();
                         })
                         ->action(function (Worklog $record) use ($ownerId): void {
                             if ($ownerId === null) {
@@ -131,7 +129,7 @@ class WorklogsTable
 
                             try {
                                 $record->update([
-                                    'status' => ProjectActivityStatusOption::runningCodeForOwner($ownerId),
+                                    'status' => ProjectActivityStatus::runningCase(),
                                     'is_running' => true,
                                     'started_at' => $record->started_at ?? now(),
                                     'finished_at' => null,
@@ -154,17 +152,10 @@ class WorklogsTable
                         ->label('Mark done')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
-                        ->visible(fn (Worklog $record): bool => ! in_array(
-                            $record->resolvedStatusCode(),
-                            ProjectActivityStatusOption::doneCodesForOwner($ownerId),
-                            true,
-                        ))
-                        ->action(function (Worklog $record) use ($ownerId): void {
-                            $doneStatusCode = ProjectActivityStatusOption::doneCodesForOwner($ownerId)[0]
-                                ?? ProjectActivityStatusOption::defaultCodeForOwner($ownerId);
-
+                        ->visible(fn (Worklog $record): bool => ! $record->status->isDone())
+                        ->action(function (Worklog $record): void {
                             $record->update([
-                                'status' => $doneStatusCode,
+                                'status' => ProjectActivityStatus::Done,
                                 'is_running' => false,
                                 'finished_at' => $record->finished_at ?? now(),
                             ]);
@@ -178,7 +169,7 @@ class WorklogsTable
                         ->label('Mark invoiced')
                         ->icon('heroicon-o-banknotes')
                         ->color('info')
-                        ->visible(fn (Worklog $record): bool => (bool) $record->is_billable && ! $record->isInvoiced() && $record->isReadyToInvoice($ownerId))
+                        ->visible(fn (Worklog $record): bool => (bool) $record->is_billable && ! $record->isInvoiced() && $record->isReadyToInvoice())
                         ->action(function (Worklog $record): void {
                             $record->update([
                                 'is_invoiced' => true,

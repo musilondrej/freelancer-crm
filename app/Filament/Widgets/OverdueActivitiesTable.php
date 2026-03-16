@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\ProjectActivityStatusOption;
+use App\Enums\ProjectActivityStatus;
 use App\Models\UserSetting;
 use App\Models\Worklog;
 use Filament\Facades\Filament;
@@ -20,14 +20,13 @@ class OverdueActivitiesTable extends TableWidget
     public function table(Table $table): Table
     {
         $ownerId = Filament::auth()->id();
-        $openStatuses = ProjectActivityStatusOption::openCodesForOwner($ownerId);
         $dateFormat = UserSetting::dateFormatForUser($ownerId);
 
         return $table
             ->query(fn (): Builder => Worklog::query()
                 ->whereNotNull('due_date')
                 ->whereDate('due_date', '<', today())
-                ->whereIn('status', $openStatuses)
+                ->whereIn('status', ProjectActivityStatus::openValues())
                 ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
                 ->with(['project:id,name']))
             ->heading(__('Overdue Worklogs'))

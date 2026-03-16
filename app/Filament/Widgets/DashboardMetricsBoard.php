@@ -3,12 +3,12 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\LeadStatus;
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
+use App\Enums\ProjectStatus;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
 use App\Models\Lead;
 use App\Models\Project;
-use App\Models\ProjectActivityStatusOption;
-use App\Models\ProjectStatusOption;
 use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -383,7 +383,7 @@ class DashboardMetricsBoard extends BaseWidget
         CarbonImmutable $endDate,
     ): EloquentCollection {
         return $this->amountActivityQuery($ownerId)
-            ->whereIn('status', $this->doneActivityStatusCodes($ownerId))
+            ->whereIn('status', $this->doneActivityStatusCodes())
             ->where('is_billable', true)
             ->whereNotNull('finished_at')
             ->whereBetween('finished_at', [$startDate, $endDate])
@@ -407,7 +407,7 @@ class DashboardMetricsBoard extends BaseWidget
     private function loadPipelineActivities(int $ownerId): EloquentCollection
     {
         return $this->amountActivityQuery($ownerId)
-            ->whereIn('status', $this->openActivityStatusCodes($ownerId))
+            ->whereIn('status', $this->openActivityStatusCodes())
             ->where('is_billable', true)
             ->get();
     }
@@ -422,7 +422,7 @@ class DashboardMetricsBoard extends BaseWidget
     ): EloquentCollection {
         return Worklog::query()
             ->where('owner_id', $ownerId)
-            ->whereIn('status', $this->doneActivityStatusCodes($ownerId))
+            ->whereIn('status', $this->doneActivityStatusCodes())
             ->where('type', ProjectActivityType::Hourly->value)
             ->whereNotNull('finished_at')
             ->whereBetween('finished_at', [$startDate, $endDate])
@@ -526,7 +526,7 @@ class DashboardMetricsBoard extends BaseWidget
     {
         return Project::query()
             ->where('owner_id', $ownerId)
-            ->whereIn('status', ProjectStatusOption::openCodesForOwner($ownerId))
+            ->whereIn('status', ProjectStatus::openValues())
             ->count();
     }
 
@@ -549,23 +549,23 @@ class DashboardMetricsBoard extends BaseWidget
             ->where('owner_id', $ownerId)
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', now()->toDateString())
-            ->whereIn('status', $this->openActivityStatusCodes($ownerId))
+            ->whereIn('status', $this->openActivityStatusCodes())
             ->count();
     }
 
     /**
      * @return list<string>
      */
-    private function doneActivityStatusCodes(int $ownerId): array
+    private function doneActivityStatusCodes(): array
     {
-        return ProjectActivityStatusOption::doneCodesForOwner($ownerId);
+        return ProjectActivityStatus::doneValues();
     }
 
     /**
      * @return list<string>
      */
-    private function openActivityStatusCodes(int $ownerId): array
+    private function openActivityStatusCodes(): array
     {
-        return ProjectActivityStatusOption::openCodesForOwner($ownerId);
+        return ProjectActivityStatus::openValues();
     }
 }

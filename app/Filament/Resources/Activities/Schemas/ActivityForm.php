@@ -6,7 +6,6 @@ use App\Models\Activity;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -17,7 +16,6 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Database\Eloquent\Builder;
 
 class ActivityForm
 {
@@ -38,18 +36,6 @@ class ActivityForm
                                             ->schema([
                                                 Hidden::make('owner_id')
                                                     ->default($ownerId),
-                                                Select::make('project_id')
-                                                    ->label('Project scope')
-                                                    ->relationship(
-                                                        name: 'project',
-                                                        titleAttribute: 'name',
-                                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
-                                                            ? $query->where('owner_id', $ownerId)
-                                                            : $query,
-                                                    )
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->helperText('Leave empty to create a global activity available for all projects.'),
                                                 TextInput::make('name')
                                                     ->required()
                                                     ->maxLength(160),

@@ -2,8 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
-use App\Models\ProjectActivityStatusOption;
 use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -107,7 +107,7 @@ class WorkHoursTimelineChart extends ChartWidget
     {
         [$rangeStart, $rangeEnd, $bucket] = $this->resolvedRange();
         $ownerId = Filament::auth()->id();
-        $doneStatuses = ProjectActivityStatusOption::doneCodesForOwner($ownerId);
+        $doneStatuses = ProjectActivityStatus::doneValues();
 
         $cacheKey = sprintf(
             'dashboard.work-hours.owner.%s.start.%s.end.%s.bucket.%s.statuses.%s',

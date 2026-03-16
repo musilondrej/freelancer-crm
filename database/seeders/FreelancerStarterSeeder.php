@@ -5,9 +5,11 @@ namespace Database\Seeders;
 use App\Enums\CustomerStatus;
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
+use App\Enums\ProjectStatus;
 use App\Enums\RecurringServiceBillingModel;
 use App\Enums\RecurringServiceCadenceUnit;
 use App\Enums\RecurringServiceStatus;
@@ -18,8 +20,6 @@ use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\Note;
 use App\Models\Project;
-use App\Models\ProjectActivityStatusOption;
-use App\Models\ProjectStatusOption;
 use App\Models\RecurringService;
 use App\Models\RecurringServiceType;
 use App\Models\Tag;
@@ -48,14 +48,12 @@ class FreelancerStarterSeeder extends Seeder
         );
 
         UserSetting::ensureForUser($owner->id);
-        ProjectStatusOption::ensureDefaultsForOwner($owner->id);
-        ProjectActivityStatusOption::ensureDefaultsForOwner($owner->id);
 
         $leadSources = $this->seedLeadSources($owner);
         $customers = $this->seedCustomers($owner);
         $contacts = $this->seedContacts($owner, $customers);
         $projects = $this->seedProjects($owner, $customers, $contacts);
-        $activities = $this->seedActivities($owner, $projects);
+        $activities = $this->seedActivities($owner);
 
         $this->seedProjectActivities($owner, $projects, $activities);
         $this->seedLeads($owner, $customers, $leadSources);
@@ -202,7 +200,7 @@ class FreelancerStarterSeeder extends Seeder
      */
     private function seedProjects(User $owner, array $customers, array $contacts): array
     {
-        $projectStatusCodes = $this->resolveProjectStatusCodes($owner->id);
+        $projectStatusCodes = $this->resolveProjectStatusCodes();
 
         $definitions = [
             'eshop-maintenance' => [
@@ -263,14 +261,12 @@ class FreelancerStarterSeeder extends Seeder
     }
 
     /**
-     * @param  array<string, Project>  $projects
      * @return array<string, Activity>
      */
-    private function seedActivities(User $owner, array $projects): array
+    private function seedActivities(User $owner): array
     {
         $definitions = [
             'global-development' => [
-                'project_id' => null,
                 'name' => 'Development',
                 'description' => 'Default development activity.',
                 'default_hourly_rate' => $owner->default_hourly_rate,
@@ -278,7 +274,6 @@ class FreelancerStarterSeeder extends Seeder
                 'sort_order' => 10,
             ],
             'global-meeting' => [
-                'project_id' => null,
                 'name' => 'Meeting',
                 'description' => 'Client meetings and calls.',
                 'default_hourly_rate' => $owner->default_hourly_rate,
@@ -286,7 +281,6 @@ class FreelancerStarterSeeder extends Seeder
                 'sort_order' => 20,
             ],
             'global-admin' => [
-                'project_id' => null,
                 'name' => 'Internal Admin',
                 'description' => 'Non-billable operations.',
                 'default_hourly_rate' => null,
@@ -294,20 +288,18 @@ class FreelancerStarterSeeder extends Seeder
                 'sort_order' => 30,
             ],
             'eshop-bugfix' => [
-                'project_id' => $projects['eshop-maintenance']->id,
                 'name' => 'Bugfix & Support',
                 'description' => 'Bugfixing and support tasks.',
                 'default_hourly_rate' => 1500,
                 'is_billable' => true,
-                'sort_order' => 10,
+                'sort_order' => 40,
             ],
             'landing-design' => [
-                'project_id' => $projects['landing-redesign']->id,
                 'name' => 'Design & Implementation',
                 'description' => 'Design handoff and frontend implementation.',
                 'default_hourly_rate' => 95,
                 'is_billable' => true,
-                'sort_order' => 10,
+                'sort_order' => 50,
             ],
         ];
 
@@ -317,7 +309,6 @@ class FreelancerStarterSeeder extends Seeder
             $activities[$key] = Activity::query()->updateOrCreate(
                 [
                     'owner_id' => $owner->id,
-                    'project_id' => $definition['project_id'],
                     'name' => $definition['name'],
                 ],
                 [
@@ -339,7 +330,7 @@ class FreelancerStarterSeeder extends Seeder
      */
     private function seedProjectActivities(User $owner, array $projects, array $activities): void
     {
-        $projectActivityStatusCodes = $this->resolveProjectActivityStatusCodes($owner->id);
+        $projectActivityStatusCodes = $this->resolveProjectActivityStatusCodes();
 
         $entries = [
             [
@@ -711,54 +702,23 @@ class FreelancerStarterSeeder extends Seeder
     /**
      * @return array{planned: string, in_progress: string}
      */
-    private function resolveProjectStatusCodes(int $ownerId): array
+    private function resolveProjectStatusCodes(): array
     {
-        $defaultCode = ProjectStatusOption::defaultCodeForOwner($ownerId);
-        $openCodes = collect(ProjectStatusOption::definitionsForOwner($ownerId))
-            ->filter(static fn (array $definition): bool => $definition['is_open'])
-            ->pluck('code')
-            ->values();
-
-        $plannedCode = (string) ($openCodes->get(0) ?? $defaultCode);
-        $inProgressCode = (string) ($openCodes->get(1) ?? $plannedCode);
-
         return [
-            'planned' => $plannedCode,
-            'in_progress' => $inProgressCode,
+            'planned' => ProjectStatus::Planned->value,
+            'in_progress' => ProjectStatus::InProgress->value,
         ];
     }
 
     /**
      * @return array{planned: string, in_progress: string, done: string}
      */
-    private function resolveProjectActivityStatusCodes(int $ownerId): array
+    private function resolveProjectActivityStatusCodes(): array
     {
-        $definitions = collect(ProjectActivityStatusOption::definitionsForOwner($ownerId));
-        $defaultCode = ProjectActivityStatusOption::defaultCodeForOwner($ownerId);
-
-        $openCodes = $definitions
-            ->filter(static fn (array $definition): bool => $definition['is_open'])
-            ->pluck('code')
-            ->values();
-
-        $runningDefinition = $definitions
-            ->first(static fn (array $definition): bool => $definition['is_running']);
-
-        $doneDefinition = $definitions
-            ->first(static fn (array $definition): bool => $definition['is_done']);
-
-        $plannedCode = (string) ($openCodes->get(0) ?? $defaultCode);
-        $inProgressCode = is_array($runningDefinition)
-            ? (string) $runningDefinition['code']
-            : (string) ($openCodes->get(1) ?? $plannedCode);
-        $doneCode = is_array($doneDefinition)
-            ? (string) $doneDefinition['code']
-            : $plannedCode;
-
         return [
-            'planned' => $plannedCode,
-            'in_progress' => $inProgressCode,
-            'done' => $doneCode,
+            'planned' => ProjectActivityStatus::InProgress->value,
+            'in_progress' => ProjectActivityStatus::InProgress->value,
+            'done' => ProjectActivityStatus::Done->value,
         ];
     }
 }

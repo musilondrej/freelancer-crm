@@ -24,7 +24,6 @@ class Activity extends Model
      */
     protected $fillable = [
         'owner_id',
-        'project_id',
         'name',
         'description',
         'default_hourly_rate',
@@ -54,14 +53,6 @@ class Activity extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
-    }
-
-    /**
-     * @return BelongsTo<Project, $this>
-     */
-    public function project(): BelongsTo
-    {
-        return $this->belongsTo(Project::class);
     }
 
     /**

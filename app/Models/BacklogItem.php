@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BacklogItemPriority;
 use App\Enums\BacklogItemStatus;
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use App\Models\Concerns\EnforcesOwner;
 use Database\Factories\BacklogItemFactory;
@@ -188,7 +189,7 @@ class BacklogItem extends Model
             'title' => $this->title,
             'description' => $this->description,
             'type' => ProjectActivityType::Hourly,
-            'status' => ProjectActivityStatusOption::defaultCodeForOwner($this->owner_id),
+            'status' => ProjectActivityStatus::defaultCase(),
             'is_running' => false,
             'is_billable' => $isBillable,
             'currency' => $project->effectiveCurrency(),

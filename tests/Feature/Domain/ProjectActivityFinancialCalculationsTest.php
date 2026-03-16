@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
@@ -202,7 +203,7 @@ it('returns null for hourly amount when no time quantity is available', function
         'activity_id' => $context['activity']->id,
         'title' => 'Missing measure',
         'type' => ProjectActivityType::Hourly,
-        'status' => 'planned',
+        'status' => ProjectActivityStatus::InProgress,
         'is_billable' => true,
         'unit_rate' => 1000,
         'tracked_minutes' => null,

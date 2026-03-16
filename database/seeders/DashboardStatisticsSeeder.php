@@ -96,9 +96,8 @@ class DashboardStatisticsSeeder extends Seeder
             'cz' => $this->upsertCustomer($owner, [
                 'name' => 'Acme Digital s.r.o.',
                 'legal_name' => 'Acme Digital s.r.o.',
-                'company_id' => '28495011',
+                'registration_number' => '28495011',
                 'vat_id' => 'CZ28495011',
-                'dic' => 'CZ28495011',
                 'email' => 'billing+acme@crmseed.test',
                 'phone' => '+420 777 100 200',
                 'website' => 'https://acme-digital.example',
@@ -118,9 +117,8 @@ class DashboardStatisticsSeeder extends Seeder
             'eur' => $this->upsertCustomer($owner, [
                 'name' => 'Northwind GmbH',
                 'legal_name' => 'Northwind GmbH',
-                'company_id' => 'DE90238477',
+                'registration_number' => 'DE90238477',
                 'vat_id' => 'DE90238477',
-                'dic' => null,
                 'email' => 'finance+northwind@crmseed.test',
                 'phone' => '+49 151 0000 9999',
                 'website' => 'https://northwind.example',
@@ -140,9 +138,8 @@ class DashboardStatisticsSeeder extends Seeder
             'usd' => $this->upsertCustomer($owner, [
                 'name' => 'Pacific Apps LLC',
                 'legal_name' => 'Pacific Apps LLC',
-                'company_id' => 'US-TX-294772',
+                'registration_number' => 'US-TX-294772',
                 'vat_id' => 'US29477211',
-                'dic' => null,
                 'email' => 'accounts+pacific@crmseed.test',
                 'phone' => '+1 512 900 1200',
                 'website' => 'https://pacificapps.example',

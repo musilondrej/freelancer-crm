@@ -6,6 +6,7 @@ use App\Enums\CustomerStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Customer;
+use App\Support\CustomerIdentityFields;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
@@ -41,7 +42,7 @@ class CustomerForm
                                 Tab::make('Profile')
                                     ->icon(Heroicon::OutlinedBuildingOffice2)
                                     ->schema([
-                                        Section::make('Company Profile')
+                                        Section::make('Organization Profile')
                                             ->schema([
                                                 Hidden::make('owner_id')
                                                     ->default($ownerId),
@@ -52,11 +53,13 @@ class CustomerForm
                                                 TextInput::make('legal_name')
                                                     ->maxLength(255)
                                                     ->columnSpanFull(),
-                                                TextInput::make('company_id')
-                                                    ->label('Company ID')
+                                                TextInput::make('registration_number')
+                                                    ->label(CustomerIdentityFields::registrationNumberLabel())
+                                                    ->helperText(CustomerIdentityFields::registrationNumberHelperText())
                                                     ->maxLength(255),
                                                 TextInput::make('vat_id')
-                                                    ->label('VAT ID')
+                                                    ->label(CustomerIdentityFields::primaryTaxIdLabel())
+                                                    ->helperText(CustomerIdentityFields::primaryTaxIdHelperText())
                                                     ->maxLength(255)
                                                     ->unique(
                                                         Customer::class,
@@ -66,9 +69,6 @@ class CustomerForm
                                                             ->where('owner_id', Filament::auth()->id())
                                                             ->whereNull('deleted_at'),
                                                     ),
-                                                TextInput::make('dic')
-                                                    ->label('DIC')
-                                                    ->maxLength(255),
                                                 Textarea::make('internal_summary')
                                                     ->rows(5)
                                                     ->columnSpanFull(),

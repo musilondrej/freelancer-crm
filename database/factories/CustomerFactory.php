@@ -19,8 +19,20 @@ class CustomerFactory extends Factory
      */
     public function definition(): array
     {
+        $registrationNumber = fake()->optional(0.6)->randomElement([
+            fake()->numerify('########'),
+            fake()->bothify('HRB######'),
+            fake()->bothify('US-??-######'),
+            fake()->bothify('ABN###########'),
+        ]);
         $vatId = fake()->boolean(70)
-            ? fake()->unique()->bothify('CZ########')
+            ? fake()->unique()->randomElement([
+                fake()->bothify('CZ########'),
+                fake()->bothify('DE#########'),
+                fake()->bothify('GB#########'),
+                fake()->bothify('AU###########'),
+                fake()->bothify('US#########'),
+            ])
             : null;
         $email = fake()->boolean(80)
             ? fake()->unique()->companyEmail()
@@ -30,9 +42,8 @@ class CustomerFactory extends Factory
             'owner_id' => User::factory(),
             'name' => fake()->company(),
             'legal_name' => fake()->optional(0.7)->company(),
-            'company_id' => fake()->optional(0.6)->numerify('########'),
+            'registration_number' => $registrationNumber,
             'vat_id' => $vatId,
-            'dic' => fake()->optional(0.7)->bothify('CZ########'),
             'email' => $email,
             'phone' => fake()->optional(0.8)->phoneNumber(),
             'website' => fake()->optional(0.7)->url(),

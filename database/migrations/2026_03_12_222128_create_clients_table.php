@@ -3,7 +3,6 @@
 use App\Enums\CustomerStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -35,28 +34,18 @@ return new class extends Migration
             $table->jsonb('meta')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
+            $table->string('email_unique_key')->nullable()->storedAs('case when deleted_at is null and email is not null then lower(email) else null end');
+            $table->string('vat_id_unique_key')->nullable()->storedAs('case when deleted_at is null and vat_id is not null then upper(vat_id) else null end');
 
             $table->unique(['owner_id', 'id']);
+            $table->unique(['owner_id', 'email_unique_key'], 'clients_owner_email_unique');
+            $table->unique(['owner_id', 'vat_id_unique_key'], 'clients_owner_vat_id_unique');
             $table->index(['owner_id', 'status']);
             $table->index(['owner_id', 'next_follow_up_at']);
             $table->index(['owner_id', 'name']);
             $table->index(['owner_id', 'last_contacted_at']);
             $table->index(['owner_id', 'billing_currency']);
         });
-
-        DB::statement('
-            CREATE UNIQUE INDEX clients_owner_email_unique
-                ON clients (owner_id, lower(email))
-                WHERE deleted_at IS NULL
-                  AND email IS NOT NULL
-        ');
-
-        DB::statement('
-            CREATE UNIQUE INDEX clients_owner_vat_id_unique
-                ON clients (owner_id, upper(vat_id))
-                WHERE deleted_at IS NULL
-                  AND vat_id IS NOT NULL
-        ');
     }
 
     /**

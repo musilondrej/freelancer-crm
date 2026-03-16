@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -26,8 +25,10 @@ return new class extends Migration
             $table->jsonb('meta')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
+            $table->string('email_unique_key')->nullable()->storedAs('case when deleted_at is null and email is not null then lower(email) else null end');
 
             $table->unique(['owner_id', 'id']);
+            $table->unique(['owner_id', 'client_id', 'email_unique_key'], 'client_contacts_owner_client_email_unique');
             $table->index(['client_id', 'is_primary']);
             $table->index(['client_id', 'last_contacted_at']);
             $table->index(['owner_id', 'client_id']);
@@ -40,13 +41,6 @@ return new class extends Migration
                 ->on('clients')
                 ->cascadeOnDelete();
         });
-
-        DB::statement('
-            CREATE UNIQUE INDEX client_contacts_owner_client_email_unique
-                ON client_contacts (owner_id, client_id, lower(email))
-                WHERE deleted_at IS NULL
-                  AND email IS NOT NULL
-        ');
     }
 
     /**

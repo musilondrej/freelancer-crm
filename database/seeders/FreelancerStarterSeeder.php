@@ -103,9 +103,8 @@ class FreelancerStarterSeeder extends Seeder
             'novak-eshop' => [
                 'name' => 'Novak eShop s.r.o.',
                 'legal_name' => 'Novak eShop s.r.o.',
-                'company_id' => '07651234',
+                'registration_number' => '07651234',
                 'vat_id' => 'CZ07651234',
-                'dic' => 'CZ07651234',
                 'email' => 'invoice@novakeshop.test',
                 'phone' => '+420 777 100 200',
                 'website' => 'https://novakeshop.example',
@@ -119,9 +118,8 @@ class FreelancerStarterSeeder extends Seeder
             'alpen-digital' => [
                 'name' => 'Alpen Digital GmbH',
                 'legal_name' => 'Alpen Digital GmbH',
-                'company_id' => 'HRB998877',
+                'registration_number' => 'HRB998877',
                 'vat_id' => 'DE998877665',
-                'dic' => null,
                 'email' => 'finance@alpen-digital.test',
                 'phone' => '+49 151 1010 2020',
                 'website' => 'https://alpen-digital.example',

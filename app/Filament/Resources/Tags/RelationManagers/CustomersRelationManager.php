@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Tags\RelationManagers;
 
 use App\Enums\CustomerStatus;
+use App\Support\CustomerIdentityFields;
 use Filament\Actions\AttachAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -40,9 +41,12 @@ class CustomersRelationManager extends RelationManager
                 TextInput::make('name')
                     ->required(),
                 TextInput::make('legal_name'),
-                TextInput::make('company_id'),
-                TextInput::make('vat_id'),
-                TextInput::make('dic'),
+                TextInput::make('registration_number')
+                    ->label(CustomerIdentityFields::registrationNumberLabel())
+                    ->helperText(CustomerIdentityFields::registrationNumberHelperText()),
+                TextInput::make('vat_id')
+                    ->label(CustomerIdentityFields::primaryTaxIdLabel())
+                    ->helperText(CustomerIdentityFields::primaryTaxIdHelperText()),
                 TextInput::make('email')
                     ->label('Email address')
                     ->email(),
@@ -78,11 +82,11 @@ class CustomersRelationManager extends RelationManager
                     ->searchable(),
                 TextColumn::make('legal_name')
                     ->searchable(),
-                TextColumn::make('company_id')
+                TextColumn::make('registration_number')
+                    ->label(CustomerIdentityFields::registrationNumberLabel())
                     ->searchable(),
                 TextColumn::make('vat_id')
-                    ->searchable(),
-                TextColumn::make('dic')
+                    ->label(CustomerIdentityFields::primaryTaxIdLabel())
                     ->searchable(),
                 TextColumn::make('email')
                     ->label('Email address')

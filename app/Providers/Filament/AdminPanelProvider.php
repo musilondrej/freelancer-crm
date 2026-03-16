@@ -48,11 +48,13 @@ class AdminPanelProvider extends PanelProvider
             )
             ->navigationGroups([
                 NavigationGroup::make()
-                    ->label(__('Work Log')),
-                NavigationGroup::make()
                     ->label(__('Sales')),
                 NavigationGroup::make()
                     ->label(__('CRM')),
+                NavigationGroup::make()
+                    ->label(__('Delivery')),
+                NavigationGroup::make()
+                    ->label(__('Time & Money')),
                 NavigationGroup::make()
                     ->label(__('Setup')),
             ])

@@ -25,7 +25,7 @@ class RecurringServiceResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPathRoundedSquare;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Work Log';
+    protected static string|UnitEnum|null $navigationGroup = 'Time & Money';
 
     protected static ?int $navigationSort = 20;
 

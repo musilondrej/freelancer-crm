@@ -8,18 +8,16 @@ use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Activity;
 use App\Models\BacklogItem;
-use App\Models\Worklog;
 use App\Support\Filament\Currency;
+use App\Support\TimeDuration;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -214,30 +212,15 @@ class WorklogForm
                                 DateTimePicker::make('finished_at')
                                     ->seconds(false),
                                 TextInput::make('tracked_minutes')
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->suffix('min')
+                                    ->label('Tracked time')
+                                    ->placeholder('e.g. 2h 30m, 1d, 45m')
+                                    ->formatStateUsing(fn (?int $state): ?string => TimeDuration::format($state))
+                                    ->dehydrateStateUsing(fn (?string $state): ?int => $state !== null ? TimeDuration::toMinutes($state) : null)
                                     ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::Hourly->value),
                                 DatePicker::make('due_date'),
                             ])
                             ->columns(1),
 
-                        Section::make('System')
-                            ->schema([
-                                TextEntry::make('created_at')
-                                    ->label('Created')
-                                    ->state(fn (?Worklog $record): ?string => $record?->created_at?->diffForHumans()),
-                                TextEntry::make('updated_at')
-                                    ->label('Last modified')
-                                    ->state(fn (?Worklog $record): ?string => $record?->updated_at?->diffForHumans()),
-                            ])
-                            ->hidden(fn (?Worklog $record): bool => ! $record instanceof Worklog),
-                        Section::make('Technical Metadata')
-                            ->schema([
-                                KeyValue::make('meta')
-                                    ->columnSpanFull(),
-                            ])
-                            ->collapsed(),
                     ])
                     ->columnSpan([
                         'lg' => 4,

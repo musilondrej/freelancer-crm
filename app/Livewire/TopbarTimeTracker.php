@@ -9,6 +9,7 @@ use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Models\Worklog;
+use App\Support\TimeDuration;
 use App\Support\TimeTrackingRounding;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
@@ -275,7 +276,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
             Notification::make()
                 ->title(__('Time entry saved'))
-                ->body(__('Logged :duration.', ['duration' => $this->formatTrackedTime($trackedMinutes)]))
+                ->body(__('Logged :duration.', ['duration' => TimeDuration::format($trackedMinutes)]))
                 ->success()
                 ->send();
 
@@ -373,7 +374,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
 
         Notification::make()
             ->title(__('Time logged'))
-            ->body(__('Logged :duration.', ['duration' => $this->formatTrackedTime($totalTrackedMinutes)]))
+            ->body(__('Logged :duration.', ['duration' => TimeDuration::format($totalTrackedMinutes)]))
             ->success()
             ->send();
         $this->clearActiveSessionCache();
@@ -694,22 +695,6 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     {
         return $exception->getCode() === '23505'
             && str_contains($exception->getMessage(), 'worklogs_owner_running_hourly_unique');
-    }
-
-    private function formatTrackedTime(int $trackedMinutes): string
-    {
-        $hours = intdiv($trackedMinutes, 60);
-        $minutes = $trackedMinutes % 60;
-
-        if ($hours > 0 && $minutes > 0) {
-            return sprintf('%dh %dm', $hours, $minutes);
-        }
-
-        if ($hours > 0) {
-            return sprintf('%dh', $hours);
-        }
-
-        return sprintf('%dm', $minutes);
     }
 
     private function stopActionLabel(): string

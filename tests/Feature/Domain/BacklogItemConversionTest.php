@@ -28,7 +28,6 @@ it('converts a backlog item into a worklog and marks it as converted', function 
 
     $activity = Activity::query()->create([
         'owner_id' => $owner->id,
-        'project_id' => $project->id,
         'name' => 'Feature development',
         'default_hourly_rate' => 120,
         'is_billable' => true,

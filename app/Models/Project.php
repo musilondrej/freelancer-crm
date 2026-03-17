@@ -176,14 +176,4 @@ class Project extends Model
 
         return $this->currency ?? $customer?->effectiveCurrency();
     }
-
-    public function resolvedStatusLabel(): string
-    {
-        return $this->status->getLabel();
-    }
-
-    public function resolvedStatusColor(): string
-    {
-        return $this->status->getColor();
-    }
 }

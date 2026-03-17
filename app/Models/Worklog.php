@@ -270,45 +270,6 @@ class Worklog extends Model
         return $this->status->isDone();
     }
 
-    public function trackedDurationLabel(): string
-    {
-        return self::formatTrackedMinutes($this->tracked_minutes);
-    }
-
-    public function trackedMinutesWithSuffix(): string
-    {
-        if ($this->tracked_minutes === null) {
-            return '-';
-        }
-
-        $normalizedMinutes = max((int) $this->tracked_minutes, 0);
-
-        return number_format($normalizedMinutes, 0, '.', ' ').' min';
-    }
-
-    public static function formatTrackedMinutes(?int $minutes): string
-    {
-        if ($minutes === null) {
-            return '-';
-        }
-
-        $normalizedMinutes = max($minutes, 0);
-        $hours = intdiv($normalizedMinutes, 60);
-        $remainingMinutes = $normalizedMinutes % 60;
-
-        if ($hours === 0) {
-            return sprintf('%d min', $remainingMinutes);
-        }
-
-        $formattedHours = number_format($hours, 0, '.', ' ');
-
-        if ($remainingMinutes === 0) {
-            return sprintf('%s h', $formattedHours);
-        }
-
-        return sprintf('%s h %d min', $formattedHours, $remainingMinutes);
-    }
-
     private function resolvedTypeValue(): string
     {
         $rawType = $this->getAttribute('type');
@@ -318,15 +279,5 @@ class Worklog extends Model
         }
 
         return (string) $rawType;
-    }
-
-    public function resolvedStatusLabel(): string
-    {
-        return $this->status->getLabel();
-    }
-
-    public function resolvedStatusColor(): string
-    {
-        return $this->status->getColor();
     }
 }

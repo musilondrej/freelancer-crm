@@ -57,10 +57,6 @@ class TagForm
                                                 ColorPicker::make('color')
                                                     ->required()
                                                     ->default('#f59e0b'),
-                                                TextInput::make('sort_order')
-                                                    ->numeric()
-                                                    ->minValue(0)
-                                                    ->default(0),
                                             ])
                                             ->columns(1),
                                     ]),

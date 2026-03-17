@@ -29,10 +29,6 @@ class RecurringServiceTypesTable
                     ->boolean()
                     ->label('Active')
                     ->sortable(),
-                TextColumn::make('sort_order')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(),
                 TextColumn::make('recurring_services_count')
                     ->counts('recurringServices')
                     ->label('Services')

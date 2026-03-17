@@ -58,11 +58,6 @@ class ActivityForm
                                                     ->default(true),
                                                 Toggle::make('is_active')
                                                     ->default(true),
-                                                TextInput::make('sort_order')
-                                                    ->numeric()
-                                                    ->integer()
-                                                    ->default(0)
-                                                    ->minValue(0),
                                             ])
                                             ->columns(1),
                                     ]),

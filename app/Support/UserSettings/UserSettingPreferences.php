@@ -2,6 +2,13 @@
 
 namespace App\Support\UserSettings;
 
+use App\Enums\Profile\DateFormatEnum;
+use App\Enums\Profile\TimeFormatEnum;
+use App\Enums\TimeTrackingRoundingInterval;
+use App\Enums\TimeTrackingRoundingMode;
+use App\Enums\UserSettingLocale;
+use App\Enums\UserSettingWeekStartsOn;
+
 final class UserSettingPreferences
 {
     /**
@@ -9,21 +16,28 @@ final class UserSettingPreferences
      */
     public static function defaults(): array
     {
+        $roundingMode = TimeTrackingRoundingMode::tryFrom((string) config('crm.time_tracking.rounding.mode', 'ceil'))
+            ?? TimeTrackingRoundingMode::RoundUp;
+        $roundingInterval = TimeTrackingRoundingInterval::tryFrom((int) config('crm.time_tracking.rounding.interval_minutes', 15))
+            ?? TimeTrackingRoundingInterval::FifteenMinutes;
+        $locale = UserSettingLocale::tryFrom((string) config('app.locale', UserSettingLocale::English->value))
+            ?? UserSettingLocale::English;
+
         return [
             'time_tracking' => [
                 'rounding' => [
                     'enabled' => (bool) config('crm.time_tracking.rounding.enabled', true),
-                    'mode' => (string) config('crm.time_tracking.rounding.mode', 'ceil'),
-                    'interval_minutes' => (int) config('crm.time_tracking.rounding.interval_minutes', 15),
+                    'mode' => $roundingMode->value,
+                    'interval_minutes' => $roundingInterval->value,
                     'minimum_minutes' => (int) config('crm.time_tracking.rounding.minimum_minutes', 1),
                 ],
             ],
             'ui' => [
-                'locale' => config('app.locale', 'en'),
+                'locale' => $locale->value,
                 'timezone' => config('app.timezone', 'UTC'),
-                'week_starts_on' => 'monday',
-                'date_format' => 'd.m.Y',
-                'time_format' => 'H:i',
+                'week_starts_on' => UserSettingWeekStartsOn::Monday->value,
+                'date_format' => DateFormatEnum::EuropeanDot->value,
+                'time_format' => TimeFormatEnum::HourMinute24h->value,
             ],
         ];
     }
@@ -33,7 +47,7 @@ final class UserSettingPreferences
      */
     public static function allowedLocales(): array
     {
-        return ['en', 'cs'];
+        return UserSettingLocale::values();
     }
 
     /**
@@ -41,12 +55,7 @@ final class UserSettingPreferences
      */
     public static function allowedDateFormats(): array
     {
-        return [
-            'd.m.Y',
-            'Y-m-d',
-            'm/d/Y',
-            'd/m/Y',
-        ];
+        return DateFormatEnum::values();
     }
 
     /**
@@ -54,11 +63,7 @@ final class UserSettingPreferences
      */
     public static function allowedTimeFormats(): array
     {
-        return [
-            'H:i',
-            'H:i:s',
-            'h:i A',
-        ];
+        return TimeFormatEnum::values();
     }
 
     /**
@@ -73,10 +78,17 @@ final class UserSettingPreferences
         $defaultIntervalMinutes = (int) ($defaults['interval_minutes'] ?? 15);
         $defaultMinimumMinutes = (int) ($defaults['minimum_minutes'] ?? 1);
 
+        $resolvedMode = TimeTrackingRoundingMode::tryFrom(
+            (string) data_get($preferences, 'time_tracking.rounding.mode', $defaultMode),
+        ) ?? TimeTrackingRoundingMode::from($defaultMode);
+        $resolvedIntervalMinutes = TimeTrackingRoundingInterval::tryFrom(
+            (int) data_get($preferences, 'time_tracking.rounding.interval_minutes', $defaultIntervalMinutes),
+        ) ?? TimeTrackingRoundingInterval::from($defaultIntervalMinutes);
+
         return [
             'enabled' => (bool) data_get($preferences, 'time_tracking.rounding.enabled', $defaultEnabled),
-            'mode' => (string) data_get($preferences, 'time_tracking.rounding.mode', $defaultMode),
-            'interval_minutes' => (int) data_get($preferences, 'time_tracking.rounding.interval_minutes', $defaultIntervalMinutes),
+            'mode' => $resolvedMode->value,
+            'interval_minutes' => $resolvedIntervalMinutes->value,
             'minimum_minutes' => (int) data_get($preferences, 'time_tracking.rounding.minimum_minutes', $defaultMinimumMinutes),
         ];
     }
@@ -100,7 +112,7 @@ final class UserSettingPreferences
         }
 
         $resolvedWeekStartsOn = (string) data_get($preferences, 'ui.week_starts_on', $defaultWeekStartsOn);
-        if (! in_array($resolvedWeekStartsOn, ['monday', 'sunday'], true)) {
+        if (! in_array($resolvedWeekStartsOn, UserSettingWeekStartsOn::values(), true)) {
             $resolvedWeekStartsOn = $defaultWeekStartsOn;
         }
 

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\UserSettings\Schemas;
 
+use DateTimeZone;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -65,11 +66,12 @@ class UserSettingForm
                             ])
                             ->default((string) config('app.locale', 'en'))
                             ->required(),
-                        TextInput::make('preferences.ui.timezone')
+                        Select::make('preferences.ui.timezone')
                             ->label(__('Timezone'))
+                            ->options(self::timezoneOptions())
+                            ->searchable()
                             ->default((string) config('app.timezone', 'UTC'))
-                            ->required()
-                            ->maxLength(64),
+                            ->required(),
                         Select::make('preferences.ui.date_format')
                             ->label(__('Date format'))
                             ->options([
@@ -99,5 +101,15 @@ class UserSettingForm
                             ->required(),
                     ]),
             ]);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function timezoneOptions(): array
+    {
+        $timezones = timezone_identifiers_list(DateTimeZone::ALL);
+
+        return array_combine($timezones, $timezones) ?: [];
     }
 }

@@ -49,6 +49,16 @@ enum BacklogItemStatus: string implements HasColor, HasIcon, HasLabel
         };
     }
 
+    public function isOpen(): bool
+    {
+        return in_array($this, [self::Todo, self::InProgress, self::Blocked], true);
+    }
+
+    public function isDone(): bool
+    {
+        return $this === self::Done;
+    }
+
     /**
      * @return list<string>
      */

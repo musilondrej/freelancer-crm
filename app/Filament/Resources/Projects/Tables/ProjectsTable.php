@@ -4,11 +4,14 @@ namespace App\Filament\Resources\Projects\Tables;
 
 use App\Enums\ProjectStatus;
 use App\Models\Project;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -32,8 +35,6 @@ class ProjectsTable
                 ->sortable(),
             TextColumn::make('status')
                 ->badge()
-                ->formatStateUsing(fn (Project $record): string => $record->resolvedStatusLabel())
-                ->color(fn (Project $record): string => $record->resolvedStatusColor())
                 ->sortable(),
             TextColumn::make('pricing_model')
                 ->badge()
@@ -59,8 +60,6 @@ class ProjectsTable
                     ->sortable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (Project $record): string => $record->resolvedStatusLabel())
-                    ->color(fn (Project $record): string => $record->resolvedStatusColor())
                     ->sortable(),
                 TextColumn::make('pricing_model')
                     ->badge()
@@ -91,7 +90,40 @@ class ProjectsTable
                     ->label('Customer'),
             ])
             ->recordActions([
-                EditAction::make(),
+                ActionGroup::make([
+                    Action::make('mark_completed')
+                        ->label('Mark completed')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->visible(fn (Project $record): bool => $record->status->isOpen())
+                        ->action(function (Project $record): void {
+                            $record->update([
+                                'status' => ProjectStatus::Completed,
+                                'closed_date' => $record->closed_date ?? now(),
+                            ]);
+
+                            Notification::make()
+                                ->title('Project marked as completed')
+                                ->success()
+                                ->send();
+                        }),
+                    Action::make('mark_blocked')
+                        ->label('Mark blocked')
+                        ->icon('heroicon-o-exclamation-triangle')
+                        ->color('danger')
+                        ->visible(fn (Project $record): bool => $record->status === ProjectStatus::InProgress)
+                        ->action(function (Project $record): void {
+                            $record->update([
+                                'status' => ProjectStatus::Blocked,
+                            ]);
+
+                            Notification::make()
+                                ->title('Project marked as blocked')
+                                ->warning()
+                                ->send();
+                        }),
+                    EditAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

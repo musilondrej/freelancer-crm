@@ -20,4 +20,9 @@ class EditBacklogItem extends EditRecord
             RestoreAction::make(),
         ];
     }
+
+    public function hasCombinedRelationManagerTabsWithContent(): bool
+    {
+        return true;
+    }
 }

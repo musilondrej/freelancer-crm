@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\BacklogItems;
 
+use App\Enums\BacklogItemStatus;
 use App\Filament\Resources\BacklogItems\Pages\CreateBacklogItem;
 use App\Filament\Resources\BacklogItems\Pages\EditBacklogItem;
 use App\Filament\Resources\BacklogItems\Pages\ListBacklogItems;
@@ -58,6 +59,7 @@ class BacklogItemResource extends Resource
 
         $count = BacklogItem::query()
             ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
+            ->whereIn('status', BacklogItemStatus::openValues())
             ->whereNull('converted_at')
             ->count();
 

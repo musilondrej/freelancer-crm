@@ -15,8 +15,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @property BacklogItemStatus $status
+ * @property BacklogItemPriority $priority
+ * @property Carbon|null $converted_at
+ */
 class BacklogItem extends Model
 {
     use EnforcesOwner;
@@ -115,38 +121,6 @@ class BacklogItem extends Model
     public function tags(): MorphToMany
     {
         return $this->morphToMany(Tag::class, 'taggable');
-    }
-
-    public function resolvedStatusCode(): string
-    {
-        $rawStatus = $this->getRawOriginal('status');
-
-        return (string) $rawStatus;
-    }
-
-    public function resolvedStatusLabel(): string
-    {
-        return BacklogItemStatus::tryFrom($this->resolvedStatusCode())?->getLabel() ?? 'Unknown';
-    }
-
-    public function resolvedStatusColor(): string
-    {
-        return BacklogItemStatus::tryFrom($this->resolvedStatusCode())?->getColor() ?? 'gray';
-    }
-
-    public function resolvedPriorityValue(): int
-    {
-        return (int) ($this->getRawOriginal('priority') ?? BacklogItemPriority::Medium->value);
-    }
-
-    public function resolvedPriorityLabel(): string
-    {
-        return BacklogItemPriority::tryFrom($this->resolvedPriorityValue())?->getLabel() ?? 'Medium';
-    }
-
-    public function resolvedPriorityColor(): string
-    {
-        return BacklogItemPriority::tryFrom($this->resolvedPriorityValue())?->getColor() ?? 'info';
     }
 
     public function convertToWorklog(): Worklog

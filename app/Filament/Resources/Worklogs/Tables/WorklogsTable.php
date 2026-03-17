@@ -7,6 +7,7 @@ use App\Enums\ProjectActivityType;
 use App\Filament\Resources\Worklogs\WorklogResource;
 use App\Models\UserSetting;
 use App\Models\Worklog;
+use App\Support\TimeDuration;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -38,12 +39,10 @@ class WorklogsTable
                 ->sortable(),
             TextColumn::make('status')
                 ->badge()
-                ->formatStateUsing(fn (Worklog $record): string => $record->resolvedStatusLabel())
-                ->color(fn (Worklog $record): string => $record->resolvedStatusColor())
                 ->sortable(),
             TextColumn::make('tracked_minutes')
                 ->label('Tracked time')
-                ->state(fn (Worklog $record): string => $record->trackedDurationLabel())
+                ->state(fn (Worklog $record): ?string => TimeDuration::format($record->tracked_minutes))
                 ->sortable()
                 ->toggleable(),
             TextColumn::make('created_at')
@@ -91,8 +90,6 @@ class WorklogsTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (Worklog $record): string => $record->resolvedStatusLabel())
-                    ->color(fn (Worklog $record): string => $record->resolvedStatusColor())
                     ->sortable(),
                 IconColumn::make('is_billable')
                     ->boolean()
@@ -106,7 +103,7 @@ class WorklogsTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('tracked_minutes')
                     ->label('Tracked time')
-                    ->state(fn (Worklog $record): string => $record->trackedDurationLabel())
+                    ->state(fn (Worklog $record): ?string => TimeDuration::format($record->tracked_minutes))
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('due_date')

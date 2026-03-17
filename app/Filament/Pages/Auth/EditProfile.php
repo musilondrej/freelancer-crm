@@ -228,7 +228,7 @@ class EditProfile extends BaseEditProfile
                             ->schema([
                                 Placeholder::make('snapshot_currency')
                                     ->label(__('Default currency'))
-                                    ->content(fn (Get $get): string => (string) ($get('default_currency') ?: __('Not set'))),
+                                    ->content(fn (Get $get): string => $this->formatCurrency($get('default_currency'))),
                                 Placeholder::make('snapshot_hourly_rate')
                                     ->label(__('Default hourly rate'))
                                     ->content(fn (Get $get): string => $this->formatHourlyRate($get('default_hourly_rate'))),
@@ -273,6 +273,25 @@ class EditProfile extends BaseEditProfile
         }
 
         return number_format((float) $value, 0, '.', ' ').' / h';
+    }
+
+    protected function formatCurrency(mixed $value): string
+    {
+        if ($value instanceof Currency) {
+            return $value->value;
+        }
+
+        if (is_string($value) && trim($value) !== '') {
+            $currency = Currency::tryFrom($value);
+
+            if ($currency !== null) {
+                return $currency->value;
+            }
+
+            return $value;
+        }
+
+        return __('Not set');
     }
 
     /**

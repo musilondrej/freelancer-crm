@@ -76,7 +76,7 @@ it('returns configured ui defaults when user id is null', function (): void {
         'locale' => 'cs',
         'timezone' => 'Europe/Prague',
         'week_starts_on' => 'monday',
-        'date_format' => 'd.m.Y',
+        'date_format' => 'd. m. Y',
         'time_format' => 'H:i',
     ]);
 });
@@ -127,7 +127,7 @@ it('merges ui preferences and falls back for invalid values', function (): void 
         'locale' => 'en',
         'timezone' => 'UTC',
         'week_starts_on' => 'monday',
-        'date_format' => 'd.m.Y',
+        'date_format' => 'd. m. Y',
         'time_format' => 'H:i',
     ]);
 });

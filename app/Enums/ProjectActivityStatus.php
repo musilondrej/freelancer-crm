@@ -10,14 +10,18 @@ use Filament\Support\Icons\Heroicon;
 
 enum ProjectActivityStatus: string implements HasColor, HasIcon, HasLabel
 {
+    case Planned = 'planned';
     case InProgress = 'in_progress';
+    case Blocked = 'blocked';
     case Done = 'done';
     case Cancelled = 'cancelled';
 
     public function getLabel(): string
     {
         return match ($this) {
+            self::Planned => 'Planned',
             self::InProgress => 'In Progress',
+            self::Blocked => 'Blocked',
             self::Done => 'Done',
             self::Cancelled => 'Cancelled',
         };
@@ -26,19 +30,28 @@ enum ProjectActivityStatus: string implements HasColor, HasIcon, HasLabel
     public function getColor(): string
     {
         return match ($this) {
+            self::Planned => 'gray',
             self::InProgress => 'warning',
+            self::Blocked => 'danger',
             self::Done => 'success',
-            self::Cancelled => 'danger',
+            self::Cancelled => 'gray',
         };
     }
 
     public function getIcon(): BackedEnum
     {
         return match ($this) {
+            self::Planned => Heroicon::OutlinedClipboardDocumentList,
             self::InProgress => Heroicon::OutlinedPlayCircle,
+            self::Blocked => Heroicon::OutlinedNoSymbol,
             self::Done => Heroicon::OutlinedCheckCircle,
-            self::Cancelled => Heroicon::OutlinedNoSymbol,
+            self::Cancelled => Heroicon::OutlinedXCircle,
         };
+    }
+
+    public function isPlanned(): bool
+    {
+        return $this === self::Planned;
     }
 
     public function isDone(): bool
@@ -51,9 +64,14 @@ enum ProjectActivityStatus: string implements HasColor, HasIcon, HasLabel
         return $this === self::Cancelled;
     }
 
+    public function isBlocked(): bool
+    {
+        return $this === self::Blocked;
+    }
+
     public function isOpen(): bool
     {
-        return $this === self::InProgress;
+        return in_array($this, [self::Planned, self::InProgress, self::Blocked], true);
     }
 
     public function isRunning(): bool
@@ -74,7 +92,7 @@ enum ProjectActivityStatus: string implements HasColor, HasIcon, HasLabel
      */
     public static function openValues(): array
     {
-        return [self::InProgress->value];
+        return [self::Planned->value, self::InProgress->value, self::Blocked->value];
     }
 
     public static function defaultCase(): self

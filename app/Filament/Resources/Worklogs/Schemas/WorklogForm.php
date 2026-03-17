@@ -5,10 +5,10 @@ namespace App\Filament\Resources\Worklogs\Schemas;
 use App\Enums\Currency;
 use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
+use App\Enums\WorklogPriority;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Activity;
-use App\Models\BacklogItem;
 use App\Support\TimeDuration;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
@@ -24,7 +24,6 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Date;
 
 class WorklogForm
 {
@@ -33,10 +32,8 @@ class WorklogForm
         $ownerId = Filament::auth()->id();
         $requestedProjectId = request()->query('project_id');
         $requestedActivityId = request()->query('activity_id');
-        $requestedBacklogItemId = request()->query('backlog_item_id');
         $defaultProjectId = is_numeric($requestedProjectId) ? (int) $requestedProjectId : null;
         $defaultActivityId = is_numeric($requestedActivityId) ? (int) $requestedActivityId : null;
-        $defaultBacklogItemId = is_numeric($requestedBacklogItemId) ? (int) $requestedBacklogItemId : null;
 
         return $schema
             ->components([
@@ -61,7 +58,6 @@ class WorklogForm
                                     ->live()
                                     ->afterStateUpdated(function (Set $set): void {
                                         $set('activity_id', null);
-                                        $set('backlog_item_id', null);
                                     }),
                                 Select::make('activity_id')
                                     ->label('Activity template')
@@ -109,20 +105,6 @@ class WorklogForm
                                             $set('unit_rate', null);
                                             $set('tracked_minutes', null);
                                         }
-                                    }),
-                                Select::make('backlog_item_id')
-                                    ->label('Backlog item')
-                                    ->default($defaultBacklogItemId)
-                                    ->options(fn (Get $get): array => self::backlogOptions($ownerId, $get('project_id')))
-                                    ->searchable()
-                                    ->preload()
-                                    ->disabled(fn (Get $get): bool => ! is_numeric($get('project_id')))
-                                    ->live()
-                                    ->afterStateHydrated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
-                                        self::syncFromBacklog($ownerId, $get, $set, $state);
-                                    })
-                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
-                                        self::syncFromBacklog($ownerId, $get, $set, $state);
                                     }),
                                 TextInput::make('title')
                                     ->required()
@@ -194,6 +176,8 @@ class WorklogForm
                                     ->options(ProjectActivityStatus::class)
                                     ->default(ProjectActivityStatus::defaultCase())
                                     ->required(),
+                                Select::make('priority')
+                                    ->options(WorklogPriority::class),
                             ]),
 
                         Section::make('Tags')
@@ -213,6 +197,11 @@ class WorklogForm
                                     ->formatStateUsing(fn (?int $state): ?string => TimeDuration::format($state))
                                     ->dehydrateStateUsing(fn (?string $state): ?int => $state !== null ? TimeDuration::toMinutes($state) : null)
                                     ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::Hourly->value),
+                                TextInput::make('estimated_minutes')
+                                    ->label('Estimate')
+                                    ->placeholder('e.g. 2h 30m, 1d, 45m')
+                                    ->formatStateUsing(fn (?int $state): ?string => TimeDuration::format($state))
+                                    ->dehydrateStateUsing(fn (?string $state): ?int => $state !== null ? TimeDuration::toMinutes($state) : null),
                                 DatePicker::make('due_date'),
                             ])
                             ->columns(1),
@@ -244,55 +233,6 @@ class WorklogForm
             ->orderBy('name')
             ->pluck('name', 'id')
             ->all();
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private static function backlogOptions(?int $ownerId, mixed $projectId): array
-    {
-        if ($ownerId === null || ! is_numeric($projectId)) {
-            return [];
-        }
-
-        return BacklogItem::query()
-            ->where('owner_id', $ownerId)
-            ->where('project_id', (int) $projectId)
-            ->orderByDesc('priority')
-            ->oldest('due_date')
-            ->orderBy('title')
-            ->pluck('title', 'id')
-            ->all();
-    }
-
-    private static function syncFromBacklog(?int $ownerId, Get $get, Set $set, mixed $state): void
-    {
-        if ($ownerId === null || ! is_numeric($state)) {
-            return;
-        }
-
-        $backlogItem = BacklogItem::query()
-            ->where('owner_id', $ownerId)
-            ->find((int) $state);
-
-        if (! $backlogItem instanceof BacklogItem) {
-            return;
-        }
-
-        $set('project_id', $backlogItem->project_id);
-        $set('activity_id', $backlogItem->activity_id);
-
-        if (! is_string($get('title')) || trim($get('title')) === '') {
-            $set('title', $backlogItem->title);
-        }
-
-        if ((! is_string($get('description')) || trim($get('description')) === '') && $backlogItem->description !== null) {
-            $set('description', $backlogItem->description);
-        }
-
-        if ($get('due_date') === null && $backlogItem->due_date !== null) {
-            $set('due_date', Date::parse((string) $backlogItem->due_date)->toDateString());
-        }
     }
 
     private static function resolveActivityTypeValue(mixed $value): string

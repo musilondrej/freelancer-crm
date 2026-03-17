@@ -28,7 +28,7 @@ class ProjectActivityFactory extends Factory
             'project_id' => Project::factory(),
             'owner_id' => fn (array $attributes): ?int => Project::query()->find($attributes['project_id'])?->owner_id,
             'activity_id' => fn (array $attributes): ?int => $this->resolveActivityForOwner($attributes['owner_id'] ?? null)?->id,
-            'backlog_item_id' => null,
+            'priority' => fake()->optional(0.3)->randomElement([1, 2, 3, 4, 5]),
             'title' => function (array $attributes): string {
                 $activityId = $attributes['activity_id'] ?? null;
                 $activity = Activity::query()->find($activityId);
@@ -74,6 +74,7 @@ class ProjectActivityFactory extends Factory
             },
             'flat_amount' => $isHourly ? null : fake()->randomFloat(2, 400, 18000),
             'tracked_minutes' => $isHourly ? fake()->numberBetween(30, 5200) : null,
+            'estimated_minutes' => fake()->optional(0.4)->numberBetween(30, 4800),
             'due_date' => fake()->optional(0.6)->dateTimeBetween('now', '+3 months'),
             'started_at' => fake()->optional(0.6)->dateTimeBetween('-2 months', 'now'),
             'finished_at' => function (array $attributes): mixed {
@@ -122,6 +123,20 @@ class ProjectActivityFactory extends Factory
             'unit_rate' => fake()->randomFloat(2, 500, 3200),
             'flat_amount' => null,
             'tracked_minutes' => fake()->numberBetween(60, 4800),
+        ]);
+    }
+
+    public function planned(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'type' => ProjectActivityType::Hourly,
+            'status' => ProjectActivityStatus::Planned,
+            'is_running' => false,
+            'priority' => fake()->randomElement([1, 2, 3, 4, 5]),
+            'estimated_minutes' => fake()->numberBetween(60, 4800),
+            'tracked_minutes' => null,
+            'started_at' => null,
+            'finished_at' => null,
         ]);
     }
 

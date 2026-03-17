@@ -7,7 +7,6 @@ use App\Filament\Resources\Projects\Pages\CreateProject;
 use App\Filament\Resources\Projects\Pages\EditProject;
 use App\Filament\Resources\Projects\Pages\ListProjects;
 use App\Filament\Resources\Projects\RelationManagers\ActivitiesRelationManager;
-use App\Filament\Resources\Projects\RelationManagers\BacklogItemsRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\RecurringServicesRelationManager;
 use App\Filament\Resources\Projects\Schemas\ProjectForm;
 use App\Filament\Resources\Projects\Tables\ProjectsTable;
@@ -50,7 +49,6 @@ class ProjectResource extends Resource
         return [
             RelationGroup::make('Delivery', [
                 ActivitiesRelationManager::class,
-                BacklogItemsRelationManager::class,
                 RecurringServicesRelationManager::class,
             ]),
         ];

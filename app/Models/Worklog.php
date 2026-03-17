@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
+use App\Enums\WorklogPriority;
 use App\Models\Concerns\EnforcesOwner;
 use Database\Factories\ProjectActivityFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * @property ProjectActivityStatus $status
  * @property ProjectActivityType $type
+ * @property WorklogPriority|null $priority
  */
 class Worklog extends Model
 {
@@ -42,11 +44,11 @@ class Worklog extends Model
         'owner_id',
         'project_id',
         'activity_id',
-        'backlog_item_id',
         'title',
         'description',
         'type',
         'status',
+        'priority',
         'is_running',
         'is_billable',
         'is_invoiced',
@@ -57,6 +59,7 @@ class Worklog extends Model
         'unit_rate',
         'flat_amount',
         'tracked_minutes',
+        'estimated_minutes',
         'due_date',
         'started_at',
         'finished_at',
@@ -71,6 +74,8 @@ class Worklog extends Model
         return [
             'type' => ProjectActivityType::class,
             'status' => ProjectActivityStatus::class,
+            'priority' => WorklogPriority::class,
+            'estimated_minutes' => 'integer',
             'is_running' => 'boolean',
             'is_billable' => 'boolean',
             'is_invoiced' => 'boolean',
@@ -131,14 +136,6 @@ class Worklog extends Model
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);
-    }
-
-    /**
-     * @return BelongsTo<BacklogItem, $this>
-     */
-    public function backlogItem(): BelongsTo
-    {
-        return $this->belongsTo(BacklogItem::class);
     }
 
     /**

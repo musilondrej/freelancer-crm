@@ -13,17 +13,21 @@ it('marks Cancelled as cancelled', function (): void {
         ->and(ProjectActivityStatus::InProgress->isCancelled())->toBeFalse();
 });
 
-it('marks InProgress as open and running', function (): void {
-    expect(ProjectActivityStatus::InProgress->isOpen())->toBeTrue()
+it('marks open statuses correctly', function (): void {
+    expect(ProjectActivityStatus::Planned->isOpen())->toBeTrue()
+        ->and(ProjectActivityStatus::InProgress->isOpen())->toBeTrue()
+        ->and(ProjectActivityStatus::Blocked->isOpen())->toBeTrue()
         ->and(ProjectActivityStatus::Done->isOpen())->toBeFalse()
         ->and(ProjectActivityStatus::Cancelled->isOpen())->toBeFalse()
         ->and(ProjectActivityStatus::InProgress->isRunning())->toBeTrue()
-        ->and(ProjectActivityStatus::Done->isRunning())->toBeFalse();
+        ->and(ProjectActivityStatus::Planned->isRunning())->toBeFalse()
+        ->and(ProjectActivityStatus::Planned->isPlanned())->toBeTrue()
+        ->and(ProjectActivityStatus::Blocked->isBlocked())->toBeTrue();
 });
 
 it('returns correct static collections', function (): void {
     expect(ProjectActivityStatus::doneValues())->toBe(['done'])
-        ->and(ProjectActivityStatus::openValues())->toBe(['in_progress'])
+        ->and(ProjectActivityStatus::openValues())->toBe(['planned', 'in_progress', 'blocked'])
         ->and(ProjectActivityStatus::defaultCase())->toBe(ProjectActivityStatus::InProgress)
         ->and(ProjectActivityStatus::runningCase())->toBe(ProjectActivityStatus::InProgress);
 });

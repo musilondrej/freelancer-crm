@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Customers\Schemas;
 
+use App\Enums\Currency;
 use App\Enums\CustomerStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
@@ -87,15 +88,11 @@ class CustomerForm
                                     ->maxLength(255),
                                 Select::make('billing_currency')
                                     ->label('Currency')
-                                    ->options([
-                                        'CZK' => 'CZK (Kč)',
-                                        'EUR' => 'EUR (€)',
-                                        'USD' => 'USD ($)',
-                                    ]),
+                                    ->options(Currency::class),
                                 TextInput::make('hourly_rate')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->suffix(fn (Get $get): string => (string) ($get('billing_currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK')))),
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get, 'billing_currency')),
                             ])
                             ->columns(1),
 

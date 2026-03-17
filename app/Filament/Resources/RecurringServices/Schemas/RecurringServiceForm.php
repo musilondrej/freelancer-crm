@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\RecurringServices\Schemas;
 
+use App\Enums\Currency;
 use App\Enums\RecurringServiceBillingModel;
 use App\Enums\RecurringServiceCadenceUnit;
 use App\Enums\RecurringServiceStatus;
@@ -169,20 +170,16 @@ class RecurringServiceForm
                                     ->required()
                                     ->live(),
                                 Select::make('currency')
-                                    ->options([
-                                        'CZK' => 'CZK (Kč)',
-                                        'EUR' => 'EUR (€)',
-                                        'USD' => 'USD ($)',
-                                    ]),
+                                    ->options(Currency::class),
                                 TextInput::make('fixed_amount')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK'))))
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => self::resolveBillingModelValue($get('billing_model')) === RecurringServiceBillingModel::Fixed->value),
                                 TextInput::make('hourly_rate')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK'))))
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => self::resolveBillingModelValue($get('billing_model')) === RecurringServiceBillingModel::Hourly->value),
                                 TextInput::make('included_quantity')
                                     ->numeric()

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Leads\Schemas;
 
+use App\Enums\Currency;
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
@@ -135,18 +136,14 @@ class LeadForm
                                         Section::make('Commercial')
                                             ->schema([
                                                 Select::make('currency')
-                                                    ->options([
-                                                        'CZK' => 'CZK (Kč)',
-                                                        'EUR' => 'EUR (€)',
-                                                        'USD' => 'USD ($)',
-                                                    ])
-                                                    ->default('CZK')
+                                                    ->options(Currency::class)
+                                                    ->default(Currency::CZK)
                                                     ->required()
                                                     ->live(),
                                                 TextInput::make('estimated_value')
                                                     ->numeric()
                                                     ->minValue(0)
-                                                    ->suffix(fn (Get $get): string => self::resolveCurrencyCode($get('currency')))
+                                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                                     ->placeholder('0'),
                                                 DatePicker::make('expected_close_date')
                                                     ->native(false),
@@ -213,7 +210,17 @@ class LeadForm
                                     ->content(fn (Get $get): string => self::leadPipelineStageLabel($get('pipeline_stage'))),
                                 Placeholder::make('estimated_value_preview')
                                     ->label('Estimated value')
-                                    ->content(fn (Get $get): string => self::formatEstimatedValue(self::resolveCurrencyCode($get('currency')), $get('estimated_value'))),
+                                    ->content(function (Get $get): string {
+                                        $estimatedValue = $get('estimated_value');
+
+                                        if ($estimatedValue === null || $estimatedValue === '') {
+                                            return 'No estimate';
+                                        }
+
+                                        $currency = Currency::tryFrom((string) $get('currency')) ?? Currency::userDefault();
+
+                                        return $currency->format((float) $estimatedValue);
+                                    }),
                                 Placeholder::make('expected_close_preview')
                                     ->label('Expected close')
                                     ->content(function (Get $get): string {
@@ -262,11 +269,6 @@ class LeadForm
         return (string) $value;
     }
 
-    private static function resolveCurrencyCode(mixed $value): string
-    {
-        return strtoupper((string) $value);
-    }
-
     private static function leadStatusLabel(mixed $value): string
     {
         if ($value instanceof LeadStatus) {
@@ -291,21 +293,5 @@ class LeadForm
         }
 
         return 'Not set';
-    }
-
-    private static function formatEstimatedValue(string $currency, mixed $estimatedValue): string
-    {
-        if ($estimatedValue === null || $estimatedValue === '') {
-            return 'No estimate';
-        }
-
-        $numericValue = (float) $estimatedValue;
-        $formattedValue = number_format($numericValue, 0, '.', ' ');
-
-        return match (strtoupper($currency)) {
-            'EUR' => '€ '.$formattedValue,
-            'USD' => '$ '.$formattedValue,
-            default => $formattedValue.' Kč',
-        };
     }
 }

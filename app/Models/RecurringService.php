@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Currency;
 use App\Enums\RecurringServiceBillingModel;
 use App\Enums\RecurringServiceCadenceUnit;
 use App\Enums\RecurringServiceStatus;
@@ -163,12 +164,11 @@ class RecurringService extends Model
                     return null;
                 }
 
-                $currency = $attributes['currency'] ?? null;
-                $formattedHourlyRate = number_format((float) $hourlyRate, 2, '.', '');
+                $currency = Currency::tryFrom((string) ($attributes['currency'] ?? ''));
 
                 return $currency !== null
-                    ? sprintf('%s %s', $formattedHourlyRate, $currency)
-                    : $formattedHourlyRate;
+                    ? $currency->formatWithCode((float) $hourlyRate)
+                    : number_format((float) $hourlyRate, 2, '.', '');
             },
         );
     }

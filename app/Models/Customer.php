@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Currency;
 use App\Enums\CustomerStatus;
 use App\Models\Concerns\EnforcesOwner;
 use Database\Factories\CustomerFactory;
@@ -128,12 +129,11 @@ class Customer extends Model
                     return null;
                 }
 
-                $currency = $attributes['billing_currency'] ?? null;
-                $formattedHourlyRate = number_format((float) $hourlyRate, 2, '.', '');
+                $currency = Currency::tryFrom((string) ($attributes['billing_currency'] ?? ''));
 
                 return $currency !== null
-                    ? sprintf('%s %s', $formattedHourlyRate, $currency)
-                    : $formattedHourlyRate;
+                    ? $currency->formatWithCode((float) $hourlyRate)
+                    : number_format((float) $hourlyRate, 2, '.', '');
             },
         );
     }

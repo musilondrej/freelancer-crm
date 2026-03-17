@@ -2,13 +2,13 @@
 
 namespace App\Filament\Resources\Worklogs\Schemas;
 
+use App\Enums\Currency;
 use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Activity;
 use App\Models\BacklogItem;
-use App\Support\Filament\Currency;
 use App\Support\TimeDuration;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
@@ -138,11 +138,7 @@ class WorklogForm
                         Section::make('Billing')
                             ->schema([
                                 Select::make('currency')
-                                    ->options([
-                                        'CZK' => 'CZK (Kč)',
-                                        'EUR' => 'EUR (€)',
-                                        'USD' => 'USD ($)',
-                                    ]),
+                                    ->options(Currency::class),
                                 TextInput::make('quantity')
                                     ->numeric()
                                     ->minValue(0)
@@ -150,12 +146,12 @@ class WorklogForm
                                 TextInput::make('unit_rate')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->suffix(fn (Get $get): string => Currency::resolve($get))
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::Hourly->value),
                                 TextInput::make('flat_amount')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->suffix(fn (Get $get): string => Currency::resolve($get))
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::OneTime->value),
                                 TextInput::make('invoice_reference')
                                     ->maxLength(64)

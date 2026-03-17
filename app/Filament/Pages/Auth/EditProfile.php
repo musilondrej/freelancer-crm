@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Auth;
 
+use App\Enums\Currency;
 use App\Models\UserSetting;
 use Carbon\CarbonImmutable;
 use Filament\Auth\Pages\EditProfile as BaseEditProfile;
@@ -126,11 +127,7 @@ class EditProfile extends BaseEditProfile
                                             ->schema([
                                                 Select::make('default_currency')
                                                     ->label(__('Default currency'))
-                                                    ->options([
-                                                        'CZK' => 'CZK (Kc)',
-                                                        'EUR' => 'EUR (EUR)',
-                                                        'USD' => 'USD (USD)',
-                                                    ])
+                                                    ->options(Currency::class)
                                                     ->required(),
                                                 TextInput::make('default_hourly_rate')
                                                     ->label(__('Default hourly rate'))

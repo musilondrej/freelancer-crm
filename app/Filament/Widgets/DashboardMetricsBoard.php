@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\Currency;
 use App\Enums\LeadStatus;
 use App\Enums\ProjectActivityStatus;
 use App\Enums\ProjectActivityType;
@@ -186,7 +187,7 @@ class DashboardMetricsBoard extends BaseWidget
         $cacheKey = sprintf(
             'dashboard.metrics.owner.%d.currency.%s',
             $ownerId,
-            strtolower($displayCurrency),
+            strtolower($displayCurrency->value),
         );
 
         return $this->snapshotCache = Cache::remember(
@@ -302,7 +303,7 @@ class DashboardMetricsBoard extends BaseWidget
             : null;
 
         return [
-            'display_currency' => $displayCurrency,
+            'display_currency' => $displayCurrency->value,
             'revenue_today' => $revenueToday,
             'revenue_week' => $revenueWeek,
             'revenue_month' => $revenueMonth,
@@ -320,10 +321,10 @@ class DashboardMetricsBoard extends BaseWidget
     /**
      * @return array<string, float|int|string|null>
      */
-    private function emptySnapshot(string $displayCurrency): array
+    private function emptySnapshot(Currency $displayCurrency): array
     {
         return [
-            'display_currency' => $displayCurrency,
+            'display_currency' => $displayCurrency->value,
             'revenue_today' => 0.0,
             'revenue_week' => 0.0,
             'revenue_month' => 0.0,
@@ -465,7 +466,7 @@ class DashboardMetricsBoard extends BaseWidget
             ]);
     }
 
-    private function resolvedConvertedAmount(Worklog $activity, string $displayCurrency): ?float
+    private function resolvedConvertedAmount(Worklog $activity, Currency $displayCurrency): ?float
     {
         $amount = $activity->calculatedAmount();
         $currency = $activity->effectiveCurrency();

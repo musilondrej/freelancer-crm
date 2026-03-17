@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Projects\Schemas;
 
+use App\Enums\Currency;
 use App\Enums\ProjectPricingModel;
 use App\Enums\ProjectStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
@@ -77,20 +78,16 @@ class ProjectForm
                                     ->required()
                                     ->live(),
                                 Select::make('currency')
-                                    ->options([
-                                        'CZK' => 'CZK (Kč)',
-                                        'EUR' => 'EUR (€)',
-                                        'USD' => 'USD ($)',
-                                    ]),
+                                    ->options(Currency::class),
                                 TextInput::make('hourly_rate')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK'))))
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)),
                                 TextInput::make('fixed_price')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->suffix(fn (Get $get): string => (string) ($get('currency') ?: (data_get(Filament::auth()->user(), 'default_currency', 'CZK'))))
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => self::resolvePricingModelValue($get('pricing_model')) === ProjectPricingModel::Fixed->value),
                                 TextInput::make('estimated_hours')
                                     ->numeric()

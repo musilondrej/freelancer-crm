@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Enums\Currency;
+
 final class CurrencyConverter
 {
     /**
@@ -9,57 +11,29 @@ final class CurrencyConverter
      */
     public static function rates(): array
     {
-        $configuredRates = config('crm.fx.rates', []);
-
-        if (! is_array($configuredRates) || $configuredRates === []) {
-            return [
-                'EUR' => 1.0,
-                'USD' => 1.09,
-                'CZK' => 25.30,
-            ];
-        }
-
         $rates = [];
 
-        foreach ($configuredRates as $currency => $rate) {
-            if (! is_string($currency)) {
-                continue;
-            }
-
-            if (! is_numeric($rate)) {
-                continue;
-            }
-
-            $rates[strtoupper($currency)] = (float) $rate;
+        foreach (Currency::cases() as $currency) {
+            $rates[$currency->value] = $currency->fxRate();
         }
 
-        return $rates !== [] ? $rates : ['EUR' => 1.0];
+        return $rates;
     }
 
     public static function convert(float $amount, string $fromCurrency, string $toCurrency): float
     {
-        $rates = self::rates();
-        $normalizedFrom = strtoupper($fromCurrency);
-        $normalizedTo = strtoupper($toCurrency);
+        $from = Currency::tryFrom(strtoupper($fromCurrency));
+        $to = Currency::tryFrom(strtoupper($toCurrency));
 
-        if (! array_key_exists($normalizedFrom, $rates) || ! array_key_exists($normalizedTo, $rates)) {
+        if ($from === null || $to === null) {
             return $amount;
         }
 
-        $amountInEur = $amount / $rates[$normalizedFrom];
-
-        return $amountInEur * $rates[$normalizedTo];
+        return Currency::convert($amount, $from, $to);
     }
 
     public static function symbol(string $currency): string
     {
-        $symbols = config('crm.fx.symbols', []);
-        $normalizedCurrency = strtoupper($currency);
-
-        if (is_array($symbols) && array_key_exists($normalizedCurrency, $symbols) && is_string($symbols[$normalizedCurrency])) {
-            return $symbols[$normalizedCurrency];
-        }
-
-        return $normalizedCurrency;
+        return Currency::tryFrom(strtoupper($currency))?->symbol() ?? strtoupper($currency);
     }
 }

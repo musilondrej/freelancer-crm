@@ -2,68 +2,63 @@
 
 namespace App\Filament\Widgets\Concerns;
 
-use App\Support\CurrencyConverter;
-use Filament\Facades\Filament;
+use App\Enums\Currency;
 
 trait InteractsWithCurrencyConversion
 {
-    private function resolveDisplayCurrency(): string
+    private function resolveDisplayCurrency(): Currency
     {
         $rawCurrency = $this->pageFilters['currency'] ?? null;
-        $selectedCurrency = is_string($rawCurrency)
-            ? strtoupper($rawCurrency)
-            : null;
-        $rates = CurrencyConverter::rates();
 
-        if ($selectedCurrency !== null && array_key_exists($selectedCurrency, $rates)) {
-            return $selectedCurrency;
+        if (is_string($rawCurrency)) {
+            $selected = Currency::tryFrom(strtoupper($rawCurrency));
+
+            if ($selected !== null) {
+                return $selected;
+            }
         }
 
-        $defaultCurrency = strtoupper((string) (Filament::auth()->user()->default_currency ?? 'CZK'));
-
-        if (array_key_exists($defaultCurrency, $rates)) {
-            return $defaultCurrency;
-        }
-
-        return array_key_first($rates) ?? 'EUR';
+        return Currency::userDefault();
     }
 
-    private function convertAmount(float $amount, ?string $fromCurrency, ?string $toCurrency = null): float
+    private function convertAmount(float $amount, Currency|string|null $fromCurrency, Currency|string|null $toCurrency = null): float
     {
-        $normalizedFromCurrency = strtoupper((string) $fromCurrency);
-        $normalizedToCurrency = strtoupper((string) ($toCurrency ?? $this->resolveDisplayCurrency()));
-        $rates = CurrencyConverter::rates();
+        $from = $fromCurrency instanceof Currency
+            ? $fromCurrency
+            : Currency::tryFrom(strtoupper((string) $fromCurrency));
 
-        if (! array_key_exists($normalizedFromCurrency, $rates) || ! array_key_exists($normalizedToCurrency, $rates)) {
+        $to = $toCurrency instanceof Currency
+            ? $toCurrency
+            : ($toCurrency !== null
+                ? Currency::tryFrom(strtoupper($toCurrency))
+                : $this->resolveDisplayCurrency());
+
+        if ($from === null || $to === null) {
             return $amount;
         }
 
-        return CurrencyConverter::convert($amount, $normalizedFromCurrency, $normalizedToCurrency);
+        return Currency::convert($amount, $from, $to);
     }
 
-    private function formatAmountWithCurrency(float $amount, ?string $currency = null): string
+    private function formatAmountWithCurrency(float $amount, Currency|string|null $currency = null): string
     {
-        $normalizedCurrency = strtoupper((string) ($currency ?? $this->resolveDisplayCurrency()));
-        $symbol = $this->currencySymbol($normalizedCurrency);
-        $formattedAmount = $this->formatCurrencyDecimal($amount);
-
-        if ($symbol === $normalizedCurrency) {
-            return $formattedAmount.' '.$normalizedCurrency;
-        }
-
-        return match ($normalizedCurrency) {
-            'CZK' => $formattedAmount.' '.$symbol,
-            default => $symbol.' '.$formattedAmount,
+        $resolved = match (true) {
+            $currency instanceof Currency => $currency,
+            is_string($currency) => Currency::tryFrom(strtoupper($currency)) ?? $this->resolveDisplayCurrency(),
+            default => $this->resolveDisplayCurrency(),
         };
+
+        return $resolved->format($amount);
     }
 
-    private function formatCurrencyDecimal(float $amount): string
+    private function currencySymbol(Currency|string|null $currency = null): string
     {
-        return number_format(round($amount), 0, '.', ' ');
-    }
+        $resolved = match (true) {
+            $currency instanceof Currency => $currency,
+            is_string($currency) => Currency::tryFrom(strtoupper($currency)) ?? $this->resolveDisplayCurrency(),
+            default => $this->resolveDisplayCurrency(),
+        };
 
-    private function currencySymbol(string $currency): string
-    {
-        return CurrencyConverter::symbol($currency);
+        return $resolved->symbol();
     }
 }

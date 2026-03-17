@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Currency;
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use App\Models\Concerns\EnforcesOwner;
@@ -114,16 +115,11 @@ class Lead extends Model
                     return null;
                 }
 
-                $currency = strtoupper((string) ($attributes['currency'] ?? ''));
-                $formattedValue = number_format((float) $estimatedValue, 0, '.', ' ');
+                $currency = Currency::tryFrom(strtoupper((string) ($attributes['currency'] ?? '')));
 
-                return match ($currency) {
-                    'CZK' => $formattedValue.' Kč',
-                    'EUR' => '€ '.$formattedValue,
-                    'USD' => '$ '.$formattedValue,
-                    '' => $formattedValue,
-                    default => $formattedValue.' '.$currency,
-                };
+                return $currency !== null
+                    ? $currency->format((float) $estimatedValue)
+                    : number_format((float) $estimatedValue, 0, '.', ' ');
             },
         );
     }

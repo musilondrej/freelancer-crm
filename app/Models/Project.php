@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Currency;
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
 use App\Enums\ProjectStatus;
@@ -151,12 +152,11 @@ class Project extends Model
                     return null;
                 }
 
-                $currency = $attributes['currency'] ?? null;
-                $formattedHourlyRate = number_format((float) $hourlyRate, 2, '.', '');
+                $currency = Currency::tryFrom((string) ($attributes['currency'] ?? ''));
 
                 return $currency !== null
-                    ? sprintf('%s %s', $formattedHourlyRate, $currency)
-                    : $formattedHourlyRate;
+                    ? $currency->formatWithCode((float) $hourlyRate)
+                    : number_format((float) $hourlyRate, 2, '.', '');
             },
         );
     }

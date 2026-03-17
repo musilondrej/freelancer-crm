@@ -17,6 +17,34 @@ use Illuminate\Database\Eloquent\Builder;
 
 class RecurringServicesTable
 {
+    /**
+     * @return list<TextColumn>
+     */
+    public static function relationColumns(): array
+    {
+        return [
+            TextColumn::make('name')
+                ->searchable()
+                ->sortable(),
+            TextColumn::make('customer.name')
+                ->label('Customer')
+                ->searchable()
+                ->sortable(),
+            TextColumn::make('serviceType.name')
+                ->label('Category')
+                ->badge()
+                ->searchable()
+                ->sortable(),
+            TextColumn::make('status')
+                ->badge()
+                ->sortable(),
+            TextColumn::make('next_due_on')
+                ->date()
+                ->sortable()
+                ->toggleable(),
+        ];
+    }
+
     public static function configure(Table $table): Table
     {
         return $table

@@ -20,6 +20,38 @@ use Illuminate\Database\Eloquent\Builder;
 
 class LeadsTable
 {
+    /**
+     * @return list<TextColumn>
+     */
+    public static function relationColumns(): array
+    {
+        return [
+            TextColumn::make('full_name')
+                ->label('Lead')
+                ->searchable()
+                ->sortable()
+                ->description(fn (Lead $record): string => $record->company_name ?: ($record->email ?: '-')),
+            TextColumn::make('status')
+                ->badge()
+                ->sortable(),
+            TextColumn::make('pipeline_stage')
+                ->badge()
+                ->sortable(),
+            TextColumn::make('estimated_value_with_currency')
+                ->label('Potential')
+                ->sortable(
+                    query: fn (Builder $query, string $direction): Builder => $query
+                        ->orderBy('estimated_value', $direction)
+                        ->orderBy('currency', $direction),
+                )
+                ->toggleable(),
+            TextColumn::make('last_activity_at')
+                ->since()
+                ->sortable()
+                ->toggleable(),
+        ];
+    }
+
     public static function configure(Table $table): Table
     {
         $ownerId = Filament::auth()->id();

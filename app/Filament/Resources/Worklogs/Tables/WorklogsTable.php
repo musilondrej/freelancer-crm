@@ -79,10 +79,9 @@ class WorklogsTable
                     ->placeholder('-')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('backlogItem.title')
-                    ->label('Backlog item')
-                    ->placeholder('-')
-                    ->searchable()
+                TextColumn::make('priority')
+                    ->badge()
+                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('type')
                     ->badge()
@@ -106,6 +105,11 @@ class WorklogsTable
                     ->state(fn (Worklog $record): ?string => TimeDuration::format($record->tracked_minutes))
                     ->sortable()
                     ->toggleable(),
+                TextColumn::make('estimated_minutes')
+                    ->label('Estimate')
+                    ->state(fn (Worklog $record): ?string => TimeDuration::format($record->estimated_minutes))
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('due_date')
                     ->date($dateFormat)
                     ->sortable()

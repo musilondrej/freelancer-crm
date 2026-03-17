@@ -1,6 +1,5 @@
 <?php
 
-use App\Filament\Resources\BacklogItems\BacklogItemResource;
 use App\Filament\Resources\Customers\CustomerResource;
 use App\Filament\Resources\Leads\LeadResource;
 use App\Filament\Resources\Projects\ProjectResource;
@@ -34,7 +33,6 @@ it('assigns primary resources to workflow-oriented navigation groups', function 
     LeadResource::class => [LeadResource::class, 'Sales'],
     CustomerResource::class => [CustomerResource::class, 'CRM'],
     ProjectResource::class => [ProjectResource::class, 'Delivery'],
-    BacklogItemResource::class => [BacklogItemResource::class, 'Delivery'],
     WorklogResource::class => [WorklogResource::class, 'Time & Money'],
     RecurringServiceResource::class => [RecurringServiceResource::class, 'Time & Money'],
 ]);

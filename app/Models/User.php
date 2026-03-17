@@ -86,11 +86,6 @@ class User extends Authenticatable
         return $this->hasMany(Worklog::class, 'owner_id');
     }
 
-    public function backlogItems(): HasMany
-    {
-        return $this->hasMany(BacklogItem::class, 'owner_id');
-    }
-
     public function notes(): HasMany
     {
         return $this->hasMany(Note::class, 'owner_id');

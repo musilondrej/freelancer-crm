@@ -62,12 +62,4 @@ class Activity extends Model
     {
         return $this->hasMany(Worklog::class);
     }
-
-    /**
-     * @return HasMany<BacklogItem, $this>
-     */
-    public function backlogItems(): HasMany
-    {
-        return $this->hasMany(BacklogItem::class);
-    }
 }

@@ -127,14 +127,6 @@ class Project extends Model
     }
 
     /**
-     * @return HasMany<BacklogItem, $this>
-     */
-    public function backlogItems(): HasMany
-    {
-        return $this->hasMany(BacklogItem::class);
-    }
-
-    /**
      * @return HasMany<RecurringService, $this>
      */
     public function recurringServices(): HasMany

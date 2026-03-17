@@ -22,6 +22,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->enum('type', ProjectActivityType::values())->default(ProjectActivityType::Hourly->value);
             $table->string('status', 64)->default(ProjectActivityStatus::InProgress->value);
+            $table->unsignedTinyInteger('priority')->nullable();
             $table->boolean('is_running')->default(false);
             $table->boolean('is_billable')->default(true);
             $table->boolean('is_invoiced')->default(false);
@@ -32,6 +33,7 @@ return new class extends Migration
             $table->decimal('unit_rate', 10, 2)->nullable();
             $table->decimal('flat_amount', 12, 2)->nullable();
             $table->unsignedInteger('tracked_minutes')->nullable();
+            $table->unsignedInteger('estimated_minutes')->nullable();
             $table->date('due_date')->nullable();
             $table->timestampTz('started_at')->nullable();
             $table->timestampTz('finished_at')->nullable();

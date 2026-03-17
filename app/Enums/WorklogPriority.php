@@ -5,7 +5,7 @@ namespace App\Enums;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasLabel;
 
-enum BacklogItemPriority: int implements HasColor, HasLabel
+enum WorklogPriority: int implements HasColor, HasLabel
 {
     case Low = 1;
     case Medium = 2;

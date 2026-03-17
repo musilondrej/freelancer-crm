@@ -17,6 +17,35 @@ use Filament\Tables\Table;
 
 class ProjectsTable
 {
+    /**
+     * @return list<TextColumn>
+     */
+    public static function relationColumns(): array
+    {
+        return [
+            TextColumn::make('name')
+                ->searchable()
+                ->sortable(),
+            TextColumn::make('customer.name')
+                ->label('Customer')
+                ->searchable()
+                ->sortable(),
+            TextColumn::make('status')
+                ->badge()
+                ->formatStateUsing(fn (Project $record): string => $record->resolvedStatusLabel())
+                ->color(fn (Project $record): string => $record->resolvedStatusColor())
+                ->sortable(),
+            TextColumn::make('pricing_model')
+                ->badge()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('target_end_date')
+                ->date()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+        ];
+    }
+
     public static function configure(Table $table): Table
     {
         return $table

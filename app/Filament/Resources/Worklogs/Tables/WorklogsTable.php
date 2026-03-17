@@ -23,6 +23,36 @@ use Illuminate\Database\QueryException;
 
 class WorklogsTable
 {
+    /**
+     * @return list<TextColumn|IconColumn>
+     */
+    public static function relationColumns(): array
+    {
+        return [
+            TextColumn::make('title')
+                ->searchable()
+                ->sortable(),
+            TextColumn::make('project.name')
+                ->label('Project')
+                ->searchable()
+                ->sortable(),
+            TextColumn::make('status')
+                ->badge()
+                ->formatStateUsing(fn (Worklog $record): string => $record->resolvedStatusLabel())
+                ->color(fn (Worklog $record): string => $record->resolvedStatusColor())
+                ->sortable(),
+            TextColumn::make('tracked_minutes')
+                ->label('Tracked time')
+                ->state(fn (Worklog $record): string => $record->trackedDurationLabel())
+                ->sortable()
+                ->toggleable(),
+            TextColumn::make('created_at')
+                ->label('Created')
+                ->dateTime()
+                ->sortable(),
+        ];
+    }
+
     public static function configure(Table $table): Table
     {
         $ownerId = Filament::auth()->id();

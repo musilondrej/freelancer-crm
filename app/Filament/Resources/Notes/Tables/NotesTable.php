@@ -16,6 +16,25 @@ use Filament\Tables\Table;
 
 class NotesTable
 {
+    /**
+     * @return list<IconColumn|TextColumn>
+     */
+    public static function relationColumns(): array
+    {
+        return [
+            TextColumn::make('body')
+                ->limit(30)
+                ->searchable(),
+            IconColumn::make('is_pinned')
+                ->boolean()
+                ->label('Pinned')
+                ->sortable(),
+            TextColumn::make('noted_at')
+                ->dateTime()
+                ->sortable(),
+        ];
+    }
+
     public static function configure(Table $table): Table
     {
         return $table

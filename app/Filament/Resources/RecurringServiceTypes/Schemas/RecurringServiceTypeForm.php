@@ -56,10 +56,6 @@ class RecurringServiceTypeForm
                             ->schema([
                                 Toggle::make('is_active')
                                     ->default(true),
-                                TextInput::make('sort_order')
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->default(0),
                             ]),
                         Section::make('System')
                             ->schema([

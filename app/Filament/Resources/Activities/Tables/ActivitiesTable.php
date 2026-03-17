@@ -37,10 +37,6 @@ class ActivitiesTable
                     ->boolean()
                     ->label('Active')
                     ->sortable(),
-                TextColumn::make('sort_order')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(),
             ])
             ->filters([
                 TrashedFilter::make(),

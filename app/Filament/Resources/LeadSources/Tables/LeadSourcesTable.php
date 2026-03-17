@@ -29,10 +29,6 @@ class LeadSourcesTable
                     ->boolean()
                     ->label('Active')
                     ->sortable(),
-                TextColumn::make('sort_order')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(),
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()

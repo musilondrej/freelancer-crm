@@ -25,6 +25,7 @@ class TimeEntryForm
         $ownerId = Filament::auth()->id();
 
         return $schema
+            ->columns(12)
             ->components([
                 Group::make()
                     ->schema([
@@ -101,8 +102,7 @@ class TimeEntryForm
                                 DateTimePicker::make('locked_at')
                                     ->label(__('Locked at'))
                                     ->seconds(false),
-                            ])
-                            ->columns(1),
+                            ]),
                     ])
                     ->columnSpan(['lg' => 4]),
             ]);

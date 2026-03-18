@@ -88,10 +88,10 @@ class ClientContactForm
                         Section::make('System')
                             ->schema([
                                 TextEntry::make('created_at')
-                                    ->label('Created')
+                                    ->label(__('Created at'))
                                     ->state(fn (?ClientContact $record): ?string => $record?->created_at?->diffForHumans()),
                                 TextEntry::make('updated_at')
-                                    ->label('Last modified')
+                                    ->label(__('Updated at'))
                                     ->state(fn (?ClientContact $record): ?string => $record?->updated_at?->diffForHumans()),
                             ])
                             ->hidden(fn (?ClientContact $record): bool => ! $record instanceof ClientContact),

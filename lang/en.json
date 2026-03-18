@@ -1,4 +1,11 @@
 {
+    "Name": "Name",
+    "Status": "Status",
+    "Due date": "Due date",
+    "Created at": "Created at",
+    "Updated at": "Updated at",
+    "Currency": "Currency",
+    "Pricing Model": "Pricing Model",
     "1 min": "1 min",
     "5 min": "5 min",
     "6 min": "6 min",
@@ -125,4 +132,3 @@
     "Work Log": "Work Log",
     "Worklog": "Worklog"
 }
-

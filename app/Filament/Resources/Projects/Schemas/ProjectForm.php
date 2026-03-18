@@ -30,16 +30,17 @@ class ProjectForm
             ->components([
                 Group::make()
                     ->schema([
-                        Section::make('Project Brief')
+                        Section::make(__('Project Brief'))
                             ->schema([
                                 Hidden::make('owner_id')
                                     ->default($ownerId),
                                 TextInput::make('name')
+                                    ->label(__('Name'))
                                     ->required()
                                     ->maxLength(255)
                                     ->columnSpanFull(),
                                 Select::make('client_id')
-                                    ->label('Customer')
+                                    ->label(__('Customer'))
                                     ->relationship(
                                         name: 'customer',
                                         titleAttribute: 'name',
@@ -52,7 +53,7 @@ class ProjectForm
                                     ->preload()
                                     ->live(),
                                 Select::make('primary_contact_id')
-                                    ->label('Primary contact')
+                                    ->label(__('Primary Contact'))
                                     ->options(function (Get $get) use ($ownerId): array {
                                         $customerId = $get('client_id');
 
@@ -66,36 +67,42 @@ class ProjectForm
                                     ->searchable()
                                     ->preload(),
                                 Textarea::make('description')
+                                    ->label(__('Description'))
                                     ->rows(7)
                                     ->columnSpanFull(),
                             ]),
 
-                        Section::make('Pricing')
+                        Section::make(__('Financial details'))
                             ->schema([
                                 Select::make('pricing_model')
+                                    ->label(__('Pricing Model'))
                                     ->options(ProjectPricingModel::class)
                                     ->default(ProjectPricingModel::Fixed)
                                     ->required()
                                     ->live(),
                                 Select::make('currency')
+                                    ->label(__('Currency'))
                                     ->options(Currency::class),
                                 TextInput::make('hourly_rate')
+                                    ->label(__('Hourly rate'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)),
                                 TextInput::make('fixed_price')
+                                    ->label(__('Fixed price'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => self::resolvePricingModelValue($get('pricing_model')) === ProjectPricingModel::Fixed->value),
                                 TextInput::make('estimated_hours')
+                                    ->label(__('Estimated hours'))
                                     ->numeric()
-                                    ->suffix('hrs')
+                                    ->suffix(__('hrs'))
                                     ->minValue(0),
                             ]),
 
-                        Section::make('Quick Notes')
+                        Section::make(__('Notes'))
                             ->schema([
                                 NoteRepeater::make($ownerId),
                             ]),
@@ -108,13 +115,14 @@ class ProjectForm
                 // Sidebar
                 Group::make()
                     ->schema([
-                        Section::make('Tags')
+                        Section::make(__('Tags'))
                             ->schema([
                                 TagsSelect::make($ownerId),
                             ]),
-                        Section::make('Execution')
+                        Section::make(__('Other details'))
                             ->schema([
                                 Select::make('status')
+                                    ->label(__('Status'))
                                     ->options(ProjectStatus::class)
                                     ->default(ProjectStatus::defaultCase())
                                     ->required(),

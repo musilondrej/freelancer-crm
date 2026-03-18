@@ -31,7 +31,7 @@ final class NoteRepeater
 
             ])
             ->columns(1)
-            ->addActionLabel('Add note')
+            ->addActionLabel(__('Add note'))
             ->defaultItems(0)
             ->collapsed()
             ->reorderable(false)

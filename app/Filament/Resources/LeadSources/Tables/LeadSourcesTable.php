@@ -20,24 +20,27 @@ class LeadSourcesTable
             ->defaultGroup('is_active')
             ->columns([
                 TextColumn::make('name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('slug')
+                    ->label(__('Slug'))
                     ->searchable()
                     ->toggleable(),
                 IconColumn::make('is_active')
                     ->boolean()
-                    ->label('Active')
+                    ->label(__('Is active'))
                     ->sortable(),
                 TextColumn::make('updated_at')
+                    ->label(__('Updated at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(),
             ])
             ->groups([
                 Group::make('is_active')
-                    ->label('State')
-                    ->getTitleFromRecordUsing(fn (LeadSource $record): string => $record->is_active ? 'Active' : 'Inactive'),
+                    ->label(__('State'))
+                    ->getTitleFromRecordUsing(fn (LeadSource $record): string => $record->is_active ? __('Active') : __('Inactive')),
             ])
             ->recordActions([
                 EditAction::make(),

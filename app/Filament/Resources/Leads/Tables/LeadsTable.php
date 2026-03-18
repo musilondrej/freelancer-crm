@@ -27,18 +27,20 @@ class LeadsTable
     {
         return [
             TextColumn::make('full_name')
-                ->label('Lead')
+                ->label(__('Lead'))
                 ->searchable()
                 ->sortable()
                 ->description(fn (Lead $record): string => $record->company_name ?: ($record->email ?: '-')),
             TextColumn::make('status')
                 ->badge()
+                ->label(__('Status'))
                 ->sortable(),
             TextColumn::make('pipeline_stage')
                 ->badge()
+                ->label(__('Pipeline stage'))
                 ->sortable(),
             TextColumn::make('estimated_value_with_currency')
-                ->label('Potential')
+                ->label(__('Potential'))
                 ->sortable(
                     query: fn (Builder $query, string $direction): Builder => $query
                         ->orderBy('estimated_value', $direction)
@@ -46,6 +48,7 @@ class LeadsTable
                 )
                 ->toggleable(),
             TextColumn::make('last_activity_at')
+                ->label(__('Last activity'))
                 ->since()
                 ->sortable()
                 ->toggleable(),
@@ -61,17 +64,20 @@ class LeadsTable
             ->defaultSort('last_activity_at', 'desc')
             ->columns([
                 TextColumn::make('full_name')
-                    ->label('Lead')
+                    ->label(__('Lead'))
                     ->searchable()
                     ->sortable()
                     ->description(fn (Lead $record): string => $record->company_name ?: ($record->email ?: '-')),
                 TextColumn::make('status')
                     ->badge()
+                    ->label(__('Status'))
                     ->sortable(),
                 TextColumn::make('pipeline_stage')
+                    ->label(__('Pipeline stage'))
                     ->badge()
                     ->sortable(),
                 TextColumn::make('priority')
+                    ->label(__('Priority'))
                     ->sortable()
                     ->formatStateUsing(fn (int $state): string => match ($state) {
                         5 => 'Critical',
@@ -82,7 +88,7 @@ class LeadsTable
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('estimated_value_with_currency')
-                    ->label('Potential')
+                    ->label(__('Potential'))
                     ->sortable(
                         query: fn (Builder $query, string $direction): Builder => $query
                             ->orderBy('estimated_value', $direction)
@@ -91,19 +97,21 @@ class LeadsTable
                     ->toggleable(),
                 TextColumn::make('expected_close_date')
                     ->date($dateFormat)
+                    ->label(__('Expected close date'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('last_activity_at')
+                    ->label(__('Last activity'))
                     ->since()
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('leadSource.name')
-                    ->label('Source')
+                    ->label(__('Source'))
                     ->searchable()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('customer.name')
-                    ->label('Customer')
+                    ->label(__('Customer'))
                     ->searchable()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

@@ -16,11 +16,11 @@ enum WorklogPriority: int implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Low => 'Low',
-            self::Medium => 'Medium',
-            self::High => 'High',
-            self::Highest => 'Highest',
-            self::Blocker => 'Blocker',
+            self::Low => __('Low'),
+            self::Medium => __('Medium'),
+            self::High => __('High'),
+            self::Highest => __('Highest'),
+            self::Blocker => __('Blocker'),
         };
     }
 

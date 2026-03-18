@@ -18,10 +18,10 @@ enum RecurringServiceCadenceUnit: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Week => 'Week',
-            self::Month => 'Month',
-            self::Quarter => 'Quarter',
-            self::Year => 'Year',
+            self::Week => __('Week'),
+            self::Month => __('Month'),
+            self::Quarter => __('Quarter'),
+            self::Year => __('Year'),
         };
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\RecurringServices;
 
+use App\Enums\NavigationGroup;
 use App\Enums\RecurringServiceStatus;
 use App\Filament\Resources\RecurringServices\Pages\CreateRecurringService;
 use App\Filament\Resources\RecurringServices\Pages\EditRecurringService;
@@ -25,11 +26,26 @@ class RecurringServiceResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPathRoundedSquare;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Time & Money';
+    protected static string|UnitEnum|null $navigationGroup = NavigationGroup::Projects;
 
     protected static ?int $navigationSort = 20;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Recurring Services');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('Recurring Service');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Recurring Services');
+    }
 
     public static function form(Schema $schema): Schema
     {

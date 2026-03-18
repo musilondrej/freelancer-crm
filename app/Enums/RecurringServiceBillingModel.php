@@ -16,8 +16,8 @@ enum RecurringServiceBillingModel: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Fixed => 'Fixed',
-            self::Hourly => 'Hourly',
+            self::Fixed => __('Fixed'),
+            self::Hourly => __('Hourly'),
         };
     }
 

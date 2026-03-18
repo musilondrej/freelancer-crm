@@ -17,9 +17,9 @@ enum RecurringServiceStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Active => 'Active',
-            self::Paused => 'Paused',
-            self::Cancelled => 'Cancelled',
+            self::Active => __('Active'),
+            self::Paused => __('Paused'),
+            self::Cancelled => __('Cancelled'),
         };
     }
 

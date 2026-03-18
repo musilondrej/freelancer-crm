@@ -20,12 +20,12 @@ enum LeadPipelineStage: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Inbox => 'Inbox',
-            self::Discovery => 'Discovery',
-            self::Qualification => 'Qualification',
-            self::Proposal => 'Proposal',
-            self::Negotiation => 'Negotiation',
-            self::Closed => 'Closed',
+            self::Inbox => __('Inbox'),
+            self::Discovery => __('Discovery'),
+            self::Qualification => __('Qualification'),
+            self::Proposal => __('Proposal'),
+            self::Negotiation => __('Negotiation'),
+            self::Closed => __('Closed'),
         };
     }
 

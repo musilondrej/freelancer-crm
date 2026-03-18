@@ -12,8 +12,8 @@ enum UserSettingWeekStartsOn: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Monday => 'Monday',
-            self::Sunday => 'Sunday',
+            self::Monday => __('Monday'),
+            self::Sunday => __('Sunday'),
         };
     }
 

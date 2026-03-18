@@ -20,22 +20,23 @@ class ActivitiesTable
             ->reorderable('sort_order')
             ->columns([
                 TextColumn::make('name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('default_hourly_rate')
-                    ->label('Default hourly rate')
+                    ->label(__('Default hourly rate'))
                     ->numeric(decimalPlaces: 2)
                     ->placeholder('-')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_billable')
                     ->boolean()
-                    ->label('Billable')
+                    ->label(__('Is billable'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_active')
                     ->boolean()
-                    ->label('Active')
+                    ->label(__('Is active'))
                     ->sortable(),
             ])
             ->filters([

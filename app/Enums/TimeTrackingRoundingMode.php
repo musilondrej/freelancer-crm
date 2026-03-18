@@ -13,9 +13,9 @@ enum TimeTrackingRoundingMode: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::RoundUp => 'Round up',
-            self::RoundToNearest => 'Round to nearest',
-            self::RoundDown => 'Round down',
+            self::RoundUp => __('Round up'),
+            self::RoundToNearest => __('Round to nearest'),
+            self::RoundDown => __('Round down'),
         };
     }
 

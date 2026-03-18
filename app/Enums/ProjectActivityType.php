@@ -16,8 +16,8 @@ enum ProjectActivityType: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Hourly => 'Hourly',
-            self::OneTime => 'One Time',
+            self::Hourly => __('Hourly'),
+            self::OneTime => __('One Time'),
         };
     }
 

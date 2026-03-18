@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Leads;
 
 use App\Enums\LeadStatus;
+use App\Enums\NavigationGroup;
 use App\Filament\Resources\Leads\Pages\CreateLead;
 use App\Filament\Resources\Leads\Pages\EditLead;
 use App\Filament\Resources\Leads\Pages\ListLeads;
@@ -21,11 +22,13 @@ use UnitEnum;
 
 class LeadResource extends Resource
 {
+    public $full_name;
+
     protected static ?string $model = Lead::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBolt;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sales';
+    protected static string|UnitEnum|null $navigationGroup = NavigationGroup::Customers;
 
     protected static ?int $navigationSort = 10;
 
@@ -39,6 +42,21 @@ class LeadResource extends Resource
     public static function table(Table $table): Table
     {
         return LeadsTable::configure($table);
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Leads');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('Lead');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Leads');
     }
 
     public static function getRelations(): array
@@ -61,11 +79,6 @@ class LeadResource extends Resource
     public static function getNavigationBadgeColor(): ?string
     {
         return 'warning';
-    }
-
-    public static function getNavigationBadgeTooltip(): ?string
-    {
-        return 'New leads awaiting first touch.';
     }
 
     public static function getPages(): array
@@ -94,5 +107,10 @@ class LeadResource extends Resource
                 SoftDeletingScope::class,
             ])
             ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+    }
+
+    public function getTitle(): string
+    {
+        return $this->full_name;
     }
 }

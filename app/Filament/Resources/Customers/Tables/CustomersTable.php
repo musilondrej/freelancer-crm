@@ -29,17 +29,20 @@ class CustomersTable
     {
         return [
             TextColumn::make('name')
+                ->label(__('Name'))
                 ->searchable()
                 ->sortable(),
             TextColumn::make('status')
+                ->label(__('Status'))
                 ->badge()
                 ->sortable(),
             TextColumn::make('billing_currency')
+                ->label(__('Currency'))
                 ->label('Currency')
                 ->sortable()
                 ->toggleable(isToggledHiddenByDefault: true),
             TextColumn::make('projects_count')
-                ->label('Projects')
+                ->label(__('Projects'))
                 ->counts('projects')
                 ->sortable(),
         ];
@@ -50,30 +53,34 @@ class CustomersTable
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable()
                     ->description(fn (Customer $record): ?string => $record->legal_name),
                 TextColumn::make('status')
+                    ->label(__('Status'))
                     ->badge()
                     ->sortable(),
                 TextColumn::make('projects_count')
-                    ->label('Projects')
+                    ->label(__('Projects'))
                     ->counts('projects')
                     ->badge()
                     ->color(fn (int $state): string => $state > 0 ? 'primary' : 'gray')
                     ->sortable(),
                 TextColumn::make('email')
+                    ->label(__('E-mail'))
                     ->searchable()
                     ->copyable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('phone')
+                    ->label(__('Phone'))
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('billing_currency')
-                    ->label('Currency')
+                    ->label(__('Currency'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('hourly_rate_with_currency')
-                    ->label('Hourly rate')
+                    ->label(__('Hourly rate'))
                     ->sortable(
                         query: fn (Builder $query, string $direction): Builder => $query
                             ->orderBy('hourly_rate', $direction)
@@ -81,17 +88,17 @@ class CustomersTable
                     )
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('leads_count')
-                    ->label('Leads')
+                    ->label(__('Leads'))
                     ->counts('leads')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('recurring_services_count')
-                    ->label('Services')
+                    ->label(__('Services'))
                     ->counts('recurringServices')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('next_follow_up_at')
-                    ->label('Follow-up')
+                    ->label(__('Next follow-up'))
                     ->dateTime('d.m.Y')
                     ->sortable()
                     ->color(function (Customer $record): string {
@@ -109,7 +116,7 @@ class CustomersTable
                     })
                     ->toggleable(),
                 TextColumn::make('last_contacted_at')
-                    ->label('Last contact')
+                    ->label(__('Last contacted'))
                     ->since()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

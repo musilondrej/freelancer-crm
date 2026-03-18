@@ -26,8 +26,6 @@ class Dashboard extends BaseDashboard
 {
     use HasFiltersForm;
 
-    protected static ?string $title = 'Dashboard';
-
     public function getTitle(): string
     {
         return __('Dashboard');

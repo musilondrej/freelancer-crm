@@ -81,7 +81,7 @@ class LeadsTable
                     ->label(__('Priority'))
                     ->badge()
                     ->sortable()
-                    ->formatStateUsing(fn (Priority|int|null $state): string => $state instanceof Priority ? $state->getLabel() : (Priority::tryFrom((int) $state) ?? Priority::Backlog)->getLabel())
+                    ->formatStateUsing(fn (Priority|int|null $state): string => $state instanceof Priority ? $state->getLabel() : (Priority::tryFrom((int) $state) ?? Priority::Normal)->getLabel())
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('estimated_value_with_currency')
                     ->label(__('Potential'))

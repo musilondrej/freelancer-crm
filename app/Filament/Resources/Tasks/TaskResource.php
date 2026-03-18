@@ -84,7 +84,7 @@ class TaskResource extends Resource
 
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Tasks in open workflow statuses.';
+        return __('Tasks in open workflow statuses.');
     }
 
     public static function getPages(): array

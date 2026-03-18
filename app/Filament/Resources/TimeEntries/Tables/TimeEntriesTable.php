@@ -36,6 +36,7 @@ class TimeEntriesTable
             ->form([
                 TextInput::make('invoice_reference')
                     ->label(__('Invoice reference'))
+                    ->required()
                     ->maxLength(255),
                 DatePicker::make('invoiced_at')
                     ->label(__('Invoiced at'))
@@ -182,7 +183,7 @@ class TimeEntriesTable
                     ->query(fn (Builder $query): Builder => $query->where(function (Builder $builder): void {
                         $builder->whereHas('invoiceItems')
                             ->orWhere('is_invoiced', true)
-                            ->orWhereNotNull('invoice_reference')
+                            ->orWhere('invoice_reference', '<>', '')
                             ->orWhereNotNull('invoiced_at');
                     })),
                 TrashedFilter::make(),
@@ -204,6 +205,7 @@ class TimeEntriesTable
                     ->schema([
                         TextInput::make('invoice_reference')
                             ->label(__('Invoice reference'))
+                            ->required()
                             ->maxLength(255),
                         DatePicker::make('invoiced_at')
                             ->label(__('Invoiced at'))
@@ -211,7 +213,7 @@ class TimeEntriesTable
                             ->required(),
                     ])
                     ->fillForm(fn (): array => [
-                        'invoice_reference' => null,
+                        'invoice_reference' => '',
                         'invoiced_at' => today()->toDateString(),
                     ])
                     ->action(function (TimeEntry $record, array $data): void {

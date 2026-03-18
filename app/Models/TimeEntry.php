@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Validation\ValidationException;
 
 class TimeEntry extends Model
 {
@@ -72,12 +73,19 @@ class TimeEntry extends Model
     protected static function booted(): void
     {
         static::saving(function (self $timeEntry): void {
-            $hasInvoiceReference = $timeEntry->invoice_reference !== null
-                && trim((string) $timeEntry->invoice_reference) !== '';
+            $normalizedInvoiceReference = trim((string) ($timeEntry->invoice_reference ?? ''));
+            $hasInvoiceReference = $normalizedInvoiceReference !== '';
             $hasInvoicedAt = $timeEntry->invoiced_at !== null;
 
             if ((bool) $timeEntry->is_invoiced || $hasInvoiceReference || $hasInvoicedAt) {
+                if (! $hasInvoiceReference) {
+                    throw ValidationException::withMessages([
+                        'invoice_reference' => __('Invoice reference is required for invoiced time entries.'),
+                    ]);
+                }
+
                 $timeEntry->is_invoiced = true;
+                $timeEntry->invoice_reference = $normalizedInvoiceReference;
 
                 if ($timeEntry->invoiced_at === null) {
                     $timeEntry->invoiced_at = now();
@@ -87,7 +95,7 @@ class TimeEntry extends Model
             }
 
             $timeEntry->is_invoiced = false;
-            $timeEntry->invoice_reference = null;
+            $timeEntry->invoice_reference = '';
             $timeEntry->invoiced_at = null;
         });
     }
@@ -158,7 +166,9 @@ class TimeEntry extends Model
         $query->whereNotNull('ended_at');
         $query->whereDoesntHave('invoiceItems');
         $query->where('is_invoiced', false);
-        $query->whereNull('invoice_reference');
+        $query->where(fn (Builder $builder): Builder => $builder
+            ->whereNull('invoice_reference')
+            ->orWhere('invoice_reference', ''));
         $query->whereNull('invoiced_at');
         $query->where(function (Builder $builder): void {
             $builder->where('is_billable_override', true)
@@ -274,7 +284,7 @@ class TimeEntry extends Model
             return true;
         }
 
-        if ($this->invoice_reference !== null && trim((string) $this->invoice_reference) !== '') {
+        if (trim((string) $this->invoice_reference) !== '') {
             return true;
         }
 
@@ -324,7 +334,7 @@ class TimeEntry extends Model
             return trim((string) $invoice->reference);
         }
 
-        if ($this->invoice_reference !== null && trim((string) $this->invoice_reference) !== '') {
+        if (trim((string) $this->invoice_reference) !== '') {
             return trim((string) $this->invoice_reference);
         }
 

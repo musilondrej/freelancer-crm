@@ -29,7 +29,7 @@ class OverdueTasksTable extends TableWidget
                 ->whereIn('status', TaskStatus::openValues())
                 ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
                 ->with(['project:id,name']))
-            ->heading(__('Overdue Tasks'))
+            ->heading(__('Overdue tasks'))
             ->columns([
                 TextColumn::make('title')
                     ->label(__('Task'))

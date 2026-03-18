@@ -35,6 +35,9 @@ class InvoiceIssuer
         $normalizedReference = is_string($reference) && trim($reference) !== ''
             ? trim($reference)
             : null;
+
+        throw_if($records->contains(fn (Task|TimeEntry $record): bool => $record instanceof TimeEntry) && $normalizedReference === null, InvalidArgumentException::class, 'Invoice reference is required for time entry invoicing.');
+
         $normalizedIssuedAt = $this->normalizeIssuedAt($issuedAt);
 
         /** @var EloquentCollection<int, Invoice> $invoices */

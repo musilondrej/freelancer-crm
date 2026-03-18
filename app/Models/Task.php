@@ -97,7 +97,7 @@ class Task extends Model
     {
         static::saving(function (self $task): void {
             if ($task->getAttribute('priority') === null) {
-                $task->priority = Priority::Backlog;
+                $task->priority = Priority::Normal;
             }
 
             $hasInvoiceReference = $task->invoice_reference !== null

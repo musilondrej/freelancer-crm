@@ -142,7 +142,7 @@ it('marks a finished billable time entry as invoiced', function (): void {
         ->and($timeEntry->currentInvoiceItem?->invoice)->toBeInstanceOf(Invoice::class);
 });
 
-it('normalizes blank invoice references on time entries', function (): void {
+it('requires invoice reference when marking time entries as invoiced', function (): void {
     $context = buildTimeEntryContext();
 
     $timeEntry = TimeEntry::query()->create([
@@ -153,12 +153,14 @@ it('normalizes blank invoice references on time entries', function (): void {
         'minutes' => 30,
     ]);
 
-    $timeEntry->markAsInvoiced('   ');
+    expect(fn () => $timeEntry->markAsInvoiced('   '))
+        ->toThrow(InvalidArgumentException::class, 'Invoice reference is required for time entry invoicing.');
+
     $timeEntry->refresh();
 
-    expect($timeEntry->isInvoiced())->toBeTrue()
+    expect($timeEntry->isInvoiced())->toBeFalse()
         ->and($timeEntry->resolvedInvoiceReference())->toBeNull()
-        ->and($timeEntry->resolvedInvoicedAt())->not->toBeNull();
+        ->and($timeEntry->resolvedInvoicedAt())->toBeNull();
 });
 
 it('does not consider running or non-billable time entries ready to invoice', function (): void {

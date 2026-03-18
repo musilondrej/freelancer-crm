@@ -23,7 +23,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->enum('billing_model', TaskBillingModel::values())->default(TaskBillingModel::Hourly->value);
             $table->string('status', 64)->default(TaskStatus::InProgress->value);
-            $table->unsignedTinyInteger('priority')->default(Priority::Backlog->value);
+            $table->unsignedTinyInteger('priority')->default(Priority::Normal->value);
             $table->boolean('is_billable')->default(true);
             $table->boolean('track_time')->default(true);
             $table->boolean('is_invoiced')->default(false);

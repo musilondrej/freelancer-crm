@@ -720,7 +720,7 @@ class FreelancerStarterSeeder extends Seeder
     private function resolveProjectStatusCodes(): array
     {
         return [
-            'planned' => ProjectStatus::Planned->value,
+            'planned' => ProjectStatus::Planning->value,
             'in_progress' => ProjectStatus::InProgress->value,
         ];
     }
@@ -731,7 +731,7 @@ class FreelancerStarterSeeder extends Seeder
     private function resolveTaskStatusCodes(): array
     {
         return [
-            'planned' => TaskStatus::Planned->value,
+            'planned' => TaskStatus::Todo->value,
             'in_progress' => TaskStatus::InProgress->value,
             'done' => TaskStatus::Done->value,
         ];

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Projects\Tables;
 
 use App\Enums\ProjectStatus;
 use App\Models\Project;
+use App\Models\TimeEntry;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -17,6 +18,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ProjectsTable
 {
@@ -52,6 +54,14 @@ class ProjectsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->addSelect([
+                'actual_hours_minutes' => TimeEntry::query()
+                    ->selectRaw('COALESCE(SUM(time_entries.minutes), 0)')
+                    ->join('tasks', 'tasks.id', '=', 'time_entries.task_id')
+                    ->whereColumn('tasks.project_id', 'projects.id')
+                    ->whereNull('tasks.deleted_at')
+                    ->whereNull('time_entries.deleted_at'),
+            ]))
             ->columns([
                 TextColumn::make('name')
                     ->label(__('Name'))
@@ -65,11 +75,36 @@ class ProjectsTable
                     ->label(__('Status'))
                     ->badge()
                     ->sortable(),
+                TextColumn::make('priority')
+                    ->label(__('Priority'))
+                    ->badge()
+                    ->sortable(),
                 TextColumn::make('pricing_model')
                     ->label(__('Pricing Model'))
                     ->badge()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('estimated_value')
+                    ->label(__('Budget'))
+                    ->state(fn (Project $record): string => self::formatCurrencyAmount($record->estimated_value, $record->effectiveCurrency()))
+                    ->sortable()
+                    ->toggleable(),
+                TextColumn::make('actual_value')
+                    ->label(__('Spent'))
+                    ->state(fn (Project $record): string => self::formatCurrencyAmount($record->actual_value, $record->effectiveCurrency()))
+                    ->sortable()
+                    ->toggleable(),
+                TextColumn::make('estimated_hours')
+                    ->label(__('Estimated hours'))
+                    ->numeric(decimalPlaces: 2)
+                    ->sortable()
+                    ->toggleable(),
+                TextColumn::make('actual_hours_minutes')
+                    ->label(__('Actual hours'))
+                    ->state(fn (Project $record): float => round(((float) ($record->actual_hours_minutes ?? 0)) / 60, 2))
+                    ->numeric(decimalPlaces: 2)
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('actual_hours_minutes', $direction))
+                    ->toggleable(),
                 TextColumn::make('currency')
                     ->label(__('Currency'))
                     ->sortable()
@@ -134,5 +169,18 @@ class ProjectsTable
                     RestoreBulkAction::make(),
                 ]),
             ]);
+    }
+
+    private static function formatCurrencyAmount(mixed $amount, ?string $currency): string
+    {
+        if ($amount === null) {
+            return __('N/A');
+        }
+
+        if ($currency === null || trim($currency) === '') {
+            return number_format((float) $amount, 2, '.', ' ');
+        }
+
+        return number_format((float) $amount, 2, '.', ' ').' '.$currency;
     }
 }

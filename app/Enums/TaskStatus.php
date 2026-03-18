@@ -10,18 +10,22 @@ use Filament\Support\Icons\Heroicon;
 
 enum TaskStatus: string implements HasColor, HasIcon, HasLabel
 {
-    case Planned = 'planned';
+    case Backlog = 'backlog';
+    case Todo = 'todo';
     case InProgress = 'in_progress';
     case Blocked = 'blocked';
+    case InReview = 'in_review';
     case Done = 'done';
     case Cancelled = 'cancelled';
 
     public function getLabel(): string
     {
         return match ($this) {
-            self::Planned => __('Planned'),
+            self::Backlog => __('Backlog'),
+            self::Todo => __('To Do'),
             self::InProgress => __('In Progress'),
             self::Blocked => __('Blocked'),
+            self::InReview => __('In Review'),
             self::Done => __('Done'),
             self::Cancelled => __('Cancelled'),
         };
@@ -30,10 +34,12 @@ enum TaskStatus: string implements HasColor, HasIcon, HasLabel
     public function getColor(): string
     {
         return match ($this) {
-            self::Planned => 'gray',
+            self::Backlog => 'gray',
+            self::Todo => 'info',
             self::InProgress => 'warning',
-            self::Blocked => 'danger',
+            self::InReview => 'primary',
             self::Done => 'success',
+            self::Blocked => 'danger',
             self::Cancelled => 'gray',
         };
     }
@@ -41,9 +47,11 @@ enum TaskStatus: string implements HasColor, HasIcon, HasLabel
     public function getIcon(): BackedEnum
     {
         return match ($this) {
-            self::Planned => Heroicon::OutlinedClipboardDocumentList,
-            self::InProgress => Heroicon::OutlinedPlayCircle,
+            self::Backlog => Heroicon::InboxStack,
+            self::Todo => Heroicon::QueueList,
+            self::InProgress => Heroicon::ArrowPath,
             self::Blocked => Heroicon::OutlinedNoSymbol,
+            self::InReview => Heroicon::Eye,
             self::Done => Heroicon::OutlinedCheckCircle,
             self::Cancelled => Heroicon::OutlinedXCircle,
         };
@@ -51,7 +59,7 @@ enum TaskStatus: string implements HasColor, HasIcon, HasLabel
 
     public function isPlanned(): bool
     {
-        return $this === self::Planned;
+        return $this === self::Todo;
     }
 
     public function isDone(): bool
@@ -71,7 +79,7 @@ enum TaskStatus: string implements HasColor, HasIcon, HasLabel
 
     public function isOpen(): bool
     {
-        return in_array($this, [self::Planned, self::InProgress, self::Blocked], true);
+        return in_array($this, [self::Todo, self::InProgress, self::Blocked, self::InReview], true);
     }
 
     public function isRunning(): bool
@@ -92,7 +100,7 @@ enum TaskStatus: string implements HasColor, HasIcon, HasLabel
      */
     public static function openValues(): array
     {
-        return [self::Planned->value, self::InProgress->value, self::Blocked->value];
+        return [self::Todo->value, self::InProgress->value, self::Blocked->value, self::InReview->value];
     }
 
     public static function defaultCase(): self

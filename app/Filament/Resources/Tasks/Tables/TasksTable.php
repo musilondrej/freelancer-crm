@@ -8,6 +8,7 @@ use App\Filament\Resources\Tasks\TaskResource;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\UserSetting;
+use App\Support\Invoicing\InvoiceIssuer;
 use App\Support\TimeDuration;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -73,6 +74,7 @@ class TasksTable
         $timezone = UserSetting::timezoneForUser($ownerId);
 
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('currentInvoiceItem.invoice'))
             ->queryStringIdentifier('tasks')
             ->persistFiltersInSession()
             ->persistSearchInSession()
@@ -110,7 +112,7 @@ class TasksTable
                 IconColumn::make('is_invoiced')
                     ->boolean()
                     ->label(__('Invoiced'))
-                    ->sortable()
+                    ->state(fn (Task $record): bool => $record->isInvoiced())
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('amount')
                     ->label(__('Amount'))
@@ -146,12 +148,12 @@ class TasksTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('invoice_reference')
                     ->label(__('Invoice reference'))
-                    ->searchable()
+                    ->state(fn (Task $record): ?string => $record->resolvedInvoiceReference())
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('invoiced_at')
                     ->label(__('Invoiced at'))
+                    ->state(fn (Task $record): ?CarbonInterface => $record->resolvedInvoicedAt())
                     ->dateTime($dateTimeFormat, timezone: $timezone)
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->label(__('Created at'))
@@ -174,6 +176,7 @@ class TasksTable
                         ->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId))
                         ->where('is_billable', true)
                         ->whereIn('status', TaskStatus::doneValues())
+                        ->whereDoesntHave('invoiceItems')
                         ->where('is_invoiced', false)
                         ->whereNull('invoice_reference')
                         ->whereNull('invoiced_at')
@@ -292,9 +295,9 @@ class TasksTable
                                 ->default(today()->toDateString())
                                 ->required(),
                         ])
-                        ->fillForm(fn (Task $record): array => [
-                            'invoice_reference' => $record->invoice_reference,
-                            'invoiced_at' => self::toDateString($record->invoiced_at) ?? today()->toDateString(),
+                        ->fillForm(fn (): array => [
+                            'invoice_reference' => null,
+                            'invoiced_at' => today()->toDateString(),
                         ])
                         ->action(function (Task $record, array $data): void {
                             $record->markAsInvoiced(
@@ -326,9 +329,9 @@ class TasksTable
                                 ->required(),
                         ])
                         ->action(function (BulkAction $action, Collection $records, array $data): void {
-                            $records->each(function ($record) use ($action, $data): void {
+                            $readyRecords = $records->filter(function ($record) use ($action): bool {
                                 if (! $record instanceof Task) {
-                                    return;
+                                    return false;
                                 }
 
                                 if (! $record->isReadyToInvoice()) {
@@ -351,14 +354,21 @@ class TasksTable
                                         },
                                     );
 
-                                    return;
+                                    return false;
                                 }
 
-                                $record->markAsInvoiced(
-                                    invoiceReference: $data['invoice_reference'] ?? null,
-                                    invoicedAt: $data['invoiced_at'] ?? null,
-                                );
+                                return true;
                             });
+
+                            if ($readyRecords->isEmpty()) {
+                                return;
+                            }
+
+                            resolve(InvoiceIssuer::class)->issue(
+                                $readyRecords->all(),
+                                $data['invoice_reference'] ?? null,
+                                $data['invoiced_at'] ?? null,
+                            );
                         })
                         ->successNotificationTitle(__('Selected tasks assigned to invoice'))
                         ->failureNotificationTitle(function (int $successCount, int $totalCount): string {
@@ -392,19 +402,6 @@ class TasksTable
                     ->url(fn (): string => TaskResource::getUrl('create'))
                     ->color('gray'),
             ]);
-    }
-
-    private static function toDateString(mixed $value): ?string
-    {
-        if ($value instanceof CarbonInterface) {
-            return $value->toDateString();
-        }
-
-        if (is_string($value) && trim($value) !== '') {
-            return CarbonImmutable::parse($value)->toDateString();
-        }
-
-        return null;
     }
 
     private static function isPastDate(mixed $value): bool

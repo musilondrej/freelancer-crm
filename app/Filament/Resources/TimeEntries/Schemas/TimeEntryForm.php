@@ -12,7 +12,6 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -80,27 +79,6 @@ class TimeEntryForm
                                         '0' => false,
                                         default => null,
                                     }),
-                                Toggle::make('is_invoiced')
-                                    ->label(__('Is invoiced'))
-                                    ->live()
-                                    ->afterStateUpdated(function (bool $state, Set $set): void {
-                                        if (! $state) {
-                                            $set('invoice_reference', null);
-                                            $set('invoiced_at', null);
-
-                                            return;
-                                        }
-
-                                        $set('invoiced_at', now());
-                                    }),
-                                TextInput::make('invoice_reference')
-                                    ->label(__('Invoice reference'))
-                                    ->maxLength(255)
-                                    ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
-                                DateTimePicker::make('invoiced_at')
-                                    ->label(__('Invoiced at'))
-                                    ->seconds(false)
-                                    ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
                             ])
                             ->columns(1),
                     ])

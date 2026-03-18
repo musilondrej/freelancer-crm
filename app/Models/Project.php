@@ -135,6 +135,14 @@ class Project extends Model
         return $this->hasMany(RecurringService::class);
     }
 
+    /**
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     protected function hourlyRateWithCurrency(): Attribute
     {
         return Attribute::make(

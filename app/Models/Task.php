@@ -6,6 +6,7 @@ use App\Enums\Priority;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
 use App\Models\Concerns\EnforcesOwner;
+use App\Support\Invoicing\InvoiceIssuer;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\TaskFactory;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
@@ -166,6 +168,22 @@ class Task extends Model
         return $this->morphToMany(Tag::class, 'taggable');
     }
 
+    /**
+     * @return MorphMany<InvoiceItem, $this>
+     */
+    public function invoiceItems(): MorphMany
+    {
+        return $this->morphMany(InvoiceItem::class, 'invoiceable');
+    }
+
+    /**
+     * @return MorphOne<InvoiceItem, $this>
+     */
+    public function currentInvoiceItem(): MorphOne
+    {
+        return $this->morphOne(InvoiceItem::class, 'invoiceable')->latestOfMany();
+    }
+
     public function effectiveCurrency(): ?string
     {
         /** @var Project|null $project */
@@ -303,6 +321,7 @@ class Task extends Model
         $query->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId));
         $query->where('is_billable', true);
         $query->whereIn('status', TaskStatus::doneValues());
+        $query->whereDoesntHave('invoiceItems');
         $query->where('is_invoiced', false);
         $query->whereNull('invoice_reference');
         $query->whereNull('invoiced_at');
@@ -312,6 +331,10 @@ class Task extends Model
 
     public function isInvoiced(): bool
     {
+        if ($this->currentInvoiceItem()->exists()) {
+            return true;
+        }
+
         if ((bool) $this->is_invoiced) {
             return true;
         }
@@ -334,25 +357,54 @@ class Task extends Model
 
     public function markAsInvoiced(?string $invoiceReference = null, CarbonInterface|string|null $invoicedAt = null): void
     {
-        $normalizedInvoiceReference = is_string($invoiceReference)
-            ? trim($invoiceReference)
-            : null;
-
-        if ($normalizedInvoiceReference === '') {
-            $normalizedInvoiceReference = null;
+        if ($this->isInvoiced()) {
+            return;
         }
 
-        $resolvedInvoicedAt = match (true) {
-            $invoicedAt instanceof CarbonInterface => $invoicedAt,
-            is_string($invoicedAt) && trim($invoicedAt) !== '' => CarbonImmutable::parse($invoicedAt),
-            default => $this->invoiced_at ?? now(),
-        };
+        resolve(InvoiceIssuer::class)->issue([$this], $invoiceReference, $invoicedAt);
 
-        $this->fill([
-            'is_invoiced' => true,
-            'invoice_reference' => $normalizedInvoiceReference,
-            'invoiced_at' => $resolvedInvoicedAt,
-        ])->save();
+        $this->unsetRelation('currentInvoiceItem');
+        $this->refresh();
+    }
+
+    public function resolvedInvoiceReference(): ?string
+    {
+        $invoice = $this->resolvedInvoice();
+
+        if ($invoice?->reference !== null && trim((string) $invoice->reference) !== '') {
+            return trim((string) $invoice->reference);
+        }
+
+        if ($this->invoice_reference !== null && trim((string) $this->invoice_reference) !== '') {
+            return trim((string) $this->invoice_reference);
+        }
+
+        return null;
+    }
+
+    public function resolvedInvoicedAt(): ?CarbonInterface
+    {
+        $invoiceIssuedAt = $this->resolvedInvoice()?->getAttribute('issued_at');
+
+        if ($invoiceIssuedAt instanceof CarbonInterface) {
+            return $invoiceIssuedAt;
+        }
+
+        if (is_string($invoiceIssuedAt) && trim($invoiceIssuedAt) !== '') {
+            return CarbonImmutable::parse($invoiceIssuedAt);
+        }
+
+        $rawInvoicedAt = $this->getAttribute('invoiced_at');
+
+        if ($rawInvoicedAt instanceof CarbonInterface) {
+            return $rawInvoicedAt;
+        }
+
+        if (is_string($rawInvoicedAt) && trim($rawInvoicedAt) !== '') {
+            return CarbonImmutable::parse($rawInvoicedAt);
+        }
+
+        return null;
     }
 
     private function resolvedBillingModelValue(): string
@@ -364,5 +416,20 @@ class Task extends Model
         }
 
         return (string) $rawBillingModel;
+    }
+
+    private function resolvedInvoice(): ?Invoice
+    {
+        $invoiceItem = $this->relationLoaded('currentInvoiceItem')
+            ? $this->getRelation('currentInvoiceItem')
+            : $this->currentInvoiceItem()->with('invoice')->first();
+
+        if (! $invoiceItem instanceof InvoiceItem) {
+            return null;
+        }
+
+        return $invoiceItem->relationLoaded('invoice')
+            ? $invoiceItem->getRelation('invoice')
+            : $invoiceItem->invoice;
     }
 }

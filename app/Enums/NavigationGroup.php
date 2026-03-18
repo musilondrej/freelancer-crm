@@ -9,6 +9,7 @@ enum NavigationGroup: string implements HasLabel
     case Projects = 'projects';
     case Leads = 'leads';
     case Customers = 'customers';
+    case Reports = 'reports';
 
     public function getLabel(): string
     {
@@ -16,6 +17,7 @@ enum NavigationGroup: string implements HasLabel
             self::Projects => __('Projects'),
             self::Leads => __('Leads'),
             self::Customers => __('Customers'),
+            self::Reports => __('Reports'),
         };
     }
 }

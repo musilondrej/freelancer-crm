@@ -38,12 +38,12 @@ class TimeEntryResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Time Entry');
+        return __('Time entry');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Time Entries');
+        return __('Time entries');
     }
 
     public static function form(Schema $schema): Schema

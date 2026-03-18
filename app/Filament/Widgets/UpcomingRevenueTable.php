@@ -8,6 +8,7 @@ use App\Filament\Resources\RecurringServices\RecurringServiceResource;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
 use App\Models\RecurringService;
 use App\Models\UserSetting;
+use App\Support\CurrencyConverter;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -124,7 +125,7 @@ class UpcomingRevenueTable extends TableWidget
         $currency = $service->effectiveCurrency();
 
         if ($currency === null) {
-            return number_format($amount, 0, '.', ' ');
+            return CurrencyConverter::format($amount, null, 0);
         }
 
         $converted = $this->convertAmount($amount, $currency);

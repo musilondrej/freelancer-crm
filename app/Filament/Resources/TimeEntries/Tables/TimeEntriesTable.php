@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\TimeEntries\Tables;
 
 use App\Models\TimeEntry;
+use App\Support\CurrencyConverter;
 use App\Support\Invoicing\InvoiceIssuer;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -137,7 +138,7 @@ class TimeEntriesTable
 
                     $currency = $record->task?->effectiveCurrency() ?? 'CZK';
 
-                    return number_format($rate, 2, '.', ' ').' '.$currency;
+                    return CurrencyConverter::format($rate, $currency, 2);
                 })
                 ->toggleable(),
             TextColumn::make('amount')
@@ -151,7 +152,7 @@ class TimeEntriesTable
 
                     $currency = $record->task?->effectiveCurrency() ?? 'CZK';
 
-                    return number_format($amount, 2, '.', ' ').' '.$currency;
+                    return CurrencyConverter::format($amount, $currency, 2);
                 })
                 ->toggleable(),
 

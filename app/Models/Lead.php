@@ -120,7 +120,7 @@ class Lead extends Model
 
                 return $currency !== null
                     ? $currency->format((float) $estimatedValue)
-                    : number_format((float) $estimatedValue, 0, '.', ' ');
+                    : Currency::userDefault()->format((float) $estimatedValue);
             },
         );
     }

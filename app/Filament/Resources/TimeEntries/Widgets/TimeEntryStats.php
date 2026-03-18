@@ -103,7 +103,7 @@ class TimeEntryStats extends BaseWidget
             Stat::make(__('Hours This Week'), number_format($hoursThisWeek, 1, '.', ' ')),
             Stat::make(__('Billable %'), $billablePercent.'%')
                 ->color('info'),
-            Stat::make(__('Total Revenue'), number_format(round($totalRevenue), 0, '.', ' ').' '.CurrencyConverter::symbol($displayCurrency->value))
+            Stat::make(__('Total Revenue'), CurrencyConverter::format($totalRevenue, $displayCurrency->value, 0))
                 ->color('primary'),
         ];
     }

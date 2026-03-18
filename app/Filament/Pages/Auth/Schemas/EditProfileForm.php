@@ -37,14 +37,14 @@ class EditProfileForm
         return $schema
             ->columns(1)
             ->components([
-                Section::make(__('Account Identity'))
+                Section::make(__('Account identity'))
                     ->icon('heroicon-o-user')
                     ->schema([
                         ($callbacks['nameComponent'])(),
                         ($callbacks['emailComponent'])(),
                     ])
                     ->columns(1),
-                Section::make(__('Password Update'))
+                Section::make(__('Password update'))
                     ->icon('heroicon-o-lock-closed')
                     ->schema([
                         ($callbacks['passwordComponent'])(),
@@ -52,7 +52,7 @@ class EditProfileForm
                         ($callbacks['currentPasswordComponent'])(),
                     ])
                     ->columns(1),
-                Section::make(__('Billing Defaults'))
+                Section::make(__('Billing defaults'))
                     ->icon('heroicon-o-currency-dollar')
                     ->schema([
                         Select::make('default_currency')
@@ -67,7 +67,7 @@ class EditProfileForm
                             ->placeholder('0'),
                     ])
                     ->columns(1),
-                Section::make(__('Rounding Rules'))
+                Section::make(__('Rounding rules'))
                     ->icon('heroicon-o-clock')
                     ->schema([
                         Toggle::make('preferences.time_tracking.rounding.enabled')

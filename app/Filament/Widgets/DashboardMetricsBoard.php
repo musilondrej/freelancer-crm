@@ -65,7 +65,7 @@ class DashboardMetricsBoard extends BaseWidget
             'revenue_week' => __('Revenue this week'),
             'revenue_today' => __('Revenue today'),
             'unbilled_done' => __('Unbilled done work'),
-            'money_in_flight' => __('Money in flight'),
+            'money_in_flight' => __('Money In flight'),
             'billable_hours_month' => __('Billable hours (month)'),
             'worked_hours_month' => __('Worked hours (month)'),
             'open_projects' => __('Open projects'),
@@ -128,25 +128,25 @@ class DashboardMetricsBoard extends BaseWidget
     private function buildStat(string $metricKey, array $snapshot): Stat
     {
         return match ($metricKey) {
-            'revenue_month' => Stat::make(__('Revenue This Month'), $this->formatMoneyMetric($snapshot['revenue_month']))
+            'revenue_month' => Stat::make(__('Revenue this month'), $this->formatMoneyMetric($snapshot['revenue_month']))
                 ->icon('heroicon-o-banknotes')
                 ->color('warning'),
-            'revenue_week' => Stat::make(__('Revenue This Week'), $this->formatMoneyMetric($snapshot['revenue_week']))
+            'revenue_week' => Stat::make(__('Revenue this week'), $this->formatMoneyMetric($snapshot['revenue_week']))
                 ->icon('heroicon-o-banknotes')
                 ->color('info'),
-            'revenue_today' => Stat::make(__('Revenue Today'), $this->formatMoneyMetric($snapshot['revenue_today']))
+            'revenue_today' => Stat::make(__('Revenue today'), $this->formatMoneyMetric($snapshot['revenue_today']))
                 ->icon('heroicon-o-banknotes')
                 ->color('success'),
-            'unbilled_done' => Stat::make(__('Unbilled Done Work'), $this->formatMoneyMetric($snapshot['unbilled_done']))
+            'unbilled_done' => Stat::make(__('Unbilled done work'), $this->formatMoneyMetric($snapshot['unbilled_done']))
                 ->icon('heroicon-o-receipt-percent')
                 ->color('danger'),
-            'money_in_flight' => Stat::make(__('Money In Flight'), $this->formatMoneyMetric($snapshot['money_in_flight']))
+            'money_in_flight' => Stat::make(__('Money In flight'), $this->formatMoneyMetric($snapshot['money_in_flight']))
                 ->icon('heroicon-o-cloud')
                 ->color('warning'),
-            'billable_hours_month' => Stat::make(__('Billable Hours This Month'), $this->formatHoursMetric($snapshot['billable_hours_month']))
+            'billable_hours_month' => Stat::make(__('Billable hours this month'), $this->formatHoursMetric($snapshot['billable_hours_month']))
                 ->icon('heroicon-o-clock')
                 ->color('primary'),
-            'worked_hours_month' => Stat::make(__('Worked Hours This Month'), $this->formatHoursMetric($snapshot['worked_hours_month']))
+            'worked_hours_month' => Stat::make(__('Worked hours this month'), $this->formatHoursMetric($snapshot['worked_hours_month']))
                 ->icon('heroicon-o-clock')
                 ->color('gray'),
             'open_projects' => Stat::make(__('Open projects'), $this->formatCountMetric($snapshot['open_projects']))

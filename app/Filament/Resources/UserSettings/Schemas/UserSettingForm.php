@@ -21,7 +21,7 @@ class UserSettingForm
     {
         return $schema
             ->components([
-                Section::make(__('Time Tracking'))
+                Section::make(__('Time tracking'))
                     ->columns(1)
                     ->schema([
                         Toggle::make('preferences.time_tracking.rounding.enabled')

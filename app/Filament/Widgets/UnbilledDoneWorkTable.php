@@ -23,7 +23,7 @@ class UnbilledDoneWorkTable extends TableWidget
 
     protected function getTableHeading(): string|Htmlable|null
     {
-        return __('Unbilled Done Tasks');
+        return __('Unbilled done tasks');
     }
 
     protected static ?int $sort = -4;
@@ -95,7 +95,7 @@ class UnbilledDoneWorkTable extends TableWidget
 
     public function getHeading(): ?string
     {
-        return __('Unbilled Done Tasks');
+        return __('Unbilled done tasks');
     }
 
     /**

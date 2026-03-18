@@ -107,7 +107,7 @@ class UpcomingRevenueTable extends TableWidget
 
     private function headingForRange(CarbonImmutable $rangeStart, CarbonImmutable $rangeEnd, string $dateFormat): string
     {
-        return __('Upcoming Revenue (:start - :end)', [
+        return __('Upcoming revenue (:start - :end)', [
             'start' => $rangeStart->format($dateFormat),
             'end' => $rangeEnd->format($dateFormat),
         ]);

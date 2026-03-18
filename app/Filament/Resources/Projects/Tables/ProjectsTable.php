@@ -80,7 +80,7 @@ class ProjectsTable
                     ->badge()
                     ->sortable(),
                 TextColumn::make('pricing_model')
-                    ->label(__('Pricing Model'))
+                    ->label(__('Pricing model'))
                     ->badge()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

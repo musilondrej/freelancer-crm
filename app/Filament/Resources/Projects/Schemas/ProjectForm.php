@@ -30,7 +30,7 @@ class ProjectForm
             ->components([
                 Group::make()
                     ->schema([
-                        Section::make(__('Project Brief'))
+                        Section::make(__('Overview'))
                             ->schema([
                                 Hidden::make('owner_id')
                                     ->default($ownerId),
@@ -75,7 +75,7 @@ class ProjectForm
                         Section::make(__('Financial details'))
                             ->schema([
                                 Select::make('pricing_model')
-                                    ->label(__('Pricing Model'))
+                                    ->label(__('Pricing model'))
                                     ->options(ProjectPricingModel::class)
                                     ->default(ProjectPricingModel::Fixed)
                                     ->required()

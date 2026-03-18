@@ -33,7 +33,7 @@ class TimeEntryResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('Reporting Timesheets');
+        return __('Reporting timesheets');
     }
 
     public static function getModelLabel(): string

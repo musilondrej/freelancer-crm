@@ -50,7 +50,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             ->label(__('Track time'))
             ->icon(Heroicon::OutlinedPlayCircle)
             ->color('gray')
-            ->modalHeading(__('Create Time Entry'))
+            ->modalHeading(__('Create time entry'))
             ->modalIcon(Heroicon::OutlinedClock)
             ->modalWidth('5xl')
             ->modalSubmitActionLabel(__('Save'))

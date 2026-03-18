@@ -21,11 +21,11 @@ class WorkHoursTimelineChart extends ChartWidget
         'xl' => 1,
     ];
 
-    protected ?string $heading = 'Work Hours';
+    protected ?string $heading = 'Work hours';
 
     public function getHeading(): ?string
     {
-        return __('Work Hours');
+        return __('Work hours');
     }
 
     protected ?string $maxHeight = '360px';

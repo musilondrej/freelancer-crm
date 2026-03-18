@@ -81,9 +81,9 @@ class User extends Authenticatable
         return $this->hasMany(Activity::class, 'owner_id');
     }
 
-    public function projectActivities(): HasMany
+    public function tasks(): HasMany
     {
-        return $this->hasMany(Worklog::class, 'owner_id');
+        return $this->hasMany(Task::class, 'owner_id');
     }
 
     public function notes(): HasMany

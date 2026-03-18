@@ -4,13 +4,13 @@ namespace App\Filament\Widgets;
 
 use App\Enums\Currency;
 use App\Enums\LeadStatus;
-use App\Enums\ProjectActivityStatus;
-use App\Enums\ProjectActivityType;
 use App\Enums\ProjectStatus;
+use App\Enums\TaskBillingModel;
+use App\Enums\TaskStatus;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
 use App\Models\Lead;
 use App\Models\Project;
-use App\Models\Worklog;
+use App\Models\Task;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Filament\Facades\Filament;
@@ -70,7 +70,7 @@ class DashboardMetricsBoard extends BaseWidget
             'billable_hours_month' => __('Billable hours (month)'),
             'worked_hours_month' => __('Worked hours (month)'),
             'open_projects' => __('Open projects'),
-            'overdue_activities' => __('Overdue worklogs'),
+            'overdue_activities' => __('Overdue tasks'),
             'open_leads' => __('Open leads'),
         ];
     }
@@ -156,7 +156,7 @@ class DashboardMetricsBoard extends BaseWidget
             'open_projects' => Stat::make(__('Open Projects'), $this->formatCountMetric($snapshot['open_projects']))
                 ->icon('heroicon-o-briefcase')
                 ->color('warning'),
-            'overdue_activities' => Stat::make(__('Overdue Worklogs'), $this->formatCountMetric($snapshot['overdue_activities']))
+            'overdue_activities' => Stat::make(__('Overdue Tasks'), $this->formatCountMetric($snapshot['overdue_activities']))
                 ->icon('heroicon-o-exclamation-triangle')
                 ->color('danger'),
             'open_leads' => Stat::make(__('Open Leads'), $this->formatCountMetric($snapshot['open_leads']))
@@ -223,13 +223,13 @@ class DashboardMetricsBoard extends BaseWidget
         $workedHoursMonth = 0.0;
         $billableHoursMonth = 0.0;
 
-        $yearlyBillableActivities = $this->loadBillableDoneActivitiesForRange(
+        $yearlyBillableTasks = $this->loadBillableDoneTasksForRange(
             $ownerId,
             $startOfYear,
             $now,
         );
 
-        $yearlyBillableActivities->each(function (Worklog $activity) use (
+        $yearlyBillableTasks->each(function (Task $task) use (
             $displayCurrency,
             $startOfDay,
             $startOfWeek,
@@ -239,23 +239,23 @@ class DashboardMetricsBoard extends BaseWidget
             &$revenueMonth,
             &$billableHoursMonth,
         ): void {
-            $finishedAt = $this->resolvedActivityDate($activity->getAttribute('finished_at'));
+            $completedAt = $this->resolvedTaskDate($task->getAttribute('completed_at'));
 
-            if (! $finishedAt instanceof CarbonImmutable) {
+            if (! $completedAt instanceof CarbonImmutable) {
                 return;
             }
 
-            $amount = $this->resolvedConvertedAmount($activity, $displayCurrency);
+            $amount = $this->resolvedConvertedAmount($task, $displayCurrency);
 
             if ($amount === null) {
                 return;
             }
 
-            if ($finishedAt->greaterThanOrEqualTo($startOfMonth)) {
+            if ($completedAt->greaterThanOrEqualTo($startOfMonth)) {
                 $revenueMonth += $amount;
 
-                if ($this->isHourlyActivity($activity)) {
-                    $hours = $this->resolvedHourlyAmount($activity);
+                if ($this->isHourlyTask($task)) {
+                    $hours = $this->resolvedHourlyAmount($task, billableOnly: true);
 
                     if ($hours > 0) {
                         $billableHoursMonth += $hours;
@@ -263,35 +263,35 @@ class DashboardMetricsBoard extends BaseWidget
                 }
             }
 
-            if ($finishedAt->greaterThanOrEqualTo($startOfWeek)) {
+            if ($completedAt->greaterThanOrEqualTo($startOfWeek)) {
                 $revenueWeek += $amount;
             }
 
-            if ($finishedAt->greaterThanOrEqualTo($startOfDay)) {
+            if ($completedAt->greaterThanOrEqualTo($startOfDay)) {
                 $revenueToday += $amount;
             }
         });
 
-        $this->loadReadyToInvoiceActivities($ownerId)
-            ->each(function (Worklog $activity) use ($displayCurrency, &$unbilledDone): void {
-                $amount = $this->resolvedConvertedAmount($activity, $displayCurrency);
+        $this->loadReadyToInvoiceTasks($ownerId)
+            ->each(function (Task $task) use ($displayCurrency, &$unbilledDone): void {
+                $amount = $this->resolvedConvertedAmount($task, $displayCurrency);
 
                 if ($amount !== null) {
                     $unbilledDone += $amount;
                 }
             });
 
-        $this->loadPipelineActivities($ownerId)->each(function (Worklog $activity) use ($displayCurrency, &$moneyInFlight): void {
-            $amount = $this->resolvedConvertedAmount($activity, $displayCurrency);
+        $this->loadPipelineTasks($ownerId)->each(function (Task $task) use ($displayCurrency, &$moneyInFlight): void {
+            $amount = $this->resolvedConvertedAmount($task, $displayCurrency);
 
             if ($amount !== null) {
                 $moneyInFlight += $amount;
             }
         });
 
-        $this->loadWorkedHourlyActivitiesForRange($ownerId, $startOfMonth, $now)
-            ->each(function (Worklog $activity) use (&$workedHoursMonth): void {
-                $hours = $this->resolvedHourlyAmount($activity);
+        $this->loadWorkedHourlyTasksForRange($ownerId, $startOfMonth, $now)
+            ->each(function (Task $task) use (&$workedHoursMonth): void {
+                $hours = $this->resolvedHourlyAmount($task);
 
                 if ($hours > 0) {
                     $workedHoursMonth += $hours;
@@ -376,82 +376,83 @@ class DashboardMetricsBoard extends BaseWidget
     }
 
     /**
-     * @return EloquentCollection<int, Worklog>
+     * @return EloquentCollection<int, Task>
      */
-    private function loadBillableDoneActivitiesForRange(
+    private function loadBillableDoneTasksForRange(
         int $ownerId,
         CarbonImmutable $startDate,
         CarbonImmutable $endDate,
     ): EloquentCollection {
         return $this->amountActivityQuery($ownerId)
-            ->whereIn('status', $this->doneActivityStatusCodes())
+            ->whereIn('status', $this->doneTaskStatusCodes())
             ->where('is_billable', true)
-            ->whereNotNull('finished_at')
-            ->whereBetween('finished_at', [$startDate, $endDate])
+            ->whereNotNull('completed_at')
+            ->whereBetween('completed_at', [$startDate, $endDate])
             ->get();
     }
 
     /**
-     * @return EloquentCollection<int, Worklog>
+     * @return EloquentCollection<int, Task>
      */
-    private function loadReadyToInvoiceActivities(int $ownerId): EloquentCollection
+    private function loadReadyToInvoiceTasks(int $ownerId): EloquentCollection
     {
         return $this->amountActivityQuery($ownerId)
             ->readyToInvoice($ownerId)
-            ->whereNotNull('finished_at')
+            ->whereNotNull('completed_at')
             ->get();
     }
 
     /**
-     * @return EloquentCollection<int, Worklog>
+     * @return EloquentCollection<int, Task>
      */
-    private function loadPipelineActivities(int $ownerId): EloquentCollection
+    private function loadPipelineTasks(int $ownerId): EloquentCollection
     {
         return $this->amountActivityQuery($ownerId)
-            ->whereIn('status', $this->openActivityStatusCodes())
+            ->whereIn('status', $this->openTaskStatusCodes())
             ->where('is_billable', true)
             ->get();
     }
 
     /**
-     * @return EloquentCollection<int, Worklog>
+     * @return EloquentCollection<int, Task>
      */
-    private function loadWorkedHourlyActivitiesForRange(
+    private function loadWorkedHourlyTasksForRange(
         int $ownerId,
         CarbonImmutable $startDate,
         CarbonImmutable $endDate,
     ): EloquentCollection {
-        return Worklog::query()
+        return Task::query()
             ->where('owner_id', $ownerId)
-            ->whereIn('status', $this->doneActivityStatusCodes())
-            ->where('type', ProjectActivityType::Hourly->value)
-            ->whereNotNull('finished_at')
-            ->whereBetween('finished_at', [$startDate, $endDate])
+            ->whereIn('status', $this->doneTaskStatusCodes())
+            ->where('billing_model', TaskBillingModel::Hourly->value)
+            ->whereNotNull('completed_at')
+            ->whereBetween('completed_at', [$startDate, $endDate])
+            ->with('timeEntries:id,task_id,is_billable_override,minutes')
             ->select([
-                'type',
-                'tracked_minutes',
+                'billing_model',
                 'quantity',
-                'finished_at',
+                'completed_at',
                 'is_billable',
             ])
             ->get();
     }
 
     /**
-     * @return Builder<Worklog>
+     * @return Builder<Task>
      */
     private function amountActivityQuery(int $ownerId): Builder
     {
-        return Worklog::query()
+        return Task::query()
             ->where('owner_id', $ownerId)
             ->with([
-                'project:id,owner_id,client_id,currency,hourly_rate',
+                'project:id,owner_id,customer_id,currency,hourly_rate',
                 'project.customer:id,owner_id,billing_currency,hourly_rate',
                 'project.customer.owner:id,default_currency,default_hourly_rate',
+                'timeEntries:id,task_id,is_billable_override,minutes',
             ])
             ->select([
                 'project_id',
-                'type',
+                'billing_model',
                 'status',
                 'is_billable',
                 'is_invoiced',
@@ -459,17 +460,16 @@ class DashboardMetricsBoard extends BaseWidget
                 'invoiced_at',
                 'currency',
                 'quantity',
-                'unit_rate',
-                'flat_amount',
-                'tracked_minutes',
-                'finished_at',
+                'hourly_rate_override',
+                'fixed_price',
+                'completed_at',
             ]);
     }
 
-    private function resolvedConvertedAmount(Worklog $activity, Currency $displayCurrency): ?float
+    private function resolvedConvertedAmount(Task $task, Currency $displayCurrency): ?float
     {
-        $amount = $activity->calculatedAmount();
-        $currency = $activity->effectiveCurrency();
+        $amount = $task->calculatedAmount();
+        $currency = $task->effectiveCurrency();
 
         if ($amount === null || $currency === null) {
             return null;
@@ -478,7 +478,7 @@ class DashboardMetricsBoard extends BaseWidget
         return $this->convertAmount($amount, $currency, $displayCurrency);
     }
 
-    private function resolvedActivityDate(mixed $rawDate): ?CarbonImmutable
+    private function resolvedTaskDate(mixed $rawDate): ?CarbonImmutable
     {
         if ($rawDate === null) {
             return null;
@@ -495,29 +495,33 @@ class DashboardMetricsBoard extends BaseWidget
         return CarbonImmutable::parse((string) $rawDate);
     }
 
-    private function isHourlyActivity(Worklog $activity): bool
+    private function isHourlyTask(Task $task): bool
     {
-        $type = $activity->getAttribute('type');
+        $billingModel = $task->getAttribute('billing_model');
 
-        if ($type instanceof ProjectActivityType) {
-            return $type === ProjectActivityType::Hourly;
+        if ($billingModel instanceof TaskBillingModel) {
+            return $billingModel === TaskBillingModel::Hourly;
         }
 
-        return (string) $type === ProjectActivityType::Hourly->value;
+        return (string) $billingModel === TaskBillingModel::Hourly->value;
     }
 
-    private function resolvedHourlyAmount(Worklog $activity): float
+    private function resolvedHourlyAmount(Task $task, bool $billableOnly = false): float
     {
-        if (! $this->isHourlyActivity($activity)) {
+        if (! $this->isHourlyTask($task)) {
             return 0.0;
         }
 
-        if ($activity->tracked_minutes !== null) {
-            return max(((float) $activity->tracked_minutes) / 60, 0.0);
+        $trackedMinutes = $billableOnly
+            ? $task->billableTrackedMinutes()
+            : $task->totalTrackedMinutes();
+
+        if ($trackedMinutes > 0) {
+            return max($trackedMinutes / 60, 0.0);
         }
 
-        if ($activity->quantity !== null) {
-            return max((float) $activity->quantity, 0.0);
+        if ($task->quantity !== null) {
+            return max((float) $task->quantity, 0.0);
         }
 
         return 0.0;
@@ -535,38 +539,33 @@ class DashboardMetricsBoard extends BaseWidget
     {
         return Lead::query()
             ->where('owner_id', $ownerId)
-            ->whereIn('status', [
-                LeadStatus::New->value,
-                LeadStatus::Contacted->value,
-                LeadStatus::Qualified->value,
-                LeadStatus::Proposal->value,
-            ])
+            ->whereIn('status', LeadStatus::openValues())
             ->count();
     }
 
     private function overdueActivitiesCount(int $ownerId): int
     {
-        return Worklog::query()
+        return Task::query()
             ->where('owner_id', $ownerId)
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', now()->toDateString())
-            ->whereIn('status', $this->openActivityStatusCodes())
+            ->whereIn('status', $this->openTaskStatusCodes())
             ->count();
     }
 
     /**
      * @return list<string>
      */
-    private function doneActivityStatusCodes(): array
+    private function doneTaskStatusCodes(): array
     {
-        return ProjectActivityStatus::doneValues();
+        return TaskStatus::doneValues();
     }
 
     /**
      * @return list<string>
      */
-    private function openActivityStatusCodes(): array
+    private function openTaskStatusCodes(): array
     {
-        return ProjectActivityStatus::openValues();
+        return TaskStatus::openValues();
     }
 }

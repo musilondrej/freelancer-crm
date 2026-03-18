@@ -23,8 +23,8 @@ class ClientContactFactory extends Factory
             : null;
 
         return [
-            'client_id' => Customer::factory(),
-            'owner_id' => fn (array $attributes): ?int => Customer::query()->find($attributes['client_id'])?->owner_id,
+            'customer_id' => Customer::factory(),
+            'owner_id' => fn (array $attributes): ?int => Customer::query()->find($attributes['customer_id'])?->owner_id,
             'full_name' => fake()->name(),
             'job_title' => fake()->optional(0.8)->jobTitle(),
             'email' => $email,

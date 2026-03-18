@@ -8,7 +8,7 @@ use App\Models\Lead;
 use App\Models\Note;
 use App\Models\Project;
 use App\Models\RecurringService;
-use App\Models\Worklog;
+use App\Models\Task;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -28,7 +28,7 @@ class NoteFactory extends Factory
                 Customer::class => Customer::query()->find($attributes['noteable_id'])?->owner_id,
                 ClientContact::class => ClientContact::query()->find($attributes['noteable_id'])?->owner_id,
                 Project::class => Project::query()->find($attributes['noteable_id'])?->owner_id,
-                Worklog::class => Worklog::query()->find($attributes['noteable_id'])?->owner_id,
+                Task::class => Task::query()->find($attributes['noteable_id'])?->owner_id,
                 RecurringService::class => RecurringService::query()->find($attributes['noteable_id'])?->owner_id,
                 Lead::class => Lead::query()->find($attributes['noteable_id'])?->owner_id,
                 default => null,

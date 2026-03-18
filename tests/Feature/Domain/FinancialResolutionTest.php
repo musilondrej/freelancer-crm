@@ -49,7 +49,7 @@ it('resolves project rates and currency from customer when project values are mi
 
     $projectWithOwnValues = Project::query()->create([
         'owner_id' => $owner->id,
-        'client_id' => $customer->id,
+        'customer_id' => $customer->id,
         'name' => 'Project Own Values',
         'status' => 'in_progress',
         'pipeline_stage' => ProjectPipelineStage::Won,
@@ -60,7 +60,7 @@ it('resolves project rates and currency from customer when project values are mi
 
     $projectUsingCustomerDefaults = Project::query()->create([
         'owner_id' => $owner->id,
-        'client_id' => $customer->id,
+        'customer_id' => $customer->id,
         'name' => 'Project Customer Defaults',
         'status' => 'planned',
         'pipeline_stage' => ProjectPipelineStage::Proposal,
@@ -86,7 +86,7 @@ it('resolves recurring service currency by precedence service -> project -> cust
 
     $project = Project::query()->create([
         'owner_id' => $owner->id,
-        'client_id' => $customer->id,
+        'customer_id' => $customer->id,
         'name' => 'Recurring Project',
         'status' => 'in_progress',
         'pipeline_stage' => ProjectPipelineStage::Won,
@@ -134,7 +134,7 @@ it('resolves recurring service currency by precedence service -> project -> cust
 
     $projectWithoutCurrency = Project::query()->create([
         'owner_id' => $owner->id,
-        'client_id' => $customer->id,
+        'customer_id' => $customer->id,
         'name' => 'Project Customer Currency',
         'status' => 'planned',
         'pipeline_stage' => ProjectPipelineStage::New,
@@ -163,7 +163,7 @@ it('resolves recurring service currency by precedence service -> project -> cust
 
     $projectWithoutCurrencyAndCustomerCurrency = Project::query()->create([
         'owner_id' => $owner->id,
-        'client_id' => $customerWithoutCurrency->id,
+        'customer_id' => $customerWithoutCurrency->id,
         'name' => 'Project Owner Currency',
         'status' => 'planned',
         'pipeline_stage' => ProjectPipelineStage::New,

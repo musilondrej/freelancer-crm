@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Currency;
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
+use App\Enums\Priority;
 use App\Models\Concerns\EnforcesOwner;
 use Database\Factories\LeadFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -56,7 +57,7 @@ class Lead extends Model
         return [
             'status' => LeadStatus::class,
             'pipeline_stage' => LeadPipelineStage::class,
-            'priority' => 'integer',
+            'priority' => Priority::class,
             'estimated_value' => 'decimal:2',
             'expected_close_date' => 'date',
             'contacted_at' => 'datetime',

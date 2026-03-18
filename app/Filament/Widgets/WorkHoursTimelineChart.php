@@ -2,16 +2,12 @@
 
 namespace App\Filament\Widgets;
 
-use App\Enums\ProjectActivityStatus;
-use App\Enums\ProjectActivityType;
-use App\Models\Worklog;
+use App\Models\TimeEntry;
 use Carbon\CarbonImmutable;
-use Carbon\CarbonInterface;
 use Filament\Facades\Filament;
 use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 
 class WorkHoursTimelineChart extends ChartWidget
@@ -107,18 +103,16 @@ class WorkHoursTimelineChart extends ChartWidget
     {
         [$rangeStart, $rangeEnd, $bucket] = $this->resolvedRange();
         $ownerId = Filament::auth()->id();
-        $doneStatuses = ProjectActivityStatus::doneValues();
 
         $cacheKey = sprintf(
-            'dashboard.work-hours.owner.%s.start.%s.end.%s.bucket.%s.statuses.%s',
+            'dashboard.work-hours.owner.%s.start.%s.end.%s.bucket.%s',
             $ownerId ?? 'guest',
             $rangeStart->toDateString(),
             $rangeEnd->toDateString(),
             $bucket,
-            md5(implode('|', $doneStatuses)),
         );
 
-        return Cache::remember($cacheKey, now()->addSeconds(90), function () use ($rangeStart, $rangeEnd, $bucket, $ownerId, $doneStatuses): array {
+        return Cache::remember($cacheKey, now()->addSeconds(90), function () use ($rangeStart, $rangeEnd, $bucket, $ownerId): array {
             /**
              * @var array<string, array{label: string, hours: float}> $points
              */
@@ -147,42 +141,30 @@ class WorkHoursTimelineChart extends ChartWidget
                     : $cursor->addDay();
             }
 
-            Worklog::query()
-                ->where('type', ProjectActivityType::Hourly->value)
-                ->whereIn('status', $doneStatuses)
-                ->whereNotNull('finished_at')
-                ->whereBetween('finished_at', [$rangeStart, $rangeEnd])
-                ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
-                ->select(['finished_at', 'tracked_minutes', 'quantity'])
+            TimeEntry::query()
+                ->whereNotNull('ended_at')
+                ->whereBetween('ended_at', [$rangeStart, $rangeEnd])
+                ->when($ownerId !== null, fn ($query) => $query->where('owner_id', $ownerId))
+                ->select(['ended_at', 'minutes'])
                 ->get()
-                ->each(function (Worklog $activity) use (&$points, $bucket): void {
-                    $rawFinishedAt = $activity->getAttribute('finished_at');
+                ->each(function (TimeEntry $timeEntry) use (&$points, $bucket): void {
+                    $rawEndedAt = $timeEntry->getAttribute('ended_at');
 
-                    if ($rawFinishedAt === null) {
+                    if ($rawEndedAt === null) {
                         return;
                     }
 
-                    $finishedAt = $rawFinishedAt instanceof CarbonInterface
-                        ? $rawFinishedAt
-                        : CarbonImmutable::parse((string) $rawFinishedAt);
+                    $endedAt = CarbonImmutable::parse((string) $rawEndedAt);
 
                     $bucketKey = $bucket === 'month'
-                        ? $finishedAt->format('Y-m')
-                        : $finishedAt->toDateString();
+                        ? $endedAt->format('Y-m')
+                        : $endedAt->toDateString();
 
                     if (! array_key_exists($bucketKey, $points)) {
                         return;
                     }
 
-                    $hours = 0.0;
-
-                    if ($activity->tracked_minutes !== null) {
-                        $hours = (float) $activity->tracked_minutes / 60;
-                    } elseif ($activity->quantity !== null) {
-                        $hours = (float) $activity->quantity;
-                    }
-
-                    $points[$bucketKey]['hours'] += $hours;
+                    $points[$bucketKey]['hours'] += max(((int) ($timeEntry->minutes ?? 0)) / 60, 0.0);
                 });
 
             return [

@@ -28,8 +28,8 @@ return new class extends Migration
                 ->first();
 
             if ($globalActivity !== null) {
-                // Reassign worklogs and backlog_items to the global activity
-                DB::table('worklogs')
+                // Reassign tasks and backlog_items to the global activity
+                DB::table('tasks')
                     ->where('activity_id', $projectActivity->id)
                     ->update(['activity_id' => $globalActivity->id]);
 

@@ -44,7 +44,7 @@ class UpcomingRevenueTable extends TableWidget
                 })
                 ->with([
                     'customer:id,name,owner_id,billing_currency,hourly_rate',
-                    'project:id,name,owner_id,client_id,currency,hourly_rate',
+                    'project:id,name,owner_id,customer_id,currency,hourly_rate',
                     'owner:id,default_currency,default_hourly_rate',
                 ]))
             ->heading($this->headingForRange($rangeStart, $rangeEnd, $dateFormat))

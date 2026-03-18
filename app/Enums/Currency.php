@@ -169,6 +169,33 @@ enum Currency: string implements HasLabel
         return self::tryFrom((string) $code) ?? self::CZK;
     }
 
+    /**
+     * @param  list<self>|null  $currencies
+     * @return array<string, string>
+     */
+    public static function options(?array $currencies = null): array
+    {
+        $options = [];
+
+        foreach ($currencies ?? self::cases() as $currency) {
+            $options[$currency->value] = $currency->getLabel();
+        }
+
+        return $options;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function dashboardOptions(): array
+    {
+        return self::options([
+            self::CZK,
+            self::EUR,
+            self::USD,
+        ]);
+    }
+
     public static function convert(float $amount, self $from, self $to): float
     {
         if ($from === $to) {

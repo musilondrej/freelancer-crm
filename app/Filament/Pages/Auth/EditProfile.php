@@ -58,7 +58,7 @@ class EditProfile extends BaseEditProfile
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         $preferences = $data['preferences'] ?? [];
-        $newLocale = (string) data_get($preferences, 'ui.locale', config('app.locale', 'en'));
+        $newLocale = data_get($preferences, 'ui.locale', config('app.locale', 'en'));
         $this->shouldForceReload = $this->localeBeforeSave !== null && $newLocale !== $this->localeBeforeSave;
         unset($data['preferences']);
 

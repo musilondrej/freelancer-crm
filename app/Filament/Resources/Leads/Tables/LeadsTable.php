@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Leads\Tables;
 
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
+use App\Enums\Priority;
 use App\Models\Lead;
 use App\Models\UserSetting;
 use Filament\Actions\BulkActionGroup;
@@ -78,14 +79,9 @@ class LeadsTable
                     ->sortable(),
                 TextColumn::make('priority')
                     ->label(__('Priority'))
+                    ->badge()
                     ->sortable()
-                    ->formatStateUsing(fn (int $state): string => match ($state) {
-                        5 => 'Critical',
-                        4 => 'High',
-                        3 => 'Normal',
-                        2 => 'Low',
-                        default => 'Backlog',
-                    })
+                    ->formatStateUsing(fn (Priority|int|null $state): string => $state instanceof Priority ? $state->getLabel() : (Priority::tryFrom((int) $state) ?? Priority::Backlog)->getLabel())
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('estimated_value_with_currency')
                     ->label(__('Potential'))

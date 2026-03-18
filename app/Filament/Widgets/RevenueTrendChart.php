@@ -2,9 +2,9 @@
 
 namespace App\Filament\Widgets;
 
-use App\Enums\ProjectActivityStatus;
+use App\Enums\TaskStatus;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
-use App\Models\Worklog;
+use App\Models\Task;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Filament\Facades\Filament;
@@ -117,7 +117,7 @@ class RevenueTrendChart extends ChartWidget
         [$currentStart, $currentEnd] = $this->resolvedCurrentRange();
         $displayCurrency = $this->resolveDisplayCurrency();
         $ownerId = Filament::auth()->id();
-        $doneStatuses = ProjectActivityStatus::doneValues();
+        $doneStatuses = TaskStatus::doneValues();
         $cacheKey = sprintf(
             'dashboard.revenue-trend.owner.%s.start.%s.end.%s.currency.%s.statuses.%s',
             $ownerId ?? 'guest',
@@ -142,30 +142,30 @@ class RevenueTrendChart extends ChartWidget
                 $labels[] = $currentStart->addDays($index)->format('d.m.');
             }
 
-            Worklog::query()
+            Task::query()
                 ->where('is_billable', true)
                 ->whereIn('status', $doneStatuses)
-                ->whereNotNull('finished_at')
-                ->whereBetween('finished_at', [$previousStart, $currentEnd])
+                ->whereNotNull('completed_at')
+                ->whereBetween('completed_at', [$previousStart, $currentEnd])
                 ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
                 ->with([
-                    'project:id,owner_id,client_id,currency,hourly_rate',
+                    'project:id,owner_id,customer_id,currency,hourly_rate',
                     'project.customer:id,owner_id,billing_currency,hourly_rate',
                     'project.customer.owner:id,default_currency,default_hourly_rate',
+                    'timeEntries:id,task_id,is_billable_override,minutes',
                 ])
                 ->select([
                     'project_id',
                     'currency',
-                    'type',
-                    'unit_rate',
+                    'billing_model',
+                    'hourly_rate_override',
                     'quantity',
-                    'flat_amount',
-                    'tracked_minutes',
+                    'fixed_price',
                     'is_billable',
-                    'finished_at',
+                    'completed_at',
                 ])
                 ->get()
-                ->each(function (Worklog $activity) use (
+                ->each(function (Task $activity) use (
                     $displayCurrency,
                     $currentStart,
                     $previousStart,
@@ -173,9 +173,9 @@ class RevenueTrendChart extends ChartWidget
                     &$current,
                     &$previous,
                 ): void {
-                    $rawFinishedAt = $activity->getAttribute('finished_at');
+                    $rawCompletedAt = $activity->getAttribute('completed_at');
 
-                    if ($rawFinishedAt === null) {
+                    if ($rawCompletedAt === null) {
                         return;
                     }
 
@@ -188,11 +188,11 @@ class RevenueTrendChart extends ChartWidget
 
                     $convertedAmount = $this->convertAmount($amount, $currency, $displayCurrency);
 
-                    $finishedAt = $rawFinishedAt instanceof CarbonInterface
-                        ? CarbonImmutable::instance($rawFinishedAt)
-                        : CarbonImmutable::parse((string) $rawFinishedAt);
+                    $completedAt = $rawCompletedAt instanceof CarbonInterface
+                        ? CarbonImmutable::instance($rawCompletedAt)
+                        : CarbonImmutable::parse((string) $rawCompletedAt);
 
-                    $currentIndex = (int) $currentStart->diffInDays($finishedAt->startOfDay(), false);
+                    $currentIndex = (int) $currentStart->diffInDays($completedAt->startOfDay(), false);
 
                     if ($currentIndex >= 0 && $currentIndex < $periodDays) {
                         $current[$currentIndex] = ($current[$currentIndex] ?? 0.0) + $convertedAmount;
@@ -200,7 +200,7 @@ class RevenueTrendChart extends ChartWidget
                         return;
                     }
 
-                    $previousIndex = (int) $previousStart->diffInDays($finishedAt->startOfDay(), false);
+                    $previousIndex = (int) $previousStart->diffInDays($completedAt->startOfDay(), false);
 
                     if ($previousIndex >= 0 && $previousIndex < $periodDays) {
                         $previous[$previousIndex] = ($previous[$previousIndex] ?? 0.0) + $convertedAmount;

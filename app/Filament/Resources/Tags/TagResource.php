@@ -9,9 +9,9 @@ use App\Filament\Resources\Tags\Pages\ListTags;
 use App\Filament\Resources\Tags\RelationManagers\CustomersRelationManager;
 use App\Filament\Resources\Tags\RelationManagers\LeadsRelationManager;
 use App\Filament\Resources\Tags\RelationManagers\NotesRelationManager;
-use App\Filament\Resources\Tags\RelationManagers\ProjectActivitiesRelationManager;
 use App\Filament\Resources\Tags\RelationManagers\ProjectsRelationManager;
 use App\Filament\Resources\Tags\RelationManagers\RecurringServicesRelationManager;
+use App\Filament\Resources\Tags\RelationManagers\TasksRelationManager;
 use App\Filament\Resources\Tags\Schemas\TagForm;
 use App\Filament\Resources\Tags\Tables\TagsTable;
 use App\Models\Tag;
@@ -54,7 +54,7 @@ class TagResource extends Resource
             ]),
             RelationGroup::make('Delivery', [
                 ProjectsRelationManager::class,
-                ProjectActivitiesRelationManager::class,
+                TasksRelationManager::class,
                 RecurringServicesRelationManager::class,
             ]),
             NotesRelationManager::class,

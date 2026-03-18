@@ -2,10 +2,10 @@
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Resources\Worklogs\WorklogResource;
+use App\Filament\Resources\Tasks\TaskResource;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
+use App\Models\Task;
 use App\Models\UserSetting;
-use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -32,21 +32,21 @@ class UnbilledDoneWorkTable extends TableWidget
         $timezone = UserSetting::timezoneForUser($ownerId);
 
         return $table
-            ->query(fn (): Builder => Worklog::query()
+            ->query(fn (): Builder => Task::query()
                 ->readyToInvoice($ownerId)
-                ->whereNotNull('finished_at')
+                ->whereNotNull('completed_at')
                 ->when(
                     $startDate !== null && $endDate !== null,
-                    fn (Builder $query): Builder => $query->whereBetween('finished_at', [$startDate, $endDate]),
+                    fn (Builder $query): Builder => $query->whereBetween('completed_at', [$startDate, $endDate]),
                 )
                 ->with([
-                    'project:id,name,client_id,owner_id,currency,hourly_rate',
+                    'project:id,name,customer_id,owner_id,currency,hourly_rate',
                     'project.customer:id,name,owner_id,billing_currency,hourly_rate',
                     'project.customer.owner:id,default_currency,default_hourly_rate',
                 ]))
             ->columns([
                 TextColumn::make('title')
-                    ->label(__('Worklog'))
+                    ->label(__('Task'))
                     ->searchable()
                     ->limit(60),
                 TextColumn::make('project.name')
@@ -60,7 +60,7 @@ class UnbilledDoneWorkTable extends TableWidget
                     ->limit(40),
                 TextColumn::make('amount')
                     ->label(__('Amount'))
-                    ->state(function (Worklog $record): string {
+                    ->state(function (Task $record): string {
                         $amount = $record->calculatedAmount();
                         $currency = $record->effectiveCurrency();
 
@@ -72,7 +72,7 @@ class UnbilledDoneWorkTable extends TableWidget
 
                         return $this->formatAmountWithCurrency($converted);
                     }),
-                TextColumn::make('finished_at')
+                TextColumn::make('completed_at')
                     ->label(__('Done at'))
                     ->dateTime($dateTimeFormat, timezone: $timezone)
                     ->sortable(),
@@ -81,15 +81,15 @@ class UnbilledDoneWorkTable extends TableWidget
                 Action::make('open')
                     ->label(__('Open'))
                     ->icon('heroicon-o-arrow-top-right-on-square')
-                    ->url(fn (Worklog $record): string => WorklogResource::getUrl('edit', ['record' => $record])),
+                    ->url(fn (Task $record): string => TaskResource::getUrl('edit', ['record' => $record])),
             ])
-            ->defaultSort('finished_at', 'desc')
+            ->defaultSort('completed_at', 'desc')
             ->paginated([5, 10, 25]);
     }
 
     public function getHeading(): ?string
     {
-        return __('Unbilled Done Worklogs');
+        return __('Unbilled Done Tasks');
     }
 
     /**

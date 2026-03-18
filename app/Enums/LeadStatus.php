@@ -61,4 +61,17 @@ enum LeadStatus: string implements HasColor, HasIcon, HasLabel
     {
         return array_column(self::cases(), 'value');
     }
+
+    /**
+     * @return list<string>
+     */
+    public static function openValues(): array
+    {
+        return [
+            self::New->value,
+            self::Contacted->value,
+            self::Qualified->value,
+            self::Proposal->value,
+        ];
+    }
 }

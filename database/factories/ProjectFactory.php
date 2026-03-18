@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Priority;
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
 use App\Enums\ProjectStatus;
@@ -28,14 +29,14 @@ class ProjectFactory extends Factory
             : fake()->optional(0.7)->dateTimeBetween('now', '+6 months');
 
         return [
-            'client_id' => Customer::factory(),
-            'owner_id' => fn (array $attributes): ?int => Customer::query()->find($attributes['client_id'])?->owner_id,
+            'customer_id' => Customer::factory(),
+            'owner_id' => fn (array $attributes): ?int => Customer::query()->find($attributes['customer_id'])?->owner_id,
             'primary_contact_id' => null,
             'name' => ucfirst(fake()->words(3, true)),
             'status' => fake()->randomElement(ProjectStatus::cases()),
             'pipeline_stage' => fake()->randomElement(ProjectPipelineStage::cases()),
             'pricing_model' => ProjectPricingModel::Fixed,
-            'priority' => fake()->numberBetween(1, 5),
+            'priority' => fake()->randomElement(Priority::cases()),
             'start_date' => $startDate,
             'target_end_date' => $targetEndDate,
             'closed_date' => null,

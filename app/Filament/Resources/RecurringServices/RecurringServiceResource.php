@@ -22,6 +22,8 @@ use UnitEnum;
 
 class RecurringServiceResource extends Resource
 {
+    private const EXPIRING_SOON_DAYS = 14;
+
     protected static ?string $model = RecurringService::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPathRoundedSquare;
@@ -65,9 +67,14 @@ class RecurringServiceResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         $ownerId = Filament::auth()->id();
+        $today = today()->toDateString();
+        $expiresUntil = today()->addDays(self::EXPIRING_SOON_DAYS)->toDateString();
 
         $count = RecurringService::query()
             ->where('status', RecurringServiceStatus::Active)
+            ->whereNotNull('ends_on')
+            ->whereDate('ends_on', '>=', $today)
+            ->whereDate('ends_on', '<=', $expiresUntil)
             ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
             ->count();
 
@@ -76,12 +83,14 @@ class RecurringServiceResource extends Resource
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'success';
+        return static::getNavigationBadge() !== null ? 'danger' : null;
     }
 
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Active recurring services.';
+        return static::getNavigationBadge() !== null
+            ? sprintf('Recurring services ending within %d days.', self::EXPIRING_SOON_DAYS)
+            : null;
     }
 
     public static function getPages(): array

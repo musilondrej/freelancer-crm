@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('client_contacts', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('client_id');
+            $table->foreignId('customer_id');
             $table->string('full_name');
             $table->string('job_title')->nullable();
             $table->string('email')->nullable();
@@ -28,15 +28,15 @@ return new class extends Migration
             $table->string('email_unique_key')->nullable()->storedAs('case when deleted_at is null and email is not null then lower(email) else null end');
 
             $table->unique(['owner_id', 'id']);
-            $table->unique(['owner_id', 'client_id', 'email_unique_key'], 'client_contacts_owner_client_email_unique');
-            $table->index(['client_id', 'is_primary']);
-            $table->index(['client_id', 'last_contacted_at']);
-            $table->index(['owner_id', 'client_id']);
+            $table->unique(['owner_id', 'customer_id', 'email_unique_key'], 'client_contacts_owner_customer_email_unique');
+            $table->index(['customer_id', 'is_primary']);
+            $table->index(['customer_id', 'last_contacted_at']);
+            $table->index(['owner_id', 'customer_id']);
             $table->index(['owner_id', 'full_name']);
             $table->index(['owner_id', 'is_billing_contact']);
             $table->index('email');
 
-            $table->foreign(['owner_id', 'client_id'])
+            $table->foreign(['owner_id', 'customer_id'])
                 ->references(['owner_id', 'id'])
                 ->on('clients')
                 ->cascadeOnDelete();

@@ -39,7 +39,7 @@ class ProjectForm
                                     ->required()
                                     ->maxLength(255)
                                     ->columnSpanFull(),
-                                Select::make('client_id')
+                                Select::make('customer_id')
                                     ->label(__('Customer'))
                                     ->relationship(
                                         name: 'customer',
@@ -55,11 +55,11 @@ class ProjectForm
                                 Select::make('primary_contact_id')
                                     ->label(__('Primary Contact'))
                                     ->options(function (Get $get) use ($ownerId): array {
-                                        $customerId = $get('client_id');
+                                        $customerId = $get('customer_id');
 
                                         return ClientContact::query()
                                             ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
-                                            ->when($customerId !== null, fn (Builder $query): Builder => $query->where('client_id', $customerId))
+                                            ->when($customerId !== null, fn (Builder $query): Builder => $query->where('customer_id', $customerId))
                                             ->orderBy('full_name')
                                             ->pluck('full_name', 'id')
                                             ->all();

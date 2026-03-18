@@ -5,17 +5,18 @@ namespace Database\Seeders;
 use App\Enums\CustomerStatus;
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
-use App\Enums\ProjectActivityStatus;
-use App\Enums\ProjectActivityType;
+use App\Enums\Priority;
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
 use App\Enums\ProjectStatus;
+use App\Enums\TaskBillingModel;
+use App\Enums\TaskStatus;
 use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\User;
-use App\Models\Worklog;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
@@ -193,7 +194,7 @@ class DashboardStatisticsSeeder extends Seeder
                 'status' => $projectStatusCodes['in_progress'],
                 'pipeline_stage' => ProjectPipelineStage::Won,
                 'pricing_model' => ProjectPricingModel::Hourly,
-                'priority' => 4,
+                'priority' => Priority::High,
                 'start_date' => CarbonImmutable::now()->subMonths(6)->startOfMonth(),
                 'target_end_date' => null,
                 'closed_date' => null,
@@ -214,7 +215,7 @@ class DashboardStatisticsSeeder extends Seeder
                 'status' => $projectStatusCodes['planned'],
                 'pipeline_stage' => ProjectPipelineStage::Proposal,
                 'pricing_model' => ProjectPricingModel::Fixed,
-                'priority' => 3,
+                'priority' => Priority::Normal,
                 'start_date' => CarbonImmutable::now()->subMonths(1)->startOfMonth(),
                 'target_end_date' => CarbonImmutable::now()->addMonths(2)->endOfMonth(),
                 'closed_date' => null,
@@ -235,7 +236,7 @@ class DashboardStatisticsSeeder extends Seeder
                 'status' => $projectStatusCodes['blocked_or_open'],
                 'pipeline_stage' => ProjectPipelineStage::Negotiation,
                 'pricing_model' => ProjectPricingModel::Hourly,
-                'priority' => 5,
+                'priority' => Priority::Critical,
                 'start_date' => CarbonImmutable::now()->subMonths(2)->startOfMonth(),
                 'target_end_date' => CarbonImmutable::now()->addMonth()->endOfMonth(),
                 'closed_date' => null,
@@ -256,7 +257,7 @@ class DashboardStatisticsSeeder extends Seeder
                 'status' => $projectStatusCodes['completed_or_done'],
                 'pipeline_stage' => ProjectPipelineStage::Won,
                 'pricing_model' => ProjectPricingModel::Retainer,
-                'priority' => 2,
+                'priority' => Priority::Low,
                 'start_date' => CarbonImmutable::now()->subMonths(10)->startOfMonth(),
                 'target_end_date' => CarbonImmutable::now()->subMonths(1)->endOfMonth(),
                 'closed_date' => CarbonImmutable::now()->subMonths(1)->endOfMonth(),
@@ -304,9 +305,9 @@ class DashboardStatisticsSeeder extends Seeder
      */
     private function seedProjectActivities(User $owner, array $projects): void
     {
-        $projectActivityStatusCodes = $this->resolveProjectActivityStatusCodes();
+        $taskStatusCodes = $this->resolveTaskStatusCodes();
 
-        Worklog::query()
+        Task::query()
             ->withTrashed()
             ->where('owner_id', $owner->id)
             ->where('title', 'like', '[Seed Stats]%')
@@ -322,83 +323,93 @@ class DashboardStatisticsSeeder extends Seeder
                 : null;
 
             if ($dailyMinutes > 0) {
-                Worklog::factory()
+                Task::factory()
                     ->for($projects['retainer_cz'])
                     ->state([
                         'owner_id' => $owner->id,
                         'title' => '[Seed Stats] Development '.$day->format('Y-m-d'),
-                        'type' => ProjectActivityType::Hourly,
-                        'status' => $projectActivityStatusCodes['done'],
-                        'is_running' => false,
+                        'billing_model' => TaskBillingModel::Hourly,
+                        'status' => $taskStatusCodes['done'],
                         'is_billable' => true,
+                        'track_time' => true,
                         'is_invoiced' => $invoicedAt !== null,
                         'invoice_reference' => $invoicedAt !== null ? sprintf('INV-%s-CZK', $day->format('Ymd')) : null,
                         'invoiced_at' => $invoicedAt,
                         'currency' => 'CZK',
                         'quantity' => null,
-                        'unit_rate' => 1700,
-                        'flat_amount' => null,
-                        'tracked_minutes' => $dailyMinutes,
-                        'started_at' => $day->setTime(9, 0),
-                        'finished_at' => $day->setTime(17, 30),
+                        'hourly_rate_override' => 1700,
+                        'fixed_price' => null,
+                        'completed_at' => $day->setTime(17, 30),
                         'due_date' => $day,
                         'meta' => array_filter([
                             'seeded' => 'dashboard_statistics',
                             'channel' => 'delivery',
                         ]),
                     ])
-                    ->create();
+                    ->create()
+                    ->timeEntries()
+                    ->create([
+                        'owner_id' => $owner->id,
+                        'started_at' => $day->setTime(9, 0),
+                        'ended_at' => $day->setTime(17, 30),
+                        'minutes' => $dailyMinutes,
+                        'meta' => ['seeded' => 'dashboard_statistics'],
+                    ]);
             }
 
             if ($day->isMonday() || $day->isThursday()) {
-                Worklog::factory()
+                Task::factory()
                     ->for($projects['api_usd'])
                     ->state([
                         'owner_id' => $owner->id,
                         'title' => '[Seed Stats] API sync '.$day->format('Y-m-d'),
-                        'type' => ProjectActivityType::Hourly,
-                        'status' => $projectActivityStatusCodes['done'],
-                        'is_running' => false,
+                        'billing_model' => TaskBillingModel::Hourly,
+                        'status' => $taskStatusCodes['done'],
                         'is_billable' => true,
+                        'track_time' => true,
                         'is_invoiced' => $invoicedAt !== null,
                         'invoice_reference' => $invoicedAt !== null ? sprintf('INV-%s-USD', $day->format('Ymd')) : null,
                         'invoiced_at' => $invoicedAt,
                         'currency' => 'USD',
                         'quantity' => null,
-                        'unit_rate' => 125,
-                        'flat_amount' => null,
-                        'tracked_minutes' => 60,
-                        'started_at' => $day->setTime(18, 0),
-                        'finished_at' => $day->setTime(19, 0),
+                        'hourly_rate_override' => 125,
+                        'fixed_price' => null,
+                        'completed_at' => $day->setTime(19, 0),
                         'due_date' => $day,
                         'meta' => array_filter([
                             'seeded' => 'dashboard_statistics',
                             'channel' => 'integration',
                         ]),
                     ])
-                    ->create();
+                    ->create()
+                    ->timeEntries()
+                    ->create([
+                        'owner_id' => $owner->id,
+                        'started_at' => $day->setTime(18, 0),
+                        'ended_at' => $day->setTime(19, 0),
+                        'minutes' => 60,
+                        'meta' => ['seeded' => 'dashboard_statistics'],
+                    ]);
             }
 
             if (in_array($day->day, [5, 20], true)) {
-                Worklog::factory()
+                Task::factory()
                     ->for($projects['fixed_eur'])
                     ->state([
                         'owner_id' => $owner->id,
                         'title' => '[Seed Stats] Milestone '.$day->format('Y-m-d'),
-                        'type' => ProjectActivityType::OneTime,
-                        'status' => $projectActivityStatusCodes['done'],
-                        'is_running' => false,
+                        'billing_model' => TaskBillingModel::FixedPrice,
+                        'status' => $taskStatusCodes['done'],
                         'is_billable' => true,
+                        'track_time' => false,
                         'is_invoiced' => $invoicedAt !== null,
                         'invoice_reference' => $invoicedAt !== null ? sprintf('INV-%s-EUR', $day->format('Ymd')) : null,
                         'invoiced_at' => $invoicedAt,
                         'currency' => 'EUR',
                         'quantity' => 1,
-                        'unit_rate' => null,
-                        'flat_amount' => 850,
-                        'tracked_minutes' => null,
-                        'started_at' => $day->setTime(14, 0),
-                        'finished_at' => $day->setTime(15, 0),
+                        'hourly_rate_override' => null,
+                        'fixed_price' => 850,
+                        'completed_at' => $day->setTime(15, 0),
                         'due_date' => $day,
                         'meta' => array_filter([
                             'seeded' => 'dashboard_statistics',
@@ -409,56 +420,61 @@ class DashboardStatisticsSeeder extends Seeder
             }
 
             if ($day->isTuesday()) {
-                Worklog::factory()
+                Task::factory()
                     ->for($projects['retainer_cz'])
                     ->state([
                         'owner_id' => $owner->id,
                         'title' => '[Seed Stats] Internal sync '.$day->format('Y-m-d'),
-                        'type' => ProjectActivityType::Hourly,
-                        'status' => $projectActivityStatusCodes['done'],
+                        'billing_model' => TaskBillingModel::Hourly,
+                        'status' => $taskStatusCodes['done'],
                         'is_billable' => false,
+                        'track_time' => true,
                         'currency' => 'CZK',
                         'quantity' => null,
-                        'unit_rate' => 1700,
-                        'flat_amount' => null,
-                        'tracked_minutes' => 45,
-                        'started_at' => $day->setTime(8, 0),
-                        'finished_at' => $day->setTime(8, 45),
+                        'hourly_rate_override' => 1700,
+                        'fixed_price' => null,
+                        'completed_at' => $day->setTime(8, 45),
                         'due_date' => $day,
                         'meta' => [
                             'seeded' => 'dashboard_statistics',
                             'channel' => 'internal',
                         ],
                     ])
-                    ->create();
+                    ->create()
+                    ->timeEntries()
+                    ->create([
+                        'owner_id' => $owner->id,
+                        'started_at' => $day->setTime(8, 0),
+                        'ended_at' => $day->setTime(8, 45),
+                        'minutes' => 45,
+                        'meta' => ['seeded' => 'dashboard_statistics'],
+                    ]);
             }
         }
 
         collect([
-            ['title' => '[Seed Stats] Waiting for customer assets', 'dueDaysAgo' => 3, 'status' => $projectActivityStatusCodes['planned'], 'project' => $projects['fixed_eur']],
-            ['title' => '[Seed Stats] Deploy API gateway', 'dueDaysAgo' => 6, 'status' => $projectActivityStatusCodes['in_progress'], 'project' => $projects['api_usd']],
-            ['title' => '[Seed Stats] DNS migration', 'dueDaysAgo' => 12, 'status' => $projectActivityStatusCodes['planned'], 'project' => $projects['retainer_cz']],
+            ['title' => '[Seed Stats] Waiting for customer assets', 'dueDaysAgo' => 3, 'status' => $taskStatusCodes['planned'], 'project' => $projects['fixed_eur']],
+            ['title' => '[Seed Stats] Deploy API gateway', 'dueDaysAgo' => 6, 'status' => $taskStatusCodes['in_progress'], 'project' => $projects['api_usd']],
+            ['title' => '[Seed Stats] DNS migration', 'dueDaysAgo' => 12, 'status' => $taskStatusCodes['planned'], 'project' => $projects['retainer_cz']],
         ])->each(function (array $item) use ($owner): void {
-            Worklog::factory()
+            Task::factory()
                 ->for($item['project'])
                 ->state([
                     'owner_id' => $owner->id,
                     'title' => $item['title'],
-                    'type' => ProjectActivityType::OneTime,
+                    'billing_model' => TaskBillingModel::FixedPrice,
                     'status' => $item['status'],
-                    'is_running' => false,
                     'is_billable' => true,
+                    'track_time' => false,
                     'is_invoiced' => false,
                     'invoice_reference' => null,
                     'invoiced_at' => null,
                     'currency' => $item['project']->currency,
                     'quantity' => 1,
-                    'unit_rate' => null,
-                    'flat_amount' => 1200,
-                    'tracked_minutes' => null,
+                    'hourly_rate_override' => null,
+                    'fixed_price' => 1200,
                     'due_date' => CarbonImmutable::today()->subDays($item['dueDaysAgo']),
-                    'started_at' => null,
-                    'finished_at' => null,
+                    'completed_at' => null,
                     'meta' => [
                         'seeded' => 'dashboard_statistics',
                     ],
@@ -532,12 +548,12 @@ class DashboardStatisticsSeeder extends Seeder
     /**
      * @return array{planned: string, in_progress: string, done: string}
      */
-    private function resolveProjectActivityStatusCodes(): array
+    private function resolveTaskStatusCodes(): array
     {
         return [
-            'planned' => ProjectActivityStatus::InProgress->value,
-            'in_progress' => ProjectActivityStatus::InProgress->value,
-            'done' => ProjectActivityStatus::Done->value,
+            'planned' => TaskStatus::Planned->value,
+            'in_progress' => TaskStatus::InProgress->value,
+            'done' => TaskStatus::Done->value,
         ];
     }
 

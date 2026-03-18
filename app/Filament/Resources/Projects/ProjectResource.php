@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Projects;
 
+use App\Enums\NavigationGroup;
 use App\Enums\ProjectStatus;
 use App\Filament\Resources\Projects\Pages\CreateProject;
 use App\Filament\Resources\Projects\Pages\EditProject;
@@ -28,11 +29,26 @@ class ProjectResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBriefcase;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Delivery';
-
     protected static ?int $navigationSort = 10;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    protected static string|null|UnitEnum $navigationGroup = NavigationGroup::Projects;
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Projects');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('Project');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Projects');
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -69,11 +85,6 @@ class ProjectResource extends Resource
     public static function getNavigationBadgeColor(): ?string
     {
         return 'info';
-    }
-
-    public static function getNavigationBadgeTooltip(): ?string
-    {
-        return 'Projects in open workflow statuses.';
     }
 
     public static function getPages(): array

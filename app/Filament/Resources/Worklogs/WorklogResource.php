@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Worklogs;
 
+use App\Enums\NavigationGroup;
 use App\Enums\ProjectActivityStatus;
 use App\Filament\Resources\Worklogs\Pages\CreateWorklog;
 use App\Filament\Resources\Worklogs\Pages\EditWorklog;
@@ -23,19 +24,28 @@ class WorklogResource extends Resource
 {
     protected static ?string $model = Worklog::class;
 
-    protected static ?string $modelLabel = 'Worklog';
-
-    protected static ?string $pluralModelLabel = 'Worklogs';
-
-    protected static ?string $navigationLabel = 'Worklogs';
-
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Time & Money';
+    protected static string|UnitEnum|null $navigationGroup = NavigationGroup::Projects;
 
     protected static ?int $navigationSort = 10;
 
     protected static ?string $recordTitleAttribute = 'title';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Worklogs');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('Worklog');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Worklogs');
+    }
 
     public static function form(Schema $schema): Schema
     {

@@ -27,13 +27,15 @@ class ProjectsTable
     {
         return [
             TextColumn::make('name')
+                ->label(__('Name'))
                 ->searchable()
                 ->sortable(),
             TextColumn::make('customer.name')
-                ->label('Customer')
+                ->label(__('Customer'))
                 ->searchable()
                 ->sortable(),
             TextColumn::make('status')
+                ->label(__('Status'))
                 ->badge()
                 ->sortable(),
             TextColumn::make('pricing_model')
@@ -52,24 +54,24 @@ class ProjectsTable
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('customer.name')
-                    ->label('Customer')
+                    ->label(__('Customer'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('status')
+                    ->label(__('Status'))
                     ->badge()
                     ->sortable(),
                 TextColumn::make('pricing_model')
+                    ->label(__('Pricing Model'))
                     ->badge()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('currency')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('target_end_date')
-                    ->date()
+                    ->label(__('Currency'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

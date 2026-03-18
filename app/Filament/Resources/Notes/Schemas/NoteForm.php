@@ -116,10 +116,10 @@ class NoteForm
                         Section::make('System')
                             ->schema([
                                 TextEntry::make('created_at')
-                                    ->label('Created')
+                                    ->label(__('Created at'))
                                     ->state(fn (?Note $record): ?string => $record?->created_at?->diffForHumans()),
                                 TextEntry::make('updated_at')
-                                    ->label('Last modified')
+                                    ->label(__('Updated at'))
                                     ->state(fn (?Note $record): ?string => $record?->updated_at?->diffForHumans()),
                             ])
                             ->hidden(fn (?Note $record): bool => ! $record instanceof Note),

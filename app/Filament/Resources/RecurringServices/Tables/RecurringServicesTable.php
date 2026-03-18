@@ -24,21 +24,24 @@ class RecurringServicesTable
     {
         return [
             TextColumn::make('name')
+                ->label(__('Name'))
                 ->searchable()
                 ->sortable(),
             TextColumn::make('customer.name')
-                ->label('Customer')
+                ->label(__('Customer'))
                 ->searchable()
                 ->sortable(),
             TextColumn::make('serviceType.name')
-                ->label('Category')
+                ->label(__('Category'))
                 ->badge()
                 ->searchable()
                 ->sortable(),
             TextColumn::make('status')
+                ->label(__('Status'))
                 ->badge()
                 ->sortable(),
             TextColumn::make('next_due_on')
+                ->label(__('Next due on'))
                 ->date()
                 ->sortable()
                 ->toggleable(),
@@ -50,41 +53,32 @@ class RecurringServicesTable
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('customer.name')
-                    ->label('Customer')
+                    ->label(__('Customer'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('serviceType.name')
-                    ->label('Service category')
+                    ->label(__('Category'))
                     ->badge()
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('billing_model')
+                    ->label(__('Billing model'))
                     ->badge()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('status')
+                    ->label(__('Status'))
                     ->badge()
                     ->sortable(),
                 TextColumn::make('next_due_on')
+                    ->label(__('Next due on'))
                     ->date()
                     ->sortable()
                     ->toggleable(),
-                TextColumn::make('last_reminded_for_due_on')
-                    ->date()
-                    ->label('Last reminded for')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('last_reminded_at')
-                    ->since()
-                    ->label('Last reminder')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('currency')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('status')

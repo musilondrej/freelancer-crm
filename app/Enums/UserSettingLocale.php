@@ -12,8 +12,8 @@ enum UserSettingLocale: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::English => 'English',
-            self::Czech => 'Czech',
+            self::English => __('English'),
+            self::Czech => __('Czech'),
         };
     }
 

@@ -39,11 +39,12 @@ class WorklogForm
             ->components([
                 Group::make()
                     ->schema([
-                        Section::make('Worklog')
+                        Section::make(__('Worklog details'))
                             ->schema([
                                 Hidden::make('owner_id')
                                     ->default($ownerId),
                                 Select::make('project_id')
+                                    ->label(__('Project'))
                                     ->relationship(
                                         name: 'project',
                                         titleAttribute: 'name',
@@ -60,7 +61,7 @@ class WorklogForm
                                         $set('activity_id', null);
                                     }),
                                 Select::make('activity_id')
-                                    ->label('Activity template')
+                                    ->label(__('Activity template'))
                                     ->default($defaultActivityId)
                                     ->required()
                                     ->options(fn (Get $get): array => self::activityOptions($ownerId, $get('project_id')))
@@ -107,43 +108,53 @@ class WorklogForm
                                         }
                                     }),
                                 TextInput::make('title')
+                                    ->label(__('Title'))
                                     ->required()
                                     ->maxLength(255)
                                     ->readOnly(fn (Get $get): bool => is_numeric($get('activity_id')))
                                     ->columnSpanFull(),
                                 Textarea::make('description')
+                                    ->label(__('Description'))
                                     ->rows(7)
                                     ->columnSpanFull(),
                             ])
                             ->columns(1),
 
-                        Section::make('Billing')
+                        Section::make(__('Financial details'))
                             ->schema([
                                 Select::make('currency')
+                                    ->label(__('Currency'))
                                     ->options(Currency::class),
                                 TextInput::make('quantity')
+                                    ->label(__('Quantity'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::Hourly->value),
                                 TextInput::make('unit_rate')
+                                    ->label(__('Unit rate'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::Hourly->value),
                                 TextInput::make('flat_amount')
+                                    ->label(__('Flat amount'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::OneTime->value),
                                 TextInput::make('invoice_reference')
+                                    ->label(__('Invoice reference'))
                                     ->maxLength(64)
                                     ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
                                 DateTimePicker::make('invoiced_at')
+                                    ->label(__('Invoiced at'))
                                     ->seconds(false)
                                     ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
                                 Toggle::make('is_billable')
+                                    ->label(__('Is billable'))
                                     ->default(true),
                                 Toggle::make('is_invoiced')
+                                    ->label(__('Is invoiced'))
                                     ->default(false)
                                     ->live()
                                     ->afterStateUpdated(function (Set $set, mixed $state): void {
@@ -159,7 +170,7 @@ class WorklogForm
                             ])
                             ->columns(1),
 
-                        Section::make('Quick Notes')
+                        Section::make(__('Notes'))
                             ->schema([
                                 NoteRepeater::make($ownerId),
                             ]),
@@ -180,29 +191,32 @@ class WorklogForm
                                     ->options(WorklogPriority::class),
                             ]),
 
-                        Section::make('Tags')
+                        Section::make(__('Tags'))
                             ->schema([
                                 TagsSelect::make($ownerId),
                             ]),
 
-                        Section::make('Time')
+                        Section::make(__('Time'))
                             ->schema([
                                 DateTimePicker::make('started_at')
+                                    ->label(__('Started at'))
                                     ->seconds(false),
                                 DateTimePicker::make('finished_at')
+                                    ->label(__('Finished at'))
                                     ->seconds(false),
                                 TextInput::make('tracked_minutes')
-                                    ->label('Tracked time')
+                                    ->label(__('Tracked time'))
                                     ->placeholder('e.g. 2h 30m, 1d, 45m')
                                     ->formatStateUsing(fn (?int $state): ?string => TimeDuration::format($state))
                                     ->dehydrateStateUsing(fn (?string $state): ?int => $state !== null ? TimeDuration::toMinutes($state) : null)
                                     ->visible(fn (Get $get): bool => self::resolveActivityTypeValue($get('type')) === ProjectActivityType::Hourly->value),
                                 TextInput::make('estimated_minutes')
-                                    ->label('Estimate')
+                                    ->label(__('Estimate'))
                                     ->placeholder('e.g. 2h 30m, 1d, 45m')
                                     ->formatStateUsing(fn (?int $state): ?string => TimeDuration::format($state))
                                     ->dehydrateStateUsing(fn (?string $state): ?int => $state !== null ? TimeDuration::toMinutes($state) : null),
-                                DatePicker::make('due_date'),
+                                DatePicker::make('due_date')
+                                    ->label(__('Due date')),
                             ])
                             ->columns(1),
 

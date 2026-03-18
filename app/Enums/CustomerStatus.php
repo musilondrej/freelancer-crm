@@ -17,9 +17,9 @@ enum CustomerStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Lead => 'Lead',
-            self::Active => 'Active',
-            self::Inactive => 'Inactive',
+            self::Lead => __('Lead'),
+            self::Active => __('Active'),
+            self::Inactive => __('Inactive'),
         };
     }
 

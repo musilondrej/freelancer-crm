@@ -19,11 +19,11 @@ enum ProjectPipelineStage: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::New => 'New',
-            self::Proposal => 'Proposal',
-            self::Negotiation => 'Negotiation',
-            self::Won => 'Won',
-            self::Lost => 'Lost',
+            self::New => __('New'),
+            self::Proposal => __('Proposal'),
+            self::Negotiation => __('Negotiation'),
+            self::Won => __('Won'),
+            self::Lost => __('Lost'),
         };
     }
 

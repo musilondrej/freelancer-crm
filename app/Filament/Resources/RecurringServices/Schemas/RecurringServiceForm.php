@@ -34,11 +34,12 @@ class RecurringServiceForm
             ->components([
                 Group::make()
                     ->schema([
-                        Section::make('Service Definition')
+                        Section::make(__('Details'))
                             ->schema([
                                 Hidden::make('owner_id')
                                     ->default($ownerId),
                                 TextInput::make('name')
+                                    ->label(__('Name'))
                                     ->required()
                                     ->maxLength(255)
                                     ->columnSpanFull(),
@@ -53,6 +54,7 @@ class RecurringServiceForm
                                     ->searchable()
                                     ->preload(),
                                 Select::make('project_id')
+                                    ->label(__('Related project'))
                                     ->relationship(
                                         name: 'project',
                                         titleAttribute: 'name',
@@ -63,7 +65,7 @@ class RecurringServiceForm
                                     ->searchable()
                                     ->preload(),
                                 Select::make('service_type_id')
-                                    ->label('Service category')
+                                    ->label(__('Service'))
                                     ->relationship(
                                         name: 'serviceType',
                                         titleAttribute: 'name',
@@ -78,6 +80,7 @@ class RecurringServiceForm
                                     ->preload()
                                     ->createOptionForm([
                                         TextInput::make('name')
+                                            ->label(__('Name'))
                                             ->required()
                                             ->maxLength(255)
                                             ->live(onBlur: true)
@@ -115,31 +118,36 @@ class RecurringServiceForm
                             ])
                             ->columns(1),
 
-                        Section::make('Cadence')
+                        Section::make(__('Schedule'))
+
                             ->schema([
                                 Select::make('cadence_unit')
+                                    ->label(__('Cadence unit'))
                                     ->options(RecurringServiceCadenceUnit::class)
                                     ->default(RecurringServiceCadenceUnit::Month)
                                     ->required(),
                                 TextInput::make('cadence_interval')
+                                    ->label(__('Cadence interval'))
                                     ->numeric()
                                     ->minValue(1)
                                     ->default(1)
                                     ->helperText('Cadence is the source of truth for schedule progression.')
                                     ->required(),
                                 DatePicker::make('starts_on')
+                                    ->label(__('Starts on'))
                                     ->required(),
-                                DatePicker::make('next_due_on')
-                                    ->helperText('One-time override. After cadence updates, this date is recalculated automatically.'),
-                                DatePicker::make('last_invoiced_on'),
-                                DatePicker::make('ends_on'),
+                                DatePicker::make('ends_on')
+                                    ->label(__('Ends on')),
                                 Select::make('status')
+                                    ->label(__('Status'))
                                     ->options(RecurringServiceStatus::class)
                                     ->default(RecurringServiceStatus::Active)
                                     ->required(),
                                 Toggle::make('auto_renew')
+                                    ->label(__('Auto-renew'))
                                     ->default(true),
                                 CheckboxList::make('remind_days_before')
+                                    ->label(__('Remind before'))
                                     ->options([
                                         1 => '1 day',
                                         3 => '3 days',
@@ -157,26 +165,30 @@ class RecurringServiceForm
                     ]),
                 Group::make()
                     ->schema([
-                        Section::make('Tags')
+                        Section::make(__('Tags'))
                             ->schema([
                                 TagsSelect::make($ownerId),
                             ]),
 
-                        Section::make('Billing')
+                        Section::make(__('Billing Details'))
                             ->schema([
                                 Select::make('billing_model')
+                                    ->label(__('Billing Model'))
                                     ->options(RecurringServiceBillingModel::class)
                                     ->default(RecurringServiceBillingModel::Fixed)
                                     ->required()
                                     ->live(),
                                 Select::make('currency')
+                                    ->label(__('Currency'))
                                     ->options(Currency::class),
                                 TextInput::make('fixed_amount')
+                                    ->label(__('Fixed amount'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => self::resolveBillingModelValue($get('billing_model')) === RecurringServiceBillingModel::Fixed->value),
                                 TextInput::make('hourly_rate')
+                                    ->label(__('Hourly rate'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))

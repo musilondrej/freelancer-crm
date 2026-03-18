@@ -31,22 +31,24 @@ class WorklogsTable
     {
         return [
             TextColumn::make('title')
+                ->label(__('Title'))
                 ->searchable()
                 ->sortable(),
             TextColumn::make('project.name')
-                ->label('Project')
+                ->label(__('Project'))
                 ->searchable()
                 ->sortable(),
             TextColumn::make('status')
+                ->label(__('Status'))
                 ->badge()
                 ->sortable(),
             TextColumn::make('tracked_minutes')
-                ->label('Tracked time')
+                ->label(__('Tracked time'))
                 ->state(fn (Worklog $record): ?string => TimeDuration::format($record->tracked_minutes))
                 ->sortable()
                 ->toggleable(),
             TextColumn::make('created_at')
-                ->label('Created')
+                ->label(__('Created at'))
                 ->dateTime()
                 ->sortable(),
         ];
@@ -68,54 +70,59 @@ class WorklogsTable
             ->defaultSort('started_at', 'desc')
             ->columns([
                 TextColumn::make('title')
+                    ->label(__('Title'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('project.name')
-                    ->label('Project')
+                    ->label(__('Project'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('activity.name')
-                    ->label('Activity')
+                    ->label(__('Activity'))
                     ->placeholder('-')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('priority')
+                    ->label(__('Priority'))
                     ->badge()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('type')
+                    ->label(__('Type'))
                     ->badge()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('status')
+                    ->label(__('Status'))
                     ->badge()
                     ->sortable(),
                 IconColumn::make('is_billable')
                     ->boolean()
-                    ->label('Billable')
+                    ->label(__('Billable'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_invoiced')
                     ->boolean()
-                    ->label('Invoiced')
+                    ->label(__('Invoiced'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('tracked_minutes')
-                    ->label('Tracked time')
+                    ->label(__('Tracked time'))
                     ->state(fn (Worklog $record): ?string => TimeDuration::format($record->tracked_minutes))
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('estimated_minutes')
-                    ->label('Estimate')
+                    ->label(__('Estimate'))
                     ->state(fn (Worklog $record): ?string => TimeDuration::format($record->estimated_minutes))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('due_date')
+                    ->label(__('Due date'))
                     ->date($dateFormat)
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
-                    ->label('Created')
+                    ->label(__('Created at'))
                     ->dateTime($dateTimeFormat, timezone: $timezone)
                     ->sortable(),
             ])

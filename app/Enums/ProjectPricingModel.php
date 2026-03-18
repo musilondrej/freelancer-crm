@@ -17,9 +17,9 @@ enum ProjectPricingModel: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Fixed => 'Fixed Price',
-            self::Hourly => 'Hourly',
-            self::Retainer => 'Retainer',
+            self::Fixed => __('Fixed price'),
+            self::Hourly => __('Hourly rate'),
+            self::Retainer => __('Retainer'),
         };
     }
 

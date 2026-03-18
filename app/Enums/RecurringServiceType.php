@@ -21,13 +21,13 @@ enum RecurringServiceType: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Hosting => 'Hosting',
-            self::Domain => 'Domain',
-            self::Maintenance => 'Maintenance',
-            self::Support => 'Support',
-            self::License => 'License',
-            self::Retainer => 'Retainer',
-            self::Other => 'Other',
+            self::Hosting => __('Hosting'),
+            self::Domain => __('Domain'),
+            self::Maintenance => __('Maintenance'),
+            self::Support => __('Support'),
+            self::License => __('License'),
+            self::Retainer => __('Retainer'),
+            self::Other => __('Other'),
         };
     }
 

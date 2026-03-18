@@ -170,7 +170,7 @@ class TaskForm
                                     ->required(),
                                 Select::make('priority')
                                     ->options(Priority::class)
-                                    ->default(Priority::Backlog)
+                                    ->default(Priority::Normal)
                                     ->required(),
                             ]),
 

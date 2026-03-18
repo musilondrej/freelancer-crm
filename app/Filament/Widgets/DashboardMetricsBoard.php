@@ -66,7 +66,6 @@ class DashboardMetricsBoard extends BaseWidget
             'revenue_today' => __('Revenue today'),
             'unbilled_done' => __('Unbilled done work'),
             'money_in_flight' => __('Money in flight'),
-            'utilization_month' => __('Billable utilization (month)'),
             'billable_hours_month' => __('Billable hours (month)'),
             'worked_hours_month' => __('Worked hours (month)'),
             'open_projects' => __('Open projects'),
@@ -144,22 +143,19 @@ class DashboardMetricsBoard extends BaseWidget
             'money_in_flight' => Stat::make(__('Money In Flight'), $this->formatMoneyMetric($snapshot['money_in_flight']))
                 ->icon('heroicon-o-cloud')
                 ->color('warning'),
-            'utilization_month' => Stat::make(__('Billable Utilization'), $this->formatPercentageMetric($snapshot['utilization_month']))
-                ->icon('heroicon-o-chart-pie')
-                ->color('info'),
             'billable_hours_month' => Stat::make(__('Billable Hours This Month'), $this->formatHoursMetric($snapshot['billable_hours_month']))
                 ->icon('heroicon-o-clock')
                 ->color('primary'),
             'worked_hours_month' => Stat::make(__('Worked Hours This Month'), $this->formatHoursMetric($snapshot['worked_hours_month']))
                 ->icon('heroicon-o-clock')
                 ->color('gray'),
-            'open_projects' => Stat::make(__('Open Projects'), $this->formatCountMetric($snapshot['open_projects']))
+            'open_projects' => Stat::make(__('Open projects'), $this->formatCountMetric($snapshot['open_projects']))
                 ->icon('heroicon-o-briefcase')
                 ->color('warning'),
-            'overdue_activities' => Stat::make(__('Overdue Tasks'), $this->formatCountMetric($snapshot['overdue_activities']))
+            'overdue_activities' => Stat::make(__('Overdue tasks'), $this->formatCountMetric($snapshot['overdue_activities']))
                 ->icon('heroicon-o-exclamation-triangle')
                 ->color('danger'),
-            'open_leads' => Stat::make(__('Open Leads'), $this->formatCountMetric($snapshot['open_leads']))
+            'open_leads' => Stat::make(__('Open leads'), $this->formatCountMetric($snapshot['open_leads']))
                 ->icon('heroicon-o-sparkles')
                 ->color('gray'),
             default => Stat::make(__('Metric'), '-')
@@ -355,15 +351,6 @@ class DashboardMetricsBoard extends BaseWidget
         }
 
         return number_format(round((float) $value), 0, '.', ' ').' h';
-    }
-
-    private function formatPercentageMetric(float|int|string|null $value): string
-    {
-        if (! is_numeric($value)) {
-            return '-';
-        }
-
-        return number_format(round((float) $value), 0, '.', ' ').' %';
     }
 
     private function formatCountMetric(float|int|string|null $value): string

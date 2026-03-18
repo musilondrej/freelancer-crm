@@ -20,7 +20,7 @@ return new class extends Migration
             $table->foreignId('customer_id');
             $table->foreignId('primary_contact_id')->nullable();
             $table->string('name');
-            $table->string('status', 64)->default(ProjectStatus::Planned->value);
+            $table->string('status', 64)->default(ProjectStatus::Planning->value);
             $table->enum('pipeline_stage', ProjectPipelineStage::values())->default(ProjectPipelineStage::New->value);
             $table->enum('pricing_model', ProjectPricingModel::values())->default(ProjectPricingModel::Fixed->value);
             $table->unsignedTinyInteger('priority')->default(3);

@@ -15,10 +15,10 @@ return new class extends Migration
     {
         DB::table('tasks')
             ->whereNull('priority')
-            ->update(['priority' => Priority::Backlog->value]);
+            ->update(['priority' => Priority::Normal->value]);
 
         Schema::table('tasks', function (Blueprint $table): void {
-            $table->unsignedTinyInteger('priority')->default(Priority::Backlog->value)->change();
+            $table->unsignedTinyInteger('priority')->default(Priority::Normal->value)->change();
         });
     }
 

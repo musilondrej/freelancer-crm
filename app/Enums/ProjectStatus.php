@@ -10,7 +10,7 @@ use Filament\Support\Icons\Heroicon;
 
 enum ProjectStatus: string implements HasColor, HasIcon, HasLabel
 {
-    case Planned = 'planned';
+    case Planning = 'planning';
     case InProgress = 'in_progress';
     case Blocked = 'blocked';
     case Completed = 'completed';
@@ -19,7 +19,7 @@ enum ProjectStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Planned => __('Planned'),
+            self::Planning => __('Planning'),
             self::InProgress => __('In Progress'),
             self::Blocked => __('Blocked'),
             self::Completed => __('Completed'),
@@ -30,7 +30,7 @@ enum ProjectStatus: string implements HasColor, HasIcon, HasLabel
     public function getColor(): string
     {
         return match ($this) {
-            self::Planned => 'gray',
+            self::Planning => 'gray',
             self::InProgress => 'warning',
             self::Blocked => 'danger',
             self::Completed => 'success',
@@ -41,8 +41,8 @@ enum ProjectStatus: string implements HasColor, HasIcon, HasLabel
     public function getIcon(): BackedEnum
     {
         return match ($this) {
-            self::Planned => Heroicon::OutlinedCalendarDays,
-            self::InProgress => Heroicon::OutlinedPlayCircle,
+            self::Planning => Heroicon::PencilSquare,
+            self::InProgress => Heroicon::Play,
             self::Blocked => Heroicon::OutlinedExclamationTriangle,
             self::Completed => Heroicon::OutlinedCheckCircle,
             self::Cancelled => Heroicon::OutlinedNoSymbol,
@@ -51,7 +51,7 @@ enum ProjectStatus: string implements HasColor, HasIcon, HasLabel
 
     public function isOpen(): bool
     {
-        return in_array($this, [self::Planned, self::InProgress, self::Blocked], true);
+        return in_array($this, [self::Planning, self::InProgress, self::Blocked], true);
     }
 
     public function isTrackable(): bool
@@ -83,7 +83,7 @@ enum ProjectStatus: string implements HasColor, HasIcon, HasLabel
 
     public static function defaultCase(): self
     {
-        return self::Planned;
+        return self::Planning;
     }
 
     public static function values(): array

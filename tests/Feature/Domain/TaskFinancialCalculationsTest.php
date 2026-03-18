@@ -98,11 +98,11 @@ it('defaults task priority to backlog when omitted', function (): void {
         'activity_id' => $context['activity']->id,
         'title' => 'Priority fallback task',
         'billing_model' => TaskBillingModel::Hourly,
-        'status' => TaskStatus::Planned,
+        'status' => TaskStatus::Todo,
         'is_billable' => true,
     ]);
 
-    expect($task->priority)->toBe(Priority::Backlog);
+    expect($task->priority)->toBe(Priority::Normal);
 });
 
 it('calculates one-time amount from unit rate and quantity when flat amount is missing', function (): void {

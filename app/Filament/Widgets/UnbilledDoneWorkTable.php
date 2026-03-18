@@ -13,12 +13,18 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 
 class UnbilledDoneWorkTable extends TableWidget
 {
     use InteractsWithCurrencyConversion;
     use InteractsWithPageFilters;
+
+    protected function getTableHeading(): string|Htmlable|null
+    {
+        return __('Unbilled Done Tasks');
+    }
 
     protected static ?int $sort = -4;
 

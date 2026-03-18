@@ -197,6 +197,11 @@ class TasksTable
                         )),
                 TrashedFilter::make(),
             ])
+            ->recordClasses(fn (Task $record): ?string => match (true) {
+                $record->status->isDone() => 'opacity-60',
+                self::isPastDate($record->due_date) => 'bg-danger-50 dark:bg-danger-950/50',
+                default => null,
+            })
             ->recordActions([
                 ActionGroup::make([
                     Action::make('start_timer')
@@ -400,5 +405,18 @@ class TasksTable
         }
 
         return null;
+    }
+
+    private static function isPastDate(mixed $value): bool
+    {
+        if ($value instanceof CarbonInterface) {
+            return $value->isPast();
+        }
+
+        if (is_string($value) && trim($value) !== '') {
+            return CarbonImmutable::parse($value)->isPast();
+        }
+
+        return false;
     }
 }

@@ -80,11 +80,11 @@ class Tag extends Model
     }
 
     /**
-     * @return MorphToMany<Worklog, $this>
+     * @return MorphToMany<Task, $this>
      */
-    public function projectActivities(): MorphToMany
+    public function tasks(): MorphToMany
     {
-        return $this->morphedByMany(Worklog::class, 'taggable');
+        return $this->morphedByMany(Task::class, 'taggable');
     }
 
     /**

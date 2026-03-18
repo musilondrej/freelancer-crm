@@ -5,14 +5,15 @@ namespace Database\Seeders;
 use App\Enums\CustomerStatus;
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
-use App\Enums\ProjectActivityStatus;
-use App\Enums\ProjectActivityType;
+use App\Enums\Priority;
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
 use App\Enums\ProjectStatus;
 use App\Enums\RecurringServiceBillingModel;
 use App\Enums\RecurringServiceCadenceUnit;
 use App\Enums\RecurringServiceStatus;
+use App\Enums\TaskBillingModel;
+use App\Enums\TaskStatus;
 use App\Models\Activity;
 use App\Models\ClientContact;
 use App\Models\Customer;
@@ -23,9 +24,10 @@ use App\Models\Project;
 use App\Models\RecurringService;
 use App\Models\RecurringServiceType;
 use App\Models\Tag;
+use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Models\User;
 use App\Models\UserSetting;
-use App\Models\Worklog;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -178,7 +180,7 @@ class FreelancerStarterSeeder extends Seeder
             $contacts[$customerKey] = ClientContact::query()->updateOrCreate(
                 [
                     'owner_id' => $owner->id,
-                    'client_id' => $customer->id,
+                    'customer_id' => $customer->id,
                     'email' => $definition['email'],
                 ],
                 [
@@ -204,13 +206,13 @@ class FreelancerStarterSeeder extends Seeder
 
         $definitions = [
             'eshop-maintenance' => [
-                'client_id' => $customers['novak-eshop']->id,
+                'customer_id' => $customers['novak-eshop']->id,
                 'primary_contact_id' => $contacts['novak-eshop']->id,
                 'name' => 'eShop Maintenance',
                 'status' => $projectStatusCodes['in_progress'],
                 'pipeline_stage' => ProjectPipelineStage::Won,
                 'pricing_model' => ProjectPricingModel::Hourly,
-                'priority' => 4,
+                'priority' => Priority::High,
                 'start_date' => now()->subDays(45)->startOfDay(),
                 'target_end_date' => null,
                 'closed_date' => null,
@@ -224,13 +226,13 @@ class FreelancerStarterSeeder extends Seeder
                 'last_activity_at' => now()->subHours(6),
             ],
             'landing-redesign' => [
-                'client_id' => $customers['alpen-digital']->id,
+                'customer_id' => $customers['alpen-digital']->id,
                 'primary_contact_id' => $contacts['alpen-digital']->id,
                 'name' => 'Landing Page Redesign',
                 'status' => $projectStatusCodes['planned'],
                 'pipeline_stage' => ProjectPipelineStage::Proposal,
                 'pricing_model' => ProjectPricingModel::Fixed,
-                'priority' => 3,
+                'priority' => Priority::Normal,
                 'start_date' => now()->subDays(7)->startOfDay(),
                 'target_end_date' => now()->addDays(40)->startOfDay(),
                 'closed_date' => null,
@@ -330,114 +332,114 @@ class FreelancerStarterSeeder extends Seeder
      */
     private function seedProjectActivities(User $owner, array $projects, array $activities): void
     {
-        $projectActivityStatusCodes = $this->resolveProjectActivityStatusCodes();
+        $taskStatusCodes = $this->resolveTaskStatusCodes();
 
         $entries = [
             [
                 'project' => $projects['eshop-maintenance'],
                 'activity' => $activities['eshop-bugfix'],
                 'title' => 'Weekly maintenance batch',
-                'type' => ProjectActivityType::Hourly,
-                'status' => $projectActivityStatusCodes['done'],
-                'tracked_minutes' => 180,
-                'unit_rate' => 1500,
-                'flat_amount' => null,
+                'billing_model' => TaskBillingModel::Hourly,
+                'status' => $taskStatusCodes['done'],
+                'logged_minutes' => 180,
+                'hourly_rate_override' => 1500,
+                'fixed_price' => null,
                 'is_billable' => true,
                 'is_invoiced' => false,
                 'started_at' => now()->subDays(2)->setTime(9, 0),
-                'finished_at' => now()->subDays(2)->setTime(12, 0),
+                'completed_at' => now()->subDays(2)->setTime(12, 0),
                 'currency' => 'CZK',
             ],
             [
                 'project' => $projects['eshop-maintenance'],
                 'activity' => $activities['global-meeting'],
                 'title' => 'Sprint planning call',
-                'type' => ProjectActivityType::Hourly,
-                'status' => $projectActivityStatusCodes['done'],
-                'tracked_minutes' => 60,
-                'unit_rate' => 1500,
-                'flat_amount' => null,
+                'billing_model' => TaskBillingModel::Hourly,
+                'status' => $taskStatusCodes['done'],
+                'logged_minutes' => 60,
+                'hourly_rate_override' => 1500,
+                'fixed_price' => null,
                 'is_billable' => true,
                 'is_invoiced' => false,
                 'started_at' => now()->subDay()->setTime(10, 0),
-                'finished_at' => now()->subDay()->setTime(11, 0),
+                'completed_at' => now()->subDay()->setTime(11, 0),
                 'currency' => 'CZK',
             ],
             [
                 'project' => $projects['eshop-maintenance'],
                 'activity' => $activities['global-admin'],
                 'title' => 'Internal reporting',
-                'type' => ProjectActivityType::Hourly,
-                'status' => $projectActivityStatusCodes['done'],
-                'tracked_minutes' => 45,
-                'unit_rate' => null,
-                'flat_amount' => null,
+                'billing_model' => TaskBillingModel::Hourly,
+                'status' => $taskStatusCodes['done'],
+                'logged_minutes' => 45,
+                'hourly_rate_override' => null,
+                'fixed_price' => null,
                 'is_billable' => false,
                 'is_invoiced' => false,
                 'started_at' => now()->subDay()->setTime(8, 0),
-                'finished_at' => now()->subDay()->setTime(8, 45),
+                'completed_at' => now()->subDay()->setTime(8, 45),
                 'currency' => 'CZK',
             ],
             [
                 'project' => $projects['eshop-maintenance'],
                 'activity' => $activities['eshop-bugfix'],
                 'title' => 'Production hotfix',
-                'type' => ProjectActivityType::OneTime,
-                'status' => $projectActivityStatusCodes['done'],
-                'tracked_minutes' => null,
-                'unit_rate' => null,
-                'flat_amount' => 2400,
+                'billing_model' => TaskBillingModel::FixedPrice,
+                'status' => $taskStatusCodes['done'],
+                'logged_minutes' => null,
+                'hourly_rate_override' => null,
+                'fixed_price' => 2400,
                 'is_billable' => true,
                 'is_invoiced' => false,
                 'started_at' => now()->subDays(4)->setTime(14, 0),
-                'finished_at' => now()->subDays(4)->setTime(15, 0),
+                'completed_at' => now()->subDays(4)->setTime(15, 0),
                 'currency' => 'CZK',
             ],
             [
                 'project' => $projects['eshop-maintenance'],
                 'activity' => $activities['eshop-bugfix'],
                 'title' => 'API endpoint hardening',
-                'type' => ProjectActivityType::Hourly,
-                'status' => $projectActivityStatusCodes['done'],
-                'tracked_minutes' => 150,
-                'unit_rate' => 1500,
-                'flat_amount' => null,
+                'billing_model' => TaskBillingModel::Hourly,
+                'status' => $taskStatusCodes['done'],
+                'logged_minutes' => 150,
+                'hourly_rate_override' => 1500,
+                'fixed_price' => null,
                 'is_billable' => true,
                 'is_invoiced' => true,
                 'invoice_reference' => 'INV-2026-001',
                 'invoiced_at' => now()->subDays(15)->setTime(9, 0),
                 'started_at' => now()->subDays(16)->setTime(9, 30),
-                'finished_at' => now()->subDays(16)->setTime(12, 0),
+                'completed_at' => now()->subDays(16)->setTime(12, 0),
                 'currency' => 'CZK',
             ],
             [
                 'project' => $projects['landing-redesign'],
                 'activity' => $activities['landing-design'],
                 'title' => 'Wireframes and UX direction',
-                'type' => ProjectActivityType::OneTime,
-                'status' => $projectActivityStatusCodes['planned'],
-                'tracked_minutes' => null,
-                'unit_rate' => null,
-                'flat_amount' => 800,
+                'billing_model' => TaskBillingModel::FixedPrice,
+                'status' => $taskStatusCodes['planned'],
+                'logged_minutes' => null,
+                'hourly_rate_override' => null,
+                'fixed_price' => 800,
                 'is_billable' => true,
                 'is_invoiced' => false,
                 'started_at' => null,
-                'finished_at' => null,
+                'completed_at' => null,
                 'currency' => 'EUR',
             ],
             [
                 'project' => $projects['landing-redesign'],
                 'activity' => $activities['landing-design'],
                 'title' => 'UI implementation - section A',
-                'type' => ProjectActivityType::Hourly,
-                'status' => $projectActivityStatusCodes['in_progress'],
-                'tracked_minutes' => null,
-                'unit_rate' => 95,
-                'flat_amount' => null,
+                'billing_model' => TaskBillingModel::Hourly,
+                'status' => $taskStatusCodes['in_progress'],
+                'logged_minutes' => null,
+                'hourly_rate_override' => 95,
+                'fixed_price' => null,
                 'is_billable' => true,
                 'is_invoiced' => false,
                 'started_at' => now()->subHours(3),
-                'finished_at' => null,
+                'completed_at' => null,
                 'currency' => 'EUR',
             ],
         ];
@@ -446,9 +448,9 @@ class FreelancerStarterSeeder extends Seeder
             $project = $entry['project'];
             $activity = $entry['activity'];
             $startedAt = $entry['started_at'];
-            $finishedAt = $entry['finished_at'];
+            $completedAt = $entry['completed_at'];
 
-            Worklog::query()->updateOrCreate(
+            $task = Task::query()->updateOrCreate(
                 [
                     'owner_id' => $owner->id,
                     'project_id' => $project->id,
@@ -457,24 +459,36 @@ class FreelancerStarterSeeder extends Seeder
                 [
                     'activity_id' => $activity?->id,
                     'description' => null,
-                    'type' => $entry['type'],
+                    'billing_model' => $entry['billing_model'],
                     'status' => $entry['status'],
-                    'is_running' => false,
+                    'track_time' => $entry['billing_model'] === TaskBillingModel::Hourly,
                     'is_billable' => $entry['is_billable'],
                     'is_invoiced' => $entry['is_invoiced'],
                     'invoice_reference' => $entry['invoice_reference'] ?? null,
                     'invoiced_at' => $entry['invoiced_at'] ?? null,
                     'currency' => $entry['currency'],
-                    'quantity' => $entry['type'] === ProjectActivityType::OneTime ? 1 : null,
-                    'unit_rate' => $entry['unit_rate'],
-                    'flat_amount' => $entry['flat_amount'],
-                    'tracked_minutes' => $entry['tracked_minutes'],
+                    'quantity' => $entry['billing_model'] === TaskBillingModel::FixedPrice ? 1 : null,
+                    'hourly_rate_override' => $entry['hourly_rate_override'],
+                    'fixed_price' => $entry['fixed_price'],
                     'due_date' => $startedAt?->copy()->startOfDay(),
-                    'started_at' => $startedAt,
-                    'finished_at' => $finishedAt,
+                    'completed_at' => $completedAt,
                     'meta' => ['seed' => 'starter'],
                 ],
             );
+
+            $task->timeEntries()->delete();
+
+            if ($entry['billing_model'] === TaskBillingModel::Hourly && $startedAt !== null) {
+                TimeEntry::query()->create([
+                    'owner_id' => $owner->id,
+                    'task_id' => $task->id,
+                    'description' => $task->title,
+                    'started_at' => $startedAt,
+                    'ended_at' => $completedAt,
+                    'minutes' => $entry['logged_minutes'],
+                    'meta' => ['seed' => 'starter'],
+                ]);
+            }
         }
     }
 
@@ -535,7 +549,7 @@ class FreelancerStarterSeeder extends Seeder
                     'website' => null,
                     'status' => $definition['status'],
                     'pipeline_stage' => $definition['pipeline_stage'],
-                    'priority' => 3,
+                    'priority' => Priority::Normal,
                     'currency' => $definition['currency'],
                     'estimated_value' => $definition['estimated_value'],
                     'expected_close_date' => now()->addDays(21),
@@ -635,6 +649,7 @@ class FreelancerStarterSeeder extends Seeder
      */
     private function seedTagsAndNotes(User $owner, array $customers, array $projects): void
     {
+        /** @var array<string, Tag> $tags */
         $tags = collect([
             ['name' => 'Retainer', 'color' => '#2563EB', 'sort_order' => 10],
             ['name' => 'Urgent', 'color' => '#DC2626', 'sort_order' => 20],
@@ -655,7 +670,7 @@ class FreelancerStarterSeeder extends Seeder
             );
 
             return [$slug => $tag];
-        });
+        })->all();
 
         $customers['novak-eshop']->tags()->syncWithoutDetaching([
             $tags['retainer']->id,
@@ -713,12 +728,12 @@ class FreelancerStarterSeeder extends Seeder
     /**
      * @return array{planned: string, in_progress: string, done: string}
      */
-    private function resolveProjectActivityStatusCodes(): array
+    private function resolveTaskStatusCodes(): array
     {
         return [
-            'planned' => ProjectActivityStatus::InProgress->value,
-            'in_progress' => ProjectActivityStatus::InProgress->value,
-            'done' => ProjectActivityStatus::Done->value,
+            'planned' => TaskStatus::Planned->value,
+            'in_progress' => TaskStatus::InProgress->value,
+            'done' => TaskStatus::Done->value,
         ];
     }
 }

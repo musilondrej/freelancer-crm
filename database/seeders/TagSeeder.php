@@ -8,8 +8,8 @@ use App\Models\Note;
 use App\Models\Project;
 use App\Models\RecurringService;
 use App\Models\Tag;
+use App\Models\Task;
 use App\Models\User;
-use App\Models\Worklog;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -54,8 +54,8 @@ class TagSeeder extends Seeder
             $this->call(LeadSeeder::class);
         }
 
-        if (! Worklog::query()->exists()) {
-            $this->call(ProjectActivitySeeder::class);
+        if (! Task::query()->exists()) {
+            $this->call(TaskSeeder::class);
         }
 
         if (! RecurringService::query()->exists()) {
@@ -119,9 +119,9 @@ class TagSeeder extends Seeder
                     }
                 });
 
-            Worklog::query()
+            Task::query()
                 ->where('owner_id', $owner->id)
-                ->each(function (Worklog $activity) use ($tagIds): void {
+                ->each(function (Task $activity) use ($tagIds): void {
                     if (fake()->boolean(55)) {
                         $activity->tags()->syncWithoutDetaching($tagIds->random(fake()->numberBetween(1, min(2, $tagIds->count())))->all());
                     }

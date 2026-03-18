@@ -25,7 +25,7 @@ class ClientContact extends Model
      */
     protected $fillable = [
         'owner_id',
-        'client_id',
+        'customer_id',
         'full_name',
         'job_title',
         'email',
@@ -59,7 +59,7 @@ class ClientContact extends Model
      */
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'client_id');
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     public function primaryProjects(): HasMany

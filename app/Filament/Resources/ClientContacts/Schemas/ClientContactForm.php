@@ -38,7 +38,7 @@ class ClientContactForm
                                             ->schema([
                                                 Hidden::make('owner_id')
                                                     ->default($ownerId),
-                                                Select::make('client_id')
+                                                Select::make('customer_id')
                                                     ->label('Customer')
                                                     ->relationship(
                                                         name: 'customer',

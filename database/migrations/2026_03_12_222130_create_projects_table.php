@@ -17,7 +17,7 @@ return new class extends Migration
         Schema::create('projects', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('client_id');
+            $table->foreignId('customer_id');
             $table->foreignId('primary_contact_id')->nullable();
             $table->string('name');
             $table->string('status', 64)->default(ProjectStatus::Planned->value);
@@ -46,10 +46,10 @@ return new class extends Migration
             $table->index(['owner_id', 'currency']);
             $table->index(['owner_id', 'target_end_date']);
             $table->index(['owner_id', 'last_activity_at']);
-            $table->index(['client_id', 'status']);
+            $table->index(['customer_id', 'status']);
             $table->index('primary_contact_id');
 
-            $table->foreign(['owner_id', 'client_id'])
+            $table->foreign(['owner_id', 'customer_id'])
                 ->references(['owner_id', 'id'])
                 ->on('clients')
                 ->cascadeOnDelete();

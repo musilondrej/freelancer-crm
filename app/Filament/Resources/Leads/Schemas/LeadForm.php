@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Leads\Schemas;
 use App\Enums\Currency;
 use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
+use App\Enums\Priority;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Lead;
 use Filament\Facades\Filament;
@@ -118,14 +119,8 @@ class LeadForm
                                     ->required(),
                                 Select::make('priority')
                                     ->label(__('Priority'))
-                                    ->options([
-                                        5 => 'Critical',
-                                        4 => 'High',
-                                        3 => 'Normal',
-                                        2 => 'Low',
-                                        1 => 'Backlog',
-                                    ])
-                                    ->default(3)
+                                    ->options(Priority::class)
+                                    ->default(Priority::defaultCase())
                                     ->required(),
                             ])
                             ->columns(1),

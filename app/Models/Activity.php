@@ -56,10 +56,10 @@ class Activity extends Model
     }
 
     /**
-     * @return HasMany<Worklog, $this>
+     * @return HasMany<Task, $this>
      */
-    public function projectActivities(): HasMany
+    public function tasks(): HasMany
     {
-        return $this->hasMany(Worklog::class);
+        return $this->hasMany(Task::class);
     }
 }

@@ -76,7 +76,7 @@ class Customer extends Model
      */
     public function contacts(): HasMany
     {
-        return $this->hasMany(ClientContact::class, 'client_id');
+        return $this->hasMany(ClientContact::class, 'customer_id');
     }
 
     /**
@@ -84,7 +84,7 @@ class Customer extends Model
      */
     public function projects(): HasMany
     {
-        return $this->hasMany(Project::class, 'client_id');
+        return $this->hasMany(Project::class, 'customer_id');
     }
 
     /**

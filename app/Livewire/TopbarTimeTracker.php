@@ -2,13 +2,13 @@
 
 namespace App\Livewire;
 
-use App\Enums\ProjectActivityStatus;
-use App\Enums\ProjectActivityType;
 use App\Enums\ProjectStatus;
-use App\Models\Activity;
+use App\Enums\TaskBillingModel;
+use App\Enums\TaskStatus;
 use App\Models\Customer;
 use App\Models\Project;
-use App\Models\Worklog;
+use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Support\TimeDuration;
 use App\Support\TimeTrackingRounding;
 use Carbon\CarbonImmutable;
@@ -19,7 +19,6 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
@@ -31,9 +30,9 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Number;
 use Livewire\Component;
 
 class TopbarTimeTracker extends Component implements HasActions, HasSchemas
@@ -41,7 +40,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     use InteractsWithActions;
     use InteractsWithSchemas;
 
-    private ?Worklog $cachedActiveSession = null;
+    private ?TimeEntry $cachedActiveSession = null;
 
     private bool $hasCachedActiveSession = false;
 
@@ -92,25 +91,24 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                             ->searchable()
                             ->preload()
                             ->live()
-                            ->afterStateUpdated(fn (Set $set): mixed => $set('activity_id', null)),
-                        Select::make('activity_id')
-                            ->label(__('Activity template'))
+                            ->afterStateUpdated(fn (Set $set): mixed => $set('task_id', null)),
+                        Select::make('task_id')
+                            ->label(__('Task'))
                             ->required()
-                            ->options(fn (Get $get): array => $this->activityOptions($get('project_id')))
-                            ->getOptionLabelUsing(fn (mixed $value): ?string => $this->activityOptionLabel($value))
+                            ->options(fn (Get $get): array => $this->taskOptions($get('project_id')))
+                            ->getOptionLabelUsing(fn (mixed $value): ?string => $this->taskOptionLabel($value))
                             ->searchable()
                             ->preload()
                             ->disabled(fn (Get $get): bool => ! is_numeric($get('project_id')))
                             ->live()
                             ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                $activity = $this->resolveActivityById($state);
+                                $task = $this->resolveTaskById($state);
 
-                                if (! $activity instanceof Activity) {
+                                if (! $task instanceof Task) {
                                     return;
                                 }
 
-                                $set('is_billable', $activity->is_billable);
-                                $set('unit_rate', $activity->default_hourly_rate);
+                                $set('is_billable', (bool) $task->is_billable);
                             }),
                         Textarea::make('description')
                             ->rows(4),
@@ -118,13 +116,6 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                     ->columns(1),
                 Section::make(__('Advanced settings'))
                     ->schema([
-                        TextInput::make('unit_rate')
-                            ->label(__('Hourly rate override'))
-                            ->numeric()
-                            ->minValue(0)
-                            ->suffix(fn (Get $get): string => $this->unitRateCurrencySuffix($get('project_id')))
-                            ->helperText(fn (Get $get): string => $this->rateHelperText($get('project_id'), $get('activity_id')))
-                            ->columnSpanFull(),
                         Toggle::make('is_billable')
                             ->label(__('Billable'))
                             ->default(true)
@@ -202,7 +193,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             ->whereIn('status', $this->trackableProjectStatuses())
             ->when(
                 isset($data['customer_id']) && is_numeric($data['customer_id']),
-                fn (Builder $query) => $query->where('client_id', (int) $data['customer_id']),
+                fn (Builder $query) => $query->where('customer_id', (int) $data['customer_id']),
             )
             ->find((int) $data['project_id']);
 
@@ -215,43 +206,35 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             return;
         }
 
-        $activity = $this->resolveSelectableActivity(
+        $task = $this->resolveSelectableTask(
             ownerId: $ownerId,
             projectId: $project->id,
-            activityId: $data['activity_id'] ?? null,
+            taskId: $data['task_id'] ?? null,
         );
 
-        if (! $activity instanceof Activity) {
+        if (! $task instanceof Task) {
             Notification::make()
-                ->title(__('Activity is not available'))
+                ->title(__('Task is not available'))
                 ->danger()
                 ->send();
 
             return;
         }
 
-        $unitRateOverride = isset($data['unit_rate']) && is_numeric($data['unit_rate'])
-            ? (float) $data['unit_rate']
-            : null;
-        $activityDefaultRate = $activity->default_hourly_rate !== null
-            ? (float) $activity->default_hourly_rate
-            : null;
+        $isBillable = (bool) ($data['is_billable'] ?? $task->is_billable);
+        $billableOverride = $isBillable === (bool) $task->is_billable
+            ? null
+            : $isBillable;
 
         $basePayload = [
             'owner_id' => $ownerId,
-            'project_id' => $project->id,
-            'activity_id' => $activity->id,
-            'title' => $activity->name,
+            'task_id' => $task->id,
             'description' => $this->normalizedDescription($data['description'] ?? null),
-            'type' => ProjectActivityType::Hourly,
-            'is_running' => false,
-            'is_billable' => (bool) ($data['is_billable'] ?? true),
-            'unit_rate' => $unitRateOverride ?? $activityDefaultRate,
-            'currency' => $project->effectiveCurrency(),
+            'is_billable_override' => $billableOverride,
             'started_at' => $startedAt,
             'meta' => [
                 'source' => $isManualEntry ? 'topbar_timer_manual' : 'topbar_timer',
-                'activity_name' => $activity->name,
+                'task_title' => $task->title,
             ],
         ];
 
@@ -261,13 +244,10 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                 $ownerId,
             );
 
-            Worklog::query()->create([
+            TimeEntry::query()->create([
                 ...$basePayload,
-                'status' => ProjectActivityStatus::Done->value,
-                'is_running' => false,
-                'finished_at' => $finishedAt,
-                'tracked_minutes' => $trackedMinutes,
-                'quantity' => round($trackedMinutes / 60, 2),
+                'ended_at' => $finishedAt,
+                'minutes' => $trackedMinutes,
             ]);
 
             $project->update([
@@ -314,13 +294,12 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             return;
         }
 
-        $runningSessions = Worklog::query()
+        /** @var Collection<int, TimeEntry> $runningSessions */
+        $runningSessions = TimeEntry::query()
             ->where('owner_id', $ownerId)
-            ->where('type', ProjectActivityType::Hourly->value)
-            ->where('is_running', true)
-            ->whereNull('finished_at')
-            ->whereNotNull('started_at')
+            ->running()
             ->latest('started_at')
+            ->with('task.project')
             ->get();
 
         if ($runningSessions->isEmpty()) {
@@ -349,14 +328,11 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             $totalTrackedMinutes += $trackedMinutes;
 
             $runningSession->forceFill([
-                'status' => ProjectActivityStatus::Done->value,
-                'is_running' => false,
-                'finished_at' => $finishedAt,
-                'tracked_minutes' => $trackedMinutes,
-                'quantity' => round($trackedMinutes / 60, 2),
+                'ended_at' => $finishedAt,
+                'minutes' => $trackedMinutes,
             ])->save();
 
-            $runningSession->project?->update([
+            $runningSession->task?->project?->update([
                 'last_activity_at' => $finishedAt,
             ]);
         }
@@ -383,42 +359,43 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     public function render(): View
     {
         return view('livewire.topbar-time-tracker', [
-            'hasActiveSession' => $this->activeSession() instanceof Worklog,
+            'hasActiveSession' => $this->activeSession() instanceof TimeEntry,
         ]);
     }
 
     /**
-     * @return array{started_at: string, finished_at: null, unit_rate: float|null, customer_id: int|null, project_id: int|null, activity_id: int|null, description: string|null, is_billable: bool}
+     * @return array{started_at: string, finished_at: null, customer_id: int|null, project_id: int|null, task_id: int|null, description: string|null, is_billable: bool}
      */
     private function defaultFormData(): array
     {
         $now = CarbonImmutable::now();
         $activeSession = $this->activeSession();
 
-        if (! $activeSession instanceof Worklog) {
+        if (! $activeSession instanceof TimeEntry) {
             return [
                 'started_at' => $now->format('Y-m-d H:i'),
                 'finished_at' => null,
-                'unit_rate' => null,
                 'customer_id' => null,
                 'project_id' => null,
-                'activity_id' => null,
+                'task_id' => null,
                 'description' => null,
                 'is_billable' => true,
             ];
         }
 
         $startedAt = CarbonImmutable::make($activeSession->started_at)?->format('Y-m-d H:i') ?? $now->format('Y-m-d H:i');
+        $task = $activeSession->task;
 
         return [
             'started_at' => $startedAt,
             'finished_at' => null,
-            'unit_rate' => null,
-            'customer_id' => $activeSession->project?->client_id,
-            'project_id' => $activeSession->project_id,
-            'activity_id' => $activeSession->activity_id,
+            'customer_id' => $task?->project?->customer_id,
+            'project_id' => $task?->project_id,
+            'task_id' => $activeSession->task_id,
             'description' => $activeSession->description,
-            'is_billable' => (bool) $activeSession->is_billable,
+            'is_billable' => $task instanceof Task
+                ? $activeSession->effectiveBillable((bool) $task->is_billable)
+                : true,
         ];
     }
 
@@ -429,7 +406,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         return $normalizedDescription !== '' ? $normalizedDescription : null;
     }
 
-    private function activeSession(): ?Worklog
+    private function activeSession(): ?TimeEntry
     {
         if ($this->hasCachedActiveSession) {
             return $this->cachedActiveSession;
@@ -444,14 +421,11 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             return null;
         }
 
-        $this->cachedActiveSession = Worklog::query()
+        $this->cachedActiveSession = TimeEntry::query()
             ->where('owner_id', $ownerId)
-            ->where('type', ProjectActivityType::Hourly->value)
-            ->where('is_running', true)
-            ->whereNull('finished_at')
-            ->whereNotNull('started_at')
+            ->running()
             ->latest('started_at')
-            ->with('project:id,name,client_id', 'activity:id,name,default_hourly_rate,is_billable,project_id')
+            ->with('task.project:id,name,customer_id', 'task:id,title,project_id,is_billable,billing_model,track_time')
             ->first();
         $this->hasCachedActiveSession = true;
 
@@ -492,7 +466,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             ->whereIn('status', $this->trackableProjectStatuses())
             ->when(
                 is_numeric($customerId),
-                fn (Builder $query) => $query->where('client_id', (int) $customerId),
+                fn (Builder $query) => $query->where('customer_id', (int) $customerId),
             )
             ->orderBy('name')
             ->pluck('name', 'id')
@@ -520,7 +494,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     /**
      * @return array<int, string>
      */
-    private function activityOptions(mixed $projectId): array
+    private function taskOptions(mixed $projectId): array
     {
         if (! is_numeric($projectId)) {
             return [];
@@ -532,88 +506,29 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             return [];
         }
 
-        return Activity::query()
+        return Task::query()
             ->where('owner_id', $ownerId)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->pluck('name', 'id')
+            ->where('project_id', (int) $projectId)
+            ->where('track_time', true)
+            ->where('billing_model', TaskBillingModel::Hourly->value)
+            ->whereIn('status', TaskStatus::openValues())
+            ->orderBy('title')
+            ->pluck('title', 'id')
             ->all();
     }
 
-    private function activityOptionLabel(mixed $value): ?string
+    private function taskOptionLabel(mixed $value): ?string
     {
         if (! is_numeric($value)) {
             return null;
         }
 
-        return $this->resolveActivityById($value)?->name;
+        return $this->resolveTaskById($value)?->title;
     }
 
-    private function rateHelperText(mixed $projectId, mixed $activityId): string
+    private function resolveTaskById(mixed $taskId): ?Task
     {
-        $activity = $this->resolveActivityById($activityId);
-
-        if ($activity instanceof Activity && $activity->default_hourly_rate !== null) {
-            return __('Default activity rate: :rate / h', ['rate' => Number::format((float) $activity->default_hourly_rate, precision: 2)]);
-        }
-
-        if (! is_numeric($projectId)) {
-            return __('Leave empty to use the project hourly rate.');
-        }
-
-        $ownerId = Filament::auth()->id();
-
-        if ($ownerId === null) {
-            return __('Leave empty to use the project hourly rate.');
-        }
-
-        $project = Project::query()
-            ->where('owner_id', $ownerId)
-            ->find((int) $projectId);
-
-        if (! $project instanceof Project) {
-            return __('Leave empty to use the project hourly rate.');
-        }
-
-        $projectHourlyRate = $project->effectiveHourlyRate();
-        $currency = $project->effectiveCurrency();
-
-        if ($projectHourlyRate === null) {
-            return __('No default project rate set (:currency).', ['currency' => $currency]);
-        }
-
-        return __('Default project rate: :rate :currency / h', [
-            'rate' => Number::format($projectHourlyRate, precision: 2),
-            'currency' => $currency,
-        ]);
-    }
-
-    private function unitRateCurrencySuffix(mixed $projectId): string
-    {
-        $ownerDefaultCurrency = (string) (data_get(Filament::auth()->user(), 'default_currency', 'CZK'));
-
-        if (! is_numeric($projectId)) {
-            return $ownerDefaultCurrency;
-        }
-
-        $ownerId = Filament::auth()->id();
-
-        if ($ownerId === null) {
-            return $ownerDefaultCurrency;
-        }
-
-        $currency = Project::query()
-            ->where('owner_id', $ownerId)
-            ->whereKey((int) $projectId)
-            ->first()?->effectiveCurrency();
-
-        return (string) ($currency ?? $ownerDefaultCurrency);
-    }
-
-    private function resolveActivityById(mixed $activityId): ?Activity
-    {
-        if (! is_numeric($activityId)) {
+        if (! is_numeric($taskId)) {
             return null;
         }
 
@@ -623,22 +538,25 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             return null;
         }
 
-        return Activity::query()
+        return Task::query()
             ->where('owner_id', $ownerId)
-            ->whereKey((int) $activityId)
+            ->whereKey((int) $taskId)
             ->first();
     }
 
-    private function resolveSelectableActivity(int $ownerId, int $projectId, mixed $activityId): ?Activity
+    private function resolveSelectableTask(int $ownerId, int $projectId, mixed $taskId): ?Task
     {
-        if (! is_numeric($activityId)) {
+        if (! is_numeric($taskId)) {
             return null;
         }
 
-        return Activity::query()
+        return Task::query()
             ->where('owner_id', $ownerId)
-            ->where('is_active', true)
-            ->whereKey((int) $activityId)
+            ->where('project_id', $projectId)
+            ->where('track_time', true)
+            ->where('billing_model', TaskBillingModel::Hourly->value)
+            ->whereIn('status', TaskStatus::openValues())
+            ->whereKey((int) $taskId)
             ->first();
     }
 
@@ -657,12 +575,9 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             return DB::transaction(function () use ($basePayload, $project): bool {
                 $ownerId = (int) $basePayload['owner_id'];
 
-                $hasRunningSession = Worklog::query()
+                $hasRunningSession = TimeEntry::query()
                     ->where('owner_id', $ownerId)
-                    ->where('type', ProjectActivityType::Hourly->value)
-                    ->where('is_running', true)
-                    ->whereNull('finished_at')
-                    ->whereNotNull('started_at')
+                    ->running()
                     ->lockForUpdate()
                     ->exists();
 
@@ -670,11 +585,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                     return false;
                 }
 
-                Worklog::query()->create([
-                    ...$basePayload,
-                    'status' => ProjectActivityStatus::runningCase()->value,
-                    'is_running' => true,
-                ]);
+                TimeEntry::query()->create($basePayload);
 
                 $project->update([
                     'last_activity_at' => now(),
@@ -694,21 +605,21 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
     private function isRunningSessionUniqueViolation(QueryException $exception): bool
     {
         return $exception->getCode() === '23505'
-            && str_contains($exception->getMessage(), 'worklogs_owner_running_hourly_unique');
+            && str_contains($exception->getMessage(), 'time_entries_owner_running_unique');
     }
 
     private function stopActionLabel(): string
     {
         $activeSession = $this->activeSession();
 
-        if (! $activeSession instanceof Worklog) {
+        if (! $activeSession instanceof TimeEntry) {
             return __('Stop');
         }
 
         return __('Stop :elapsed', ['elapsed' => $this->elapsedClockLabel($activeSession)]);
     }
 
-    private function elapsedClockLabel(Worklog $activeSession): string
+    private function elapsedClockLabel(TimeEntry $activeSession): string
     {
         $startedAt = CarbonImmutable::make($activeSession->started_at);
 

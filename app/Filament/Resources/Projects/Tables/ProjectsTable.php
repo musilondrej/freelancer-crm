@@ -80,7 +80,7 @@ class ProjectsTable
                     ->label('Status')
                     ->options(ProjectStatus::class)
                     ->multiple(),
-                SelectFilter::make('client_id')
+                SelectFilter::make('customer_id')
                     ->relationship('customer', 'name')
                     ->label('Customer')
                     ->searchable()

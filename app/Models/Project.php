@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Currency;
+use App\Enums\Priority;
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
 use App\Enums\ProjectStatus;
@@ -34,7 +35,7 @@ class Project extends Model
      */
     protected $fillable = [
         'owner_id',
-        'client_id',
+        'customer_id',
         'primary_contact_id',
         'name',
         'status',
@@ -62,7 +63,7 @@ class Project extends Model
     {
         return [
             'status' => ProjectStatus::class,
-            'priority' => 'integer',
+            'priority' => Priority::class,
             'pipeline_stage' => ProjectPipelineStage::class,
             'pricing_model' => ProjectPricingModel::class,
             'start_date' => 'date',
@@ -91,7 +92,7 @@ class Project extends Model
      */
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'client_id');
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     /**
@@ -119,11 +120,11 @@ class Project extends Model
     }
 
     /**
-     * @return HasMany<Worklog, $this>
+     * @return HasMany<Task, $this>
      */
-    public function activities(): HasMany
+    public function tasks(): HasMany
     {
-        return $this->hasMany(Worklog::class);
+        return $this->hasMany(Task::class);
     }
 
     /**

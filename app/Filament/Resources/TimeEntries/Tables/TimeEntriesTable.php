@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\TimeEntries\Tables;
 
 use App\Models\TimeEntry;
+use App\Support\Invoicing\InvoiceIssuer;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -20,9 +22,82 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 class TimeEntriesTable
 {
+    public static function invoiceBulkAction(): BulkAction
+    {
+        return BulkAction::make('invoice_selected')
+            ->label(__('Invoice selected'))
+            ->icon('heroicon-o-banknotes')
+            ->color('info')
+            ->form([
+                TextInput::make('invoice_reference')
+                    ->label(__('Invoice reference'))
+                    ->maxLength(255),
+                DatePicker::make('invoiced_at')
+                    ->label(__('Invoiced at'))
+                    ->default(today()->toDateString())
+                    ->required(),
+            ])
+            ->action(function (BulkAction $action, Collection $records, array $data): void {
+                $readyRecords = $records->filter(function ($record) use ($action): bool {
+                    if (! $record instanceof TimeEntry) {
+                        return false;
+                    }
+
+                    if (! $record->isReadyToInvoice()) {
+                        $action->reportBulkProcessingFailure(
+                            'not_ready_to_invoice',
+                            message: function (int $failureCount, int $totalCount): string {
+                                if (($failureCount === 1) && ($totalCount === 1)) {
+                                    return __('The selected time entry is not ready to invoice.');
+                                }
+
+                                if ($failureCount === $totalCount) {
+                                    return __('All selected time entries are already invoiced, running, or not billable.');
+                                }
+
+                                if ($failureCount === 1) {
+                                    return __('One selected time entry was skipped because it is not ready to invoice.');
+                                }
+
+                                return __(':count selected time entries were skipped because they are not ready to invoice.', ['count' => $failureCount]);
+                            },
+                        );
+
+                        return false;
+                    }
+
+                    return true;
+                });
+
+                if ($readyRecords->isEmpty()) {
+                    return;
+                }
+
+                resolve(InvoiceIssuer::class)->issue(
+                    $readyRecords->all(),
+                    $data['invoice_reference'] ?? null,
+                    $data['invoiced_at'] ?? null,
+                );
+            })
+            ->successNotificationTitle(__('Selected time entries assigned to invoice'))
+            ->failureNotificationTitle(function (int $successCount, int $totalCount): string {
+                if ($successCount > 0) {
+                    return __(':count of :total selected time entries were assigned to an invoice.', [
+                        'count' => $successCount,
+                        'total' => $totalCount,
+                    ]);
+                }
+
+                return __('No selected time entries were ready to invoice.');
+            })
+            ->deselectRecordsAfterCompletion();
+    }
+
     /**
      * @return list<TextColumn|IconColumn>
      */
@@ -85,6 +160,7 @@ class TimeEntriesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('currentInvoiceItem.invoice'))
             ->columns([
                 TextColumn::make('task.title')
                     ->label(__('Task'))
@@ -103,7 +179,12 @@ class TimeEntriesTable
                     ->query(fn ($query) => $query->readyToInvoice()),
                 Filter::make('invoiced')
                     ->label(__('Invoiced'))
-                    ->query(fn ($query) => $query->where('is_invoiced', true)),
+                    ->query(fn (Builder $query): Builder => $query->where(function (Builder $builder): void {
+                        $builder->whereHas('invoiceItems')
+                            ->orWhere('is_invoiced', true)
+                            ->orWhereNotNull('invoice_reference')
+                            ->orWhereNotNull('invoiced_at');
+                    })),
                 TrashedFilter::make(),
             ])
             ->groups([
@@ -129,9 +210,9 @@ class TimeEntriesTable
                             ->default(today()->toDateString())
                             ->required(),
                     ])
-                    ->fillForm(fn (TimeEntry $record): array => [
-                        'invoice_reference' => $record->invoice_reference,
-                        'invoiced_at' => self::toDateString($record->invoiced_at) ?? today()->toDateString(),
+                    ->fillForm(fn (): array => [
+                        'invoice_reference' => null,
+                        'invoiced_at' => today()->toDateString(),
                     ])
                     ->action(function (TimeEntry $record, array $data): void {
                         $record->markAsInvoiced(
@@ -148,6 +229,7 @@ class TimeEntriesTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    self::invoiceBulkAction(),
                     DeleteBulkAction::make(),
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),

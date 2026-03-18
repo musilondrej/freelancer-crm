@@ -6,6 +6,7 @@ use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
 use App\Models\Activity;
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
@@ -135,8 +136,10 @@ it('marks a finished billable time entry as invoiced', function (): void {
 
     expect($timeEntry->isInvoiced())->toBeTrue()
         ->and($timeEntry->isReadyToInvoice())->toBeFalse()
-        ->and($timeEntry->invoice_reference)->toBe('INV-2026-003')
-        ->and($timeEntry->invoiced_at?->toDateTimeString())->toBe($invoiceDate->toDateTimeString());
+        ->and($timeEntry->resolvedInvoiceReference())->toBe('INV-2026-003')
+        ->and($timeEntry->resolvedInvoicedAt()?->toDateTimeString())->toBe($invoiceDate->toDateTimeString())
+        ->and($timeEntry->currentInvoiceItem)->not->toBeNull()
+        ->and($timeEntry->currentInvoiceItem?->invoice)->toBeInstanceOf(Invoice::class);
 });
 
 it('normalizes blank invoice references on time entries', function (): void {
@@ -153,9 +156,9 @@ it('normalizes blank invoice references on time entries', function (): void {
     $timeEntry->markAsInvoiced('   ');
     $timeEntry->refresh();
 
-    expect($timeEntry->is_invoiced)->toBeTrue()
-        ->and($timeEntry->invoice_reference)->toBeNull()
-        ->and($timeEntry->invoiced_at)->not->toBeNull();
+    expect($timeEntry->isInvoiced())->toBeTrue()
+        ->and($timeEntry->resolvedInvoiceReference())->toBeNull()
+        ->and($timeEntry->resolvedInvoicedAt())->not->toBeNull();
 });
 
 it('does not consider running or non-billable time entries ready to invoice', function (): void {

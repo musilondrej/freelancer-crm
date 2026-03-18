@@ -145,31 +145,9 @@ class TaskForm
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
                                     ->visible(fn (Get $get): bool => self::resolveTaskBillingModelValue($get('billing_model')) === TaskBillingModel::FixedPrice->value),
-                                TextInput::make('invoice_reference')
-                                    ->label(__('Invoice reference'))
-                                    ->maxLength(64)
-                                    ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
-                                DateTimePicker::make('invoiced_at')
-                                    ->label(__('Invoiced at'))
-                                    ->seconds(false)
-                                    ->visible(fn (Get $get): bool => (bool) $get('is_invoiced')),
                                 Toggle::make('is_billable')
                                     ->label(__('Is billable'))
                                     ->default(true),
-                                Toggle::make('is_invoiced')
-                                    ->label(__('Is invoiced'))
-                                    ->default(false)
-                                    ->live()
-                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                        if (! (bool) $state) {
-                                            $set('invoice_reference', null);
-                                            $set('invoiced_at', null);
-
-                                            return;
-                                        }
-
-                                        $set('invoiced_at', now());
-                                    }),
                             ])
                             ->columns(1),
 

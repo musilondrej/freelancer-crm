@@ -50,6 +50,7 @@ class TimeEntriesRelationManager extends RelationManager
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    TimeEntriesTable::invoiceBulkAction(),
                     DeleteBulkAction::make(),
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),

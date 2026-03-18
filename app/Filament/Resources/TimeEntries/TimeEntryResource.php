@@ -25,7 +25,7 @@ class TimeEntryResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
 
-    protected static string|UnitEnum|null $navigationGroup = NavigationGroup::Projects;
+    protected static string|UnitEnum|null $navigationGroup = NavigationGroup::Reports;
 
     protected static ?int $navigationSort = 11;
 
@@ -33,7 +33,7 @@ class TimeEntryResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('Time Entries');
+        return __('Reporting Timesheets');
     }
 
     public static function getModelLabel(): string

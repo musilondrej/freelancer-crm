@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Projects\Tables;
 use App\Enums\ProjectStatus;
 use App\Models\Project;
 use App\Models\TimeEntry;
+use App\Support\CurrencyConverter;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -177,10 +178,6 @@ class ProjectsTable
             return __('N/A');
         }
 
-        if ($currency === null || trim($currency) === '') {
-            return number_format((float) $amount, 2, '.', ' ');
-        }
-
-        return number_format((float) $amount, 2, '.', ' ').' '.$currency;
+        return CurrencyConverter::format((float) $amount, $currency, 2);
     }
 }

@@ -8,6 +8,7 @@ use App\Filament\Resources\Tasks\TaskResource;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\UserSetting;
+use App\Support\CurrencyConverter;
 use App\Support\Invoicing\InvoiceIssuer;
 use App\Support\TimeDuration;
 use Carbon\CarbonImmutable;
@@ -124,7 +125,7 @@ class TasksTable
                             return __('N/A');
                         }
 
-                        return number_format($amount, 2, '.', ' ').' '.$currency;
+                        return CurrencyConverter::format($amount, $currency, 2);
                     })
                     ->toggleable(),
                 TextColumn::make('tracked_time')

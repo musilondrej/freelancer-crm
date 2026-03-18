@@ -5,6 +5,7 @@ namespace App\Enums;
 use Filament\Facades\Filament;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Contracts\HasLabel;
+use Illuminate\Support\Number;
 
 enum Currency: string implements HasLabel
 {
@@ -130,12 +131,12 @@ enum Currency: string implements HasLabel
      */
     public function format(float $amount): string
     {
-        $formatted = number_format(round($amount), 0, '.', ' ');
-
-        return match ($this->symbolPosition()) {
-            'prefix' => $this->symbol().' '.$formatted,
-            default => $formatted.' '.$this->symbol(),
-        };
+        return Number::currency(
+            $amount,
+            in: $this->value,
+            locale: app()->getLocale(),
+            precision: 0,
+        );
     }
 
     /**
@@ -143,9 +144,12 @@ enum Currency: string implements HasLabel
      */
     public function formatWithCode(float $amount): string
     {
-        $formatted = number_format($amount, 2, '.', '');
-
-        return $formatted.' '.$this->value;
+        return Number::currency(
+            $amount,
+            in: $this->value,
+            locale: app()->getLocale(),
+            precision: 2,
+        );
     }
 
     /**

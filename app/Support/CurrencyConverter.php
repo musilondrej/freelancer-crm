@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\Currency;
+use Illuminate\Support\Number;
 
 final class CurrencyConverter
 {
@@ -35,5 +36,24 @@ final class CurrencyConverter
     public static function symbol(string $currency): string
     {
         return Currency::tryFrom(strtoupper($currency))?->symbol() ?? strtoupper($currency);
+    }
+
+    public static function format(float $amount, ?string $currency, int $precision = 2): string
+    {
+        $resolvedCurrency = is_string($currency) && trim($currency) !== ''
+            ? strtoupper($currency)
+            : Currency::userDefault()->value;
+
+        $resolvedCurrencyEnum = Currency::tryFrom($resolvedCurrency);
+        $code = $resolvedCurrencyEnum instanceof Currency
+            ? $resolvedCurrencyEnum->value
+            : $resolvedCurrency;
+
+        return Number::currency(
+            $amount,
+            in: $code,
+            locale: app()->getLocale(),
+            precision: $precision,
+        );
     }
 }

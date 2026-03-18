@@ -168,7 +168,7 @@ class RecurringService extends Model
 
                 return $currency !== null
                     ? $currency->formatWithCode((float) $hourlyRate)
-                    : number_format((float) $hourlyRate, 2, '.', '');
+                    : Currency::userDefault()->formatWithCode((float) $hourlyRate);
             },
         );
     }

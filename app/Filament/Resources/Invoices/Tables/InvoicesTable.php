@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Invoices\Tables;
 
 use App\Models\Invoice;
+use App\Support\CurrencyConverter;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -36,11 +37,7 @@ class InvoicesTable
                     ->state(function (Invoice $record): string {
                         $amount = $record->totalAmount();
 
-                        if ($record->currency === null) {
-                            return number_format($amount, 2, '.', ' ');
-                        }
-
-                        return number_format($amount, 2, '.', ' ').' '.$record->currency;
+                        return CurrencyConverter::format($amount, $record->currency, 2);
                     })
                     ->sortable(),
                 TextColumn::make('issued_at')

@@ -68,7 +68,7 @@ class RevenueTrendChart extends ChartWidget
 
     public function getHeading(): ?string
     {
-        return __('Revenue Trend (:currency)', ['currency' => $this->resolveDisplayCurrency()->value]);
+        return __('Revenue trend (:currency)', ['currency' => $this->resolveDisplayCurrency()->value]);
     }
 
     protected function getType(): string

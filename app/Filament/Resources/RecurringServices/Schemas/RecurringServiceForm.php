@@ -170,10 +170,10 @@ class RecurringServiceForm
                                 TagsSelect::make($ownerId),
                             ]),
 
-                        Section::make(__('Billing Details'))
+                        Section::make(__('Billing details'))
                             ->schema([
                                 Select::make('billing_model')
-                                    ->label(__('Billing Model'))
+                                    ->label(__('Billing model'))
                                     ->options(RecurringServiceBillingModel::class)
                                     ->default(RecurringServiceBillingModel::Fixed)
                                     ->required()

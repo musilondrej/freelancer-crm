@@ -58,7 +58,7 @@ class ProjectStats extends BaseWidget
         return [
             Stat::make(__('Open projects'), number_format($openProjects))
                 ->color('success'),
-            Stat::make(__('Total Budget'), number_format(round($totalBudget), 0, '.', ' ').' '.CurrencyConverter::symbol($displayCurrency->value))
+            Stat::make(__('Total budget'), number_format(round($totalBudget), 0, '.', ' ').' '.CurrencyConverter::symbol($displayCurrency->value))
                 ->color('info'),
         ];
     }

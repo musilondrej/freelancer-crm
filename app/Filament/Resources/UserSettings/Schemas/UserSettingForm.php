@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\UserSettings\Schemas;
 
+use App\Enums\Currency;
 use App\Enums\Profile\DateFormatEnum;
 use App\Enums\Profile\TimeFormatEnum;
 use App\Enums\TimeTrackingRoundingInterval;
@@ -9,10 +10,12 @@ use App\Enums\TimeTrackingRoundingMode;
 use App\Enums\UserSettingLocale;
 use App\Enums\UserSettingWeekStartsOn;
 use DateTimeZone;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class UserSettingForm
@@ -46,6 +49,29 @@ class UserSettingForm
                             ->maxValue(240)
                             ->default((int) config('crm.time_tracking.rounding.minimum_minutes', 1))
                             ->required(),
+                    ]),
+                Section::make(__('Billing'))
+                    ->columns(1)
+                    ->schema([
+                        Repeater::make('preferences.billing.hourly_rates')
+                            ->label(__('Default hourly rates by currency'))
+                            ->schema([
+                                Select::make('currency')
+                                    ->label(__('Currency'))
+                                    ->options(Currency::class)
+                                    ->required(),
+                                TextInput::make('hourly_rate')
+                                    ->label(__('Hourly rate'))
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->required()
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get, 'currency')),
+                            ])
+                            ->columns(1)
+                            ->defaultItems(0)
+                            ->addActionLabel(__('Add currency hourly rate'))
+                            ->collapsed()
+                            ->reorderable(false),
                     ]),
                 Section::make(__('Interface'))
                     ->columns(1)

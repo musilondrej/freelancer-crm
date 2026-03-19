@@ -8,15 +8,18 @@ use App\Enums\ProjectStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\ClientContact;
+use App\Models\Project as ProjectModel;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -79,16 +82,48 @@ class ProjectForm
                                     ->options(ProjectPricingModel::class)
                                     ->default(ProjectPricingModel::Fixed)
                                     ->required()
-                                    ->live(),
+                                    ->live()
+                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                        $resolvedPricingModel = self::resolvePricingModelValue($state);
+
+                                        if (in_array($resolvedPricingModel, [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)) {
+                                            return;
+                                        }
+
+                                        $set('hourly_rate', null);
+                                        $set('use_custom_hourly_rate', false);
+                                    }),
+                                Toggle::make('use_custom_currency')
+                                    ->label(__('Override inherited currency'))
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->default(fn (?ProjectModel $record): bool => $record?->currency !== null)
+                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                        if (! (bool) $state) {
+                                            $set('currency', null);
+                                        }
+                                    }),
                                 Select::make('currency')
                                     ->label(__('Currency'))
-                                    ->options(Currency::class),
+                                    ->options(Currency::class)
+                                    ->visible(fn (Get $get): bool => (bool) $get('use_custom_currency')),
+                                Toggle::make('use_custom_hourly_rate')
+                                    ->label(__('Override inherited hourly rate'))
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->default(fn (?ProjectModel $record): bool => $record?->hourly_rate !== null)
+                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                        if (! (bool) $state) {
+                                            $set('hourly_rate', null);
+                                        }
+                                    })
+                                    ->visible(fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)),
                                 TextInput::make('hourly_rate')
                                     ->label(__('Hourly rate'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
-                                    ->visible(fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)),
+                                    ->visible(fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true) && (bool) $get('use_custom_hourly_rate')),
                                 TextInput::make('fixed_price')
                                     ->label(__('Fixed price'))
                                     ->numeric()

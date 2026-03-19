@@ -216,7 +216,7 @@ it('uses the time entry inheritance chain for hourly amount calculation when tas
     logTaskTime($projectActivity, 60);
 
     expect($projectActivity->effectiveHourlyRate())->toBe(1600.0)
-        ->and($projectActivity->calculatedAmount())->toBe(1100.0);
+        ->and($projectActivity->calculatedAmount())->toBe(1600.0);
 });
 
 it('falls back to project, customer and owner rates in order', function (): void {

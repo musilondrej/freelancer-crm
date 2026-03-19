@@ -9,6 +9,7 @@ use App\Enums\TaskStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Activity;
+use App\Models\Task as TaskModel;
 use App\Support\TimeDuration;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
@@ -85,6 +86,7 @@ class TaskForm
 
                                         if ($activity->default_hourly_rate !== null) {
                                             $set('hourly_rate_override', $activity->default_hourly_rate);
+                                            $set('use_custom_hourly_rate', true);
                                         }
                                     }),
                                 Select::make('billing_model')
@@ -105,6 +107,7 @@ class TaskForm
                                         if ($resolvedBillingModel === TaskBillingModel::FixedPrice->value) {
                                             $set('quantity', null);
                                             $set('hourly_rate_override', null);
+                                            $set('use_custom_hourly_rate', false);
                                         }
                                     }),
                                 TextInput::make('title')
@@ -122,9 +125,20 @@ class TaskForm
 
                         Section::make(__('Billing details'))
                             ->schema([
+                                Toggle::make('use_custom_currency')
+                                    ->label(__('Override inherited currency'))
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->default(fn (?TaskModel $record): bool => $record?->currency !== null)
+                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                        if (! (bool) $state) {
+                                            $set('currency', null);
+                                        }
+                                    }),
                                 Select::make('currency')
                                     ->label(__('Currency'))
-                                    ->options(Currency::class),
+                                    ->options(Currency::class)
+                                    ->visible(fn (Get $get): bool => (bool) $get('use_custom_currency')),
                                 Toggle::make('track_time')
                                     ->label(__('Track time'))
                                     ->default(true),
@@ -133,12 +147,24 @@ class TaskForm
                                     ->numeric()
                                     ->minValue(0)
                                     ->visible(fn (Get $get): bool => self::resolveTaskBillingModelValue($get('billing_model')) === TaskBillingModel::Hourly->value && ! (bool) $get('track_time')),
+                                Toggle::make('use_custom_hourly_rate')
+                                    ->label(__('Override inherited hourly rate'))
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->default(fn (?TaskModel $record): bool => $record?->hourly_rate_override !== null)
+                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                        if (! (bool) $state) {
+                                            $set('hourly_rate_override', null);
+                                        }
+                                    })
+                                    ->visible(fn (Get $get): bool => self::resolveTaskBillingModelValue($get('billing_model')) === TaskBillingModel::Hourly->value)
+                                    ->helperText(__('When disabled, task uses the project, customer, or profile hourly rate.')),
                                 TextInput::make('hourly_rate_override')
                                     ->label(__('Hourly rate override'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
-                                    ->visible(fn (Get $get): bool => self::resolveTaskBillingModelValue($get('billing_model')) === TaskBillingModel::Hourly->value),
+                                    ->visible(fn (Get $get): bool => self::resolveTaskBillingModelValue($get('billing_model')) === TaskBillingModel::Hourly->value && (bool) $get('use_custom_hourly_rate')),
                                 TextInput::make('fixed_price')
                                     ->label(__('Fixed price'))
                                     ->numeric()

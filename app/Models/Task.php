@@ -204,6 +204,7 @@ class Task extends Model
         $project = $this->project;
         /** @var Activity|null $activity */
         $activity = $this->activity;
+        $effectiveCurrency = $this->effectiveCurrency();
 
         if ($this->hourly_rate_override !== null) {
             return (float) $this->hourly_rate_override;
@@ -213,11 +214,13 @@ class Task extends Model
             return (float) $activity->default_hourly_rate;
         }
 
-        $effectiveHourlyRate = $project?->effectiveHourlyRate();
+        $effectiveHourlyRate = $project?->effectiveHourlyRate($effectiveCurrency);
 
-        return $effectiveHourlyRate !== null
-            ? (float) $effectiveHourlyRate
-            : null;
+        if ($effectiveHourlyRate !== null) {
+            return (float) $effectiveHourlyRate;
+        }
+
+        return $this->owner?->defaultHourlyRateForCurrency($effectiveCurrency);
     }
 
     public function calculatedAmount(): ?float

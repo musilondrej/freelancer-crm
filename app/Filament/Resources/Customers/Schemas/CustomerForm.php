@@ -19,6 +19,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
@@ -89,14 +90,38 @@ class CustomerForm
                                     ->label(__('Website'))
                                     ->url()
                                     ->maxLength(255),
+                                Toggle::make('use_custom_billing_currency')
+                                    ->label(__('Override inherited currency'))
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->default(fn (?Customer $record): bool => $record?->billing_currency !== null)
+                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                        if (! (bool) $state) {
+                                            $set('billing_currency', null);
+                                        }
+                                    })
+                                    ->helperText(__('When disabled, customer uses your profile default currency.')),
                                 Select::make('billing_currency')
                                     ->label(__('Currency'))
-                                    ->options(Currency::class),
+                                    ->options(Currency::class)
+                                    ->visible(fn (Get $get): bool => (bool) $get('use_custom_billing_currency')),
+                                Toggle::make('use_custom_hourly_rate')
+                                    ->label(__('Override inherited hourly rate'))
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->default(fn (?Customer $record): bool => $record?->hourly_rate !== null)
+                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                        if (! (bool) $state) {
+                                            $set('hourly_rate', null);
+                                        }
+                                    })
+                                    ->helperText(__('When disabled, customer uses your profile default hourly rate.')),
                                 TextInput::make('hourly_rate')
                                     ->label(__('Hourly rate'))
                                     ->numeric()
                                     ->minValue(0)
-                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get, 'billing_currency')),
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get, 'billing_currency'))
+                                    ->visible(fn (Get $get): bool => (bool) $get('use_custom_hourly_rate')),
                             ])
                             ->columns(1),
 

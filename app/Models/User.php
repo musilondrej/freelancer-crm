@@ -127,4 +127,85 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasOne(UserSetting::class);
     }
+
+    public function defaultHourlyRateForCurrency(?string $currency = null): ?float
+    {
+        $normalizedCurrency = is_string($currency) && trim($currency) !== ''
+            ? strtoupper(trim($currency))
+            : null;
+
+        if ($normalizedCurrency !== null) {
+            $hourlyRateByCurrency = $this->hourlyRateByCurrency($normalizedCurrency);
+
+            if ($hourlyRateByCurrency !== null) {
+                return $hourlyRateByCurrency;
+            }
+        }
+
+        return $this->default_hourly_rate !== null
+            ? (float) $this->default_hourly_rate
+            : null;
+    }
+
+    private function hourlyRateByCurrency(string $currency): ?float
+    {
+        $preferences = $this->resolvedPreferences();
+        $hourlyRates = data_get($preferences, 'billing.hourly_rates');
+
+        if (! is_array($hourlyRates)) {
+            return null;
+        }
+
+        foreach (array_reverse($hourlyRates) as $hourlyRateItem) {
+            if (! is_array($hourlyRateItem)) {
+                continue;
+            }
+
+            $itemCurrency = strtoupper(trim((string) ($hourlyRateItem['currency'] ?? '')));
+
+            if ($itemCurrency !== $currency) {
+                continue;
+            }
+
+            $itemHourlyRate = $hourlyRateItem['hourly_rate'] ?? null;
+
+            if (! is_numeric($itemHourlyRate)) {
+                continue;
+            }
+
+            return (float) $itemHourlyRate;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolvedPreferences(): array
+    {
+        $settings = $this->relationLoaded('userSetting')
+            ? $this->getRelation('userSetting')
+            : $this->userSetting()->first();
+
+        if (! $settings instanceof UserSetting) {
+            return UserSetting::defaultPreferences();
+        }
+
+        $preferences = $settings->getAttribute('preferences');
+
+        if (is_string($preferences)) {
+            $decodedPreferences = json_decode($preferences, true);
+            $preferences = is_array($decodedPreferences) ? $decodedPreferences : null;
+        }
+
+        if (! is_array($preferences)) {
+            return UserSetting::defaultPreferences();
+        }
+
+        return array_replace_recursive(
+            UserSetting::defaultPreferences(),
+            $preferences,
+        );
+    }
 }

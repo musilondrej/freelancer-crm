@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\TimeEntries\Schemas;
 
 use App\Enums\Currency;
+use App\Enums\TaskBillingModel;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
@@ -35,28 +36,42 @@ class TimeEntryForm
                                     ->default($ownerId),
                                 Select::make('project_id')
                                     ->label(__('Project'))
-                                    ->dehydrated(false)
+                                    ->required()
                                     ->options(fn (): array => Project::query()
                                         ->when($ownerId !== null, fn ($query) => $query->where('owner_id', $ownerId))
                                         ->orderBy('name')
                                         ->pluck('name', 'id')
                                         ->all())
-                                    ->default(fn (?TimeEntry $record): ?int => $record?->task?->project_id)
+                                    ->default(fn (?TimeEntry $record): ?int => $record?->project_id)
                                     ->searchable()
                                     ->preload()
                                     ->live()
-                                    ->afterStateUpdated(fn (Set $set): mixed => $set('task_id', null)),
+                                    ->afterStateUpdated(function (Set $set, mixed $state) use ($ownerId): void {
+                                        $set('task_id', null);
+                                        $set('hourly_rate_override', self::resolveInheritedRate($ownerId, null, $state));
+                                    }),
                                 Select::make('task_id')
                                     ->label(__('Task'))
-                                    ->required()
                                     ->options(fn (Get $get): array => Task::query()
                                         ->when($ownerId !== null, fn ($query) => $query->where('owner_id', $ownerId))
                                         ->when(is_numeric($get('project_id')), fn ($query) => $query->where('project_id', (int) $get('project_id')))
+                                        ->where('billing_model', TaskBillingModel::Hourly->value)
                                         ->orderBy('title')
                                         ->pluck('title', 'id')
                                         ->all())
                                     ->searchable()
-                                    ->preload(),
+                                    ->preload()
+                                    ->live()
+                                    ->afterStateUpdated(function (Get $get, Set $set) use ($ownerId): void {
+                                        if (filled($get('hourly_rate_override'))) {
+                                            return;
+                                        }
+
+                                        $set(
+                                            'hourly_rate_override',
+                                            self::resolveInheritedRate($ownerId, $get('task_id'), $get('project_id')),
+                                        );
+                                    }),
                                 Textarea::make('description')
                                     ->rows(4)
                                     ->columnSpanFull(),
@@ -64,8 +79,19 @@ class TimeEntryForm
                                     ->label(__('Hourly rate override'))
                                     ->numeric()
                                     ->minValue(0)
+                                    ->required()
+                                    ->afterStateHydrated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
+                                        if (filled($state)) {
+                                            return;
+                                        }
+
+                                        $set(
+                                            'hourly_rate_override',
+                                            self::resolveInheritedRate($ownerId, $get('task_id'), $get('project_id')),
+                                        );
+                                    })
                                     ->suffix(fn (Get $get): string => self::rateCurrencySuffix($ownerId, $get('task_id'), $get('project_id')))
-                                    ->helperText(__('Leave empty to use the task, project, customer, or profile hourly rate.')),
+                                    ->helperText(__('Time entries always store a concrete hourly rate for auditability.')),
                                 Select::make('is_billable_override')
                                     ->label(__('Billable'))
                                     ->options([
@@ -133,5 +159,32 @@ class TimeEntryForm
         }
 
         return Currency::userDefault()->value;
+    }
+
+    private static function resolveInheritedRate(?int $ownerId, mixed $taskId, mixed $projectId): ?float
+    {
+        if (is_numeric($taskId)) {
+            $task = Task::query()
+                ->when($ownerId !== null, fn ($query) => $query->where('owner_id', $ownerId))
+                ->with(['project.customer', 'owner'])
+                ->find((int) $taskId);
+
+            if ($task instanceof Task) {
+                return $task->effectiveHourlyRate();
+            }
+        }
+
+        if (is_numeric($projectId)) {
+            $project = Project::query()
+                ->when($ownerId !== null, fn ($query) => $query->where('owner_id', $ownerId))
+                ->with(['customer', 'owner'])
+                ->find((int) $projectId);
+
+            if ($project instanceof Project) {
+                return $project->effectiveHourlyRate();
+            }
+        }
+
+        return Filament::auth()->user()?->defaultHourlyRateForCurrency();
     }
 }

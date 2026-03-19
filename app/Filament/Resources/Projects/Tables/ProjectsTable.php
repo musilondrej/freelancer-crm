@@ -58,9 +58,7 @@ class ProjectsTable
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->addSelect([
                 'actual_hours_minutes' => TimeEntry::query()
                     ->selectRaw('COALESCE(SUM(time_entries.minutes), 0)')
-                    ->join('tasks', 'tasks.id', '=', 'time_entries.task_id')
-                    ->whereColumn('tasks.project_id', 'projects.id')
-                    ->whereNull('tasks.deleted_at')
+                    ->whereColumn('time_entries.project_id', 'projects.id')
                     ->whereNull('time_entries.deleted_at'),
             ]))
             ->columns([

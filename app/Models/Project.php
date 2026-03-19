@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -129,11 +128,11 @@ class Project extends Model
     }
 
     /**
-     * @return HasManyThrough<TimeEntry, Task, $this>
+     * @return HasMany<TimeEntry, $this>
      */
-    public function timeEntries(): HasManyThrough
+    public function timeEntries(): HasMany
     {
-        return $this->hasManyThrough(TimeEntry::class, Task::class);
+        return $this->hasMany(TimeEntry::class);
     }
 
     /**

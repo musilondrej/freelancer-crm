@@ -30,6 +30,7 @@ class TimeEntriesRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('task.title')
                     ->label(__('Task'))
+                    ->placeholder(__('No task'))
                     ->description(fn (TimeEntry $record): ?string => $record->task?->activity?->name)
                     ->searchable()
                     ->sortable(),
@@ -53,6 +54,6 @@ class TimeEntriesRelationManager extends RelationManager
                 ->withoutGlobalScopes([
                     SoftDeletingScope::class,
                 ])
-                ->with(['task.activity', 'task.project.customer']));
+                ->with(['project.customer', 'task.activity', 'task.project.customer']));
     }
 }

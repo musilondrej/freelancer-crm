@@ -13,6 +13,7 @@ use App\Models\TimeEntry;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
@@ -51,13 +52,13 @@ function buildTimeEntryContext(): array
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Done,
         'is_billable' => true,
-        'track_time' => true,
         'hourly_rate_override' => 1800,
     ]);
 
     return [
         'owner' => $owner,
         'customer' => $customer,
+        'project' => $project,
         'task' => $task,
     ];
 }
@@ -137,6 +138,48 @@ it('inherits hourly rate from project before customer and owner defaults', funct
     expect($timeEntry->effectiveHourlyRate())->toBe(1600.0);
 });
 
+it('stores inherited hourly rate snapshot on create when custom override is disabled', function (): void {
+    $context = buildTimeEntryContext();
+
+    $timeEntry = TimeEntry::query()->create([
+        'owner_id' => $context['task']->owner_id,
+        'task_id' => $context['task']->id,
+        'started_at' => now()->subHour(),
+        'ended_at' => now(),
+        'minutes' => 60,
+    ]);
+
+    expect($timeEntry->hourly_rate_override)->not->toBeNull()
+        ->and((float) $timeEntry->hourly_rate_override)->toBe(1800.0);
+});
+
+it('keeps historical time entry hourly rate when task rate changes later', function (): void {
+    $context = buildTimeEntryContext();
+
+    $timeEntry = TimeEntry::query()->create([
+        'owner_id' => $context['task']->owner_id,
+        'task_id' => $context['task']->id,
+        'started_at' => now()->subHour(),
+        'ended_at' => now(),
+        'minutes' => 60,
+    ]);
+
+    expect((float) $timeEntry->hourly_rate_override)->toBe(1800.0);
+
+    $context['task']->update([
+        'hourly_rate_override' => 2400,
+    ]);
+
+    $timeEntry->refresh();
+    $timeEntry->update([
+        'description' => 'No rate change intended',
+    ]);
+    $timeEntry->refresh();
+
+    expect((float) $timeEntry->hourly_rate_override)->toBe(1800.0)
+        ->and($timeEntry->calculatedAmount())->toBe(1800.0);
+});
+
 it('marks a finished billable time entry as invoiced', function (): void {
     $context = buildTimeEntryContext();
 
@@ -206,4 +249,42 @@ it('does not consider running or non-billable time entries ready to invoice', fu
 
     expect($runningEntry->isReadyToInvoice())->toBeFalse()
         ->and($nonBillableEntry->isReadyToInvoice())->toBeFalse();
+});
+
+it('rejects time entries for fixed-price tasks', function (): void {
+    $context = buildTimeEntryContext();
+
+    $context['task']->update([
+        'billing_model' => TaskBillingModel::FixedPrice,
+        'fixed_price' => 3000,
+    ]);
+
+    expect(fn () => TimeEntry::query()->create([
+        'owner_id' => $context['task']->owner_id,
+        'task_id' => $context['task']->id,
+        'started_at' => now()->subMinutes(30),
+        'ended_at' => now(),
+        'minutes' => 30,
+    ]))->toThrow(ValidationException::class);
+});
+
+it('allows project-only time entries without a task', function (): void {
+    $context = buildTimeEntryContext();
+
+    $context['project']->update([
+        'hourly_rate' => 1700,
+    ]);
+
+    $timeEntry = TimeEntry::query()->create([
+        'owner_id' => $context['owner']->id,
+        'project_id' => $context['project']->id,
+        'task_id' => null,
+        'started_at' => now()->subHour(),
+        'ended_at' => now(),
+        'minutes' => 60,
+    ]);
+
+    expect($timeEntry->effectiveHourlyRate())->toBe(1700.0)
+        ->and($timeEntry->calculatedAmount())->toBe(1700.0)
+        ->and($timeEntry->isReadyToInvoice())->toBeTrue();
 });

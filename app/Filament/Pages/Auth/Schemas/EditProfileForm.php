@@ -72,6 +72,7 @@ class EditProfileForm
                                 Select::make('currency')
                                     ->label(__('Currency'))
                                     ->options(Currency::class)
+                                    ->live()
                                     ->required(),
                                 TextInput::make('hourly_rate')
                                     ->label(__('Hourly rate'))

@@ -82,7 +82,7 @@ class TimeEntryResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['task.project.customer', 'task.owner', 'owner'])
+            ->with(['project.customer', 'project.owner', 'task.project.customer', 'task.owner', 'owner'])
             ->when(Filament::auth()->id() !== null, fn (Builder $query): Builder => $query->where('owner_id', Filament::auth()->id()));
     }
 }

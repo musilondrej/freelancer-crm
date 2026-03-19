@@ -94,7 +94,6 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                             ->afterStateUpdated(fn (Set $set): mixed => $set('task_id', null)),
                         Select::make('task_id')
                             ->label(__('Task'))
-                            ->required()
                             ->options(fn (Get $get): array => $this->taskOptions($get('project_id')))
                             ->getOptionLabelUsing(fn (mixed $value): ?string => $this->taskOptionLabel($value))
                             ->searchable()
@@ -212,7 +211,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             taskId: $data['task_id'] ?? null,
         );
 
-        if (! $task instanceof Task) {
+        if (($data['task_id'] ?? null) !== null && ! $task instanceof Task) {
             Notification::make()
                 ->title(__('Task is not available'))
                 ->danger()
@@ -221,20 +220,25 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             return;
         }
 
-        $isBillable = (bool) ($data['is_billable'] ?? $task->is_billable);
-        $billableOverride = $isBillable === (bool) $task->is_billable
+        $taskBillableDefault = $task instanceof Task
+            ? (bool) $task->is_billable
+            : true;
+
+        $isBillable = (bool) ($data['is_billable'] ?? $taskBillableDefault);
+        $billableOverride = $isBillable === $taskBillableDefault
             ? null
             : $isBillable;
 
         $basePayload = [
             'owner_id' => $ownerId,
-            'task_id' => $task->id,
+            'project_id' => $project->id,
+            'task_id' => $task?->id,
             'description' => $this->normalizedDescription($data['description'] ?? null),
             'is_billable_override' => $billableOverride,
             'started_at' => $startedAt,
             'meta' => [
                 'source' => $isManualEntry ? 'topbar_timer_manual' : 'topbar_timer',
-                'task_title' => $task->title,
+                'task_title' => $task?->title,
             ],
         ];
 
@@ -332,7 +336,7 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
                 'minutes' => $trackedMinutes,
             ])->save();
 
-            $runningSession->task?->project?->update([
+            $runningSession->project?->update([
                 'last_activity_at' => $finishedAt,
             ]);
         }
@@ -384,13 +388,14 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         }
 
         $startedAt = CarbonImmutable::make($activeSession->started_at)?->format('Y-m-d H:i') ?? $now->format('Y-m-d H:i');
+        $project = $activeSession->project;
         $task = $activeSession->task;
 
         return [
             'started_at' => $startedAt,
             'finished_at' => null,
-            'customer_id' => $task?->project?->customer_id,
-            'project_id' => $task?->project_id,
+            'customer_id' => $project?->customer_id,
+            'project_id' => $project?->id,
             'task_id' => $activeSession->task_id,
             'description' => $activeSession->description,
             'is_billable' => $task instanceof Task
@@ -425,7 +430,10 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
             ->where('owner_id', $ownerId)
             ->running()
             ->latest('started_at')
-            ->with('task.project:id,name,customer_id', 'task:id,title,project_id,is_billable,billing_model,track_time')
+            ->with(
+                'project:id,name,customer_id',
+                'task:id,title,project_id,is_billable,billing_model',
+            )
             ->first();
         $this->hasCachedActiveSession = true;
 
@@ -509,7 +517,6 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         return Task::query()
             ->where('owner_id', $ownerId)
             ->where('project_id', (int) $projectId)
-            ->where('track_time', true)
             ->where('billing_model', TaskBillingModel::Hourly->value)
             ->whereIn('status', TaskStatus::openValues())
             ->orderBy('title')
@@ -553,7 +560,6 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         return Task::query()
             ->where('owner_id', $ownerId)
             ->where('project_id', $projectId)
-            ->where('track_time', true)
             ->where('billing_model', TaskBillingModel::Hourly->value)
             ->whereIn('status', TaskStatus::openValues())
             ->whereKey((int) $taskId)

@@ -481,6 +481,7 @@ class FreelancerStarterSeeder extends Seeder
             if ($entry['billing_model'] === TaskBillingModel::Hourly && $startedAt !== null) {
                 TimeEntry::query()->create([
                     'owner_id' => $owner->id,
+                    'project_id' => $project->id,
                     'task_id' => $task->id,
                     'description' => $task->title,
                     'started_at' => $startedAt,

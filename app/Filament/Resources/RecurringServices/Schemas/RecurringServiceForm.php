@@ -180,7 +180,8 @@ class RecurringServiceForm
                                     ->live(),
                                 Select::make('currency')
                                     ->label(__('Currency'))
-                                    ->options(Currency::class),
+                                    ->options(Currency::class)
+                                    ->live(),
                                 TextInput::make('fixed_amount')
                                     ->label(__('Fixed amount'))
                                     ->numeric()

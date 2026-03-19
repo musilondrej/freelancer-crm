@@ -23,6 +23,7 @@ class TimeEntryFactory extends Factory
 
         return [
             'task_id' => Task::factory()->hourly(),
+            'project_id' => fn (array $attributes): ?int => Task::query()->find($attributes['task_id'])?->project_id,
             'owner_id' => fn (array $attributes): ?int => Task::query()->find($attributes['task_id'])?->owner_id,
             'description' => fake()->optional(0.6)->sentence(),
             'is_billable_override' => fake()->optional(0.2)->boolean(),

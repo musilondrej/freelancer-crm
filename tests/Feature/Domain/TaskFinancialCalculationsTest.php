@@ -14,6 +14,7 @@ use App\Models\TimeEntry;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
@@ -64,6 +65,7 @@ function logTaskTime(Task $task, int $minutes, ?bool $isBillableOverride = null)
 {
     TimeEntry::query()->create([
         'owner_id' => $task->owner_id,
+        'project_id' => $task->project_id,
         'task_id' => $task->id,
         'is_billable_override' => $isBillableOverride,
         'started_at' => now()->subMinutes($minutes),
@@ -176,7 +178,7 @@ it('uses individual time entry hourly rates for task amount calculation', functi
     expect($task->calculatedAmount())->toBe(2000.0);
 });
 
-it('calculates hourly amount from explicit unit rate and quantity', function (): void {
+it('ignores quantity for hourly tasks and requires time entries as source of truth', function (): void {
     $context = buildActivityCalculationContext();
 
     $task = Task::query()->create([
@@ -192,7 +194,8 @@ it('calculates hourly amount from explicit unit rate and quantity', function ():
     ]);
 
     expect($task->effectiveHourlyRate())->toBe(950.0)
-        ->and($task->calculatedAmount())->toBe(2137.5);
+        ->and($task->quantity)->toBeNull()
+        ->and($task->calculatedAmount())->toBeNull();
 });
 
 it('uses the time entry inheritance chain for hourly amount calculation when task rate is missing', function (): void {
@@ -261,7 +264,7 @@ it('returns zero for non-billable activities', function (): void {
     expect($task->calculatedAmount())->toBe(0.0);
 });
 
-it('returns null for hourly amount when no time quantity is available', function (): void {
+it('returns null for hourly amount when no tracked time is available', function (): void {
     $context = buildActivityCalculationContext();
 
     $task = Task::query()->create([
@@ -273,10 +276,31 @@ it('returns null for hourly amount when no time quantity is available', function
         'status' => TaskStatus::InProgress,
         'is_billable' => true,
         'hourly_rate_override' => 1000,
-        'quantity' => null,
     ]);
 
     expect($task->calculatedAmount())->toBeNull();
+});
+
+it('blocks switching a task to fixed price when time entries already exist', function (): void {
+    $context = buildActivityCalculationContext();
+
+    $task = Task::query()->create([
+        'owner_id' => $context['owner']->id,
+        'project_id' => $context['project']->id,
+        'activity_id' => $context['activity']->id,
+        'title' => 'Tracked implementation',
+        'billing_model' => TaskBillingModel::Hourly,
+        'status' => TaskStatus::InProgress,
+        'is_billable' => true,
+        'hourly_rate_override' => 1400,
+    ]);
+
+    logTaskTime($task, 30);
+
+    expect(fn (): bool => $task->update([
+        'billing_model' => TaskBillingModel::FixedPrice,
+        'fixed_price' => 2500,
+    ]))->toThrow(ValidationException::class);
 });
 
 it('marks a ready task as invoiced with a shared invoice reference', function (): void {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TaskBillingModel;
 use App\Models\Concerns\EnforcesOwner;
 use App\Support\Invoicing\InvoiceIssuer;
 use Carbon\CarbonImmutable;
@@ -38,6 +39,7 @@ class TimeEntry extends Model
      */
     protected $fillable = [
         'owner_id',
+        'project_id',
         'task_id',
         'description',
         'is_billable_override',
@@ -73,6 +75,68 @@ class TimeEntry extends Model
     protected static function booted(): void
     {
         static::saving(function (self $timeEntry): void {
+            $projectId = $timeEntry->getAttribute('project_id');
+
+            if ($projectId === null) {
+                $resolvedTaskForProject = self::resolveTask($timeEntry);
+
+                if ($resolvedTaskForProject instanceof Task) {
+                    $timeEntry->project_id = $resolvedTaskForProject->project_id;
+                    $projectId = $resolvedTaskForProject->project_id;
+                }
+            }
+
+            if (! is_numeric($projectId)) {
+                throw ValidationException::withMessages([
+                    'project_id' => __('Project is required for time entries.'),
+                ]);
+            }
+
+            $resolvedProject = self::resolveProject($timeEntry);
+
+            if (! $resolvedProject instanceof Project) {
+                throw ValidationException::withMessages([
+                    'project_id' => __('Selected project does not exist.'),
+                ]);
+            }
+
+            $resolvedTask = self::resolveTask($timeEntry);
+
+            if ($resolvedTask instanceof Task) {
+                if ((int) $resolvedTask->project_id !== (int) $timeEntry->project_id) {
+                    throw ValidationException::withMessages([
+                        'task_id' => __('Selected task does not belong to selected project.'),
+                    ]);
+                }
+
+                if ($resolvedTask->billing_model !== TaskBillingModel::Hourly) {
+                    throw ValidationException::withMessages([
+                        'task_id' => __('Time entries can only be added to hourly tasks.'),
+                    ]);
+                }
+            }
+
+            $shouldRefreshInheritedRate = $timeEntry->hourly_rate_override === null
+                || ($timeEntry->isDirty('task_id') && ! $timeEntry->isDirty('hourly_rate_override'));
+
+            if ($shouldRefreshInheritedRate) {
+                $inheritedHourlyRate = self::resolveInheritedHourlyRate($timeEntry);
+
+                if ($inheritedHourlyRate === null) {
+                    throw ValidationException::withMessages([
+                        'hourly_rate_override' => __('Unable to resolve inherited hourly rate. Set a default or custom hourly rate.'),
+                    ]);
+                }
+
+                $timeEntry->hourly_rate_override = $inheritedHourlyRate;
+            }
+
+            if ($timeEntry->hourly_rate_override === null) {
+                throw ValidationException::withMessages([
+                    'hourly_rate_override' => __('Hourly rate is required for time entries.'),
+                ]);
+            }
+
             $normalizedInvoiceReference = trim((string) ($timeEntry->invoice_reference ?? ''));
             $hasInvoiceReference = $normalizedInvoiceReference !== '';
             $hasInvoicedAt = $timeEntry->invoiced_at !== null;
@@ -100,12 +164,75 @@ class TimeEntry extends Model
         });
     }
 
+    private static function resolveInheritedHourlyRate(self $timeEntry): ?float
+    {
+        $task = self::resolveTask($timeEntry);
+
+        if ($task instanceof Task) {
+            return $task->effectiveHourlyRate();
+        }
+
+        $project = self::resolveProject($timeEntry);
+
+        if ($project instanceof Project) {
+            return $project->effectiveHourlyRate();
+        }
+
+        return $timeEntry->owner?->defaultHourlyRateForCurrency();
+    }
+
+    private static function resolveTask(self $timeEntry): ?Task
+    {
+        $taskId = $timeEntry->task_id;
+
+        if ($timeEntry->relationLoaded('task')) {
+            $relationTask = $timeEntry->getRelation('task');
+
+            return $relationTask instanceof Task ? $relationTask : null;
+        }
+
+        if (! is_numeric($taskId)) {
+            return null;
+        }
+
+        return Task::query()
+            ->with(['project.customer', 'owner'])
+            ->find((int) $taskId);
+    }
+
+    private static function resolveProject(self $timeEntry): ?Project
+    {
+        $projectId = $timeEntry->getAttribute('project_id');
+
+        if ($timeEntry->relationLoaded('project')) {
+            $relationProject = $timeEntry->getRelation('project');
+
+            return $relationProject instanceof Project ? $relationProject : null;
+        }
+
+        if (! is_numeric($projectId)) {
+            return null;
+        }
+
+        return Project::query()
+            ->with(['customer', 'owner'])
+            ->find((int) $projectId);
+    }
+
     /**
      * @return BelongsTo<User, $this>
      */
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * @return BelongsTo<Project, $this>
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
     }
 
     /**
@@ -175,7 +302,11 @@ class TimeEntry extends Model
                 ->orWhere(function (Builder $nested): void {
                     $nested
                         ->whereNull('is_billable_override')
-                        ->whereHas('task', fn (Builder $taskQuery): Builder => $taskQuery->where('is_billable', true));
+                        ->where(function (Builder $taskAware): void {
+                            $taskAware
+                                ->whereDoesntHave('task')
+                                ->orWhereHas('task', fn (Builder $taskQuery): Builder => $taskQuery->where('is_billable', true));
+                        });
                 });
         });
 
@@ -224,6 +355,12 @@ class TimeEntry extends Model
         $resolvedTask = $task ?? $this->task;
 
         if (! $resolvedTask instanceof Task) {
+            $resolvedProject = $this->project;
+
+            if ($resolvedProject instanceof Project) {
+                return $resolvedProject->effectiveHourlyRate();
+            }
+
             return $this->owner?->defaultHourlyRateForCurrency();
         }
 
@@ -241,12 +378,11 @@ class TimeEntry extends Model
     public function calculatedAmount(?Task $task = null): ?float
     {
         $resolvedTask = $task ?? $this->task;
+        $defaultBillable = $resolvedTask instanceof Task
+            ? (bool) $resolvedTask->is_billable
+            : true;
 
-        if (! $resolvedTask instanceof Task) {
-            return null;
-        }
-
-        if (! $this->effectiveBillable((bool) $resolvedTask->is_billable)) {
+        if (! $this->effectiveBillable($defaultBillable)) {
             return 0.0;
         }
 
@@ -259,13 +395,13 @@ class TimeEntry extends Model
         return $rate * ((float) $this->resolvedMinutes() / 60);
     }
 
-    public function effectiveBillable(bool $taskIsBillable): bool
+    public function effectiveBillable(?bool $taskIsBillable = true): bool
     {
         if ($this->is_billable_override !== null) {
             return (bool) $this->is_billable_override;
         }
 
-        return $taskIsBillable;
+        return $taskIsBillable ?? true;
     }
 
     public function isInvoiced(): bool
@@ -291,7 +427,7 @@ class TimeEntry extends Model
             return false;
         }
 
-        return $this->effectiveBillable((bool) $this->task?->is_billable);
+        return $this->effectiveBillable($this->task?->is_billable);
     }
 
     public function markAsInvoiced(?string $invoiceReference = null, CarbonInterface|string|null $invoicedAt = null): void

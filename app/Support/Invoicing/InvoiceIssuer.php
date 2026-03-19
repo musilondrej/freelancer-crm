@@ -136,7 +136,7 @@ class InvoiceIssuer
     private function customer(Task|TimeEntry $record): ?Customer
     {
         if ($record instanceof TimeEntry) {
-            return $record->task?->project?->customer;
+            return $record->project->customer ?? $record->task?->project?->customer;
         }
 
         return $record->project?->customer;
@@ -148,7 +148,9 @@ class InvoiceIssuer
     private function sharedProject(Collection $invoiceables): ?Project
     {
         $projects = $invoiceables
-            ->map(fn (Task|TimeEntry $record): ?Project => $record instanceof TimeEntry ? $record->task?->project : $record->project)
+            ->map(fn (Task|TimeEntry $record): ?Project => $record instanceof TimeEntry
+                ? ($record->project ?? $record->task?->project)
+                : $record->project)
             ->filter(fn (?Project $project): bool => $project instanceof Project)
             ->unique(fn (Project $project): int => $project->id)
             ->values();
@@ -185,7 +187,7 @@ class InvoiceIssuer
 
             return $invoiceable->task instanceof Task
                 ? $invoiceable->task->title
-                : __('Time entry');
+                : ($invoiceable->project->name ?? __('Time entry'));
         }
 
         return $invoiceable->title;
@@ -204,7 +206,7 @@ class InvoiceIssuer
                 return $trackedHours;
             }
 
-            return $invoiceable->quantity !== null ? (float) $invoiceable->quantity : 1.0;
+            return 0.0;
         }
 
         return 1.0;
@@ -235,7 +237,7 @@ class InvoiceIssuer
     private function currency(Task|TimeEntry $invoiceable): ?string
     {
         if ($invoiceable instanceof TimeEntry) {
-            return $invoiceable->task?->effectiveCurrency();
+            return $invoiceable->task?->effectiveCurrency() ?? $invoiceable->project?->effectiveCurrency();
         }
 
         return $invoiceable->effectiveCurrency();

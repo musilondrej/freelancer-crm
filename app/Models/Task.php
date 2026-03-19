@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * @property TaskStatus $status
@@ -98,6 +99,27 @@ class Task extends Model
         static::saving(function (self $task): void {
             if ($task->getAttribute('priority') === null) {
                 $task->priority = Priority::Normal;
+            }
+
+            $resolvedBillingModel = $task->resolvedBillingModelValue();
+
+            if ($resolvedBillingModel === TaskBillingModel::Hourly->value) {
+                $task->track_time = true;
+                $task->quantity = null;
+            }
+
+            if ($resolvedBillingModel === TaskBillingModel::FixedPrice->value) {
+                $hasTimeEntries = $task->exists && $task->timeEntries()->exists();
+
+                if ($hasTimeEntries) {
+                    throw ValidationException::withMessages([
+                        'billing_model' => __('Cannot switch task to fixed price while time entries exist.'),
+                    ]);
+                }
+
+                $task->track_time = false;
+                $task->quantity = null;
+                $task->hourly_rate_override = null;
             }
 
             $hasInvoiceReference = $task->invoice_reference !== null
@@ -275,10 +297,6 @@ class Task extends Model
 
         if ($billableTrackedMinutes > 0) {
             return $rate * ((float) $billableTrackedMinutes / 60);
-        }
-
-        if ($this->quantity !== null) {
-            return $rate * (float) $this->quantity;
         }
 
         return null;

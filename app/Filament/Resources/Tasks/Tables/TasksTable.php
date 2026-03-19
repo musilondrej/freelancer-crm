@@ -213,10 +213,6 @@ class TasksTable
                         ->icon('heroicon-o-play-circle')
                         ->color('gray')
                         ->visible(function (Task $record): bool {
-                            if (! (bool) $record->track_time) {
-                                return false;
-                            }
-
                             if ($record->billing_model !== TaskBillingModel::Hourly) {
                                 return false;
                             }
@@ -249,6 +245,7 @@ class TasksTable
                             try {
                                 TimeEntry::query()->create([
                                     'owner_id' => $ownerId,
+                                    'project_id' => $record->project_id,
                                     'task_id' => $record->id,
                                     'started_at' => now(),
                                 ]);

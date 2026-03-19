@@ -159,7 +159,6 @@ class RevenueTrendChart extends ChartWidget
                     'currency',
                     'billing_model',
                     'hourly_rate_override',
-                    'quantity',
                     'fixed_price',
                     'is_billable',
                     'completed_at',

@@ -53,12 +53,12 @@ class TaskFactory extends Factory
 
                 return fake()->boolean(90);
             },
-            'track_time' => $isHourly || fake()->boolean(40),
+            'track_time' => $isHourly,
             'is_invoiced' => false,
             'invoice_reference' => null,
             'invoiced_at' => null,
             'currency' => fake()->optional(0.8)->randomElement(['CZK', 'EUR', 'USD']),
-            'quantity' => $isHourly ? fake()->optional(0.3)->randomFloat(2, 0.5, 80) : null,
+            'quantity' => null,
             'hourly_rate_override' => function (array $attributes) use ($isHourly): ?float {
                 if (! $isHourly) {
                     return null;
@@ -117,7 +117,7 @@ class TaskFactory extends Factory
         return $this->state(fn (): array => [
             'billing_model' => TaskBillingModel::Hourly,
             'track_time' => true,
-            'quantity' => fake()->optional(0.3)->randomFloat(2, 1, 60),
+            'quantity' => null,
             'hourly_rate_override' => fake()->randomFloat(2, 500, 3200),
             'fixed_price' => null,
         ]);
@@ -138,7 +138,7 @@ class TaskFactory extends Factory
     {
         return $this->state(fn (): array => [
             'billing_model' => TaskBillingModel::FixedPrice,
-            'track_time' => fake()->boolean(50),
+            'track_time' => false,
             'quantity' => null,
             'hourly_rate_override' => null,
             'fixed_price' => fake()->randomFloat(2, 400, 20000),

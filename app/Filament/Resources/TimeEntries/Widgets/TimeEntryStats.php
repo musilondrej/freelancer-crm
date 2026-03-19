@@ -66,11 +66,7 @@ class TimeEntryStats extends BaseWidget
         $billableEntries = (int) (clone $query)
             ->where(function (Builder $builder): void {
                 $builder->where('is_billable_override', true)
-                    ->orWhere(function (Builder $nested): void {
-                        $nested
-                            ->whereNull('is_billable_override')
-                            ->whereHas('task', fn (Builder $taskQuery): Builder => $taskQuery->where('is_billable', true));
-                    });
+                    ->orWhereNull('is_billable_override');
             })
             ->count();
 
@@ -79,7 +75,7 @@ class TimeEntryStats extends BaseWidget
             : 0;
 
         $totalRevenue = (clone $query)
-            ->with(['task.project.customer', 'task.owner', 'owner'])
+            ->with(['project.customer', 'project.owner', 'task.project.customer', 'task.owner', 'owner'])
             ->get()
             ->sum(function (Model $model) use ($displayCurrency): float {
                 if (! $model instanceof TimeEntry) {
@@ -88,7 +84,8 @@ class TimeEntryStats extends BaseWidget
 
                 $entry = $model;
                 $amount = $entry->calculatedAmount() ?? 0.0;
-                $fromCurrency = $entry->task?->effectiveCurrency();
+                $fromCurrency = $entry->task?->effectiveCurrency()
+                    ?? $entry->project?->effectiveCurrency();
 
                 if ($amount <= 0 || $fromCurrency === null) {
                     return $amount;

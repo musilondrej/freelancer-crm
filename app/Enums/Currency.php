@@ -159,6 +159,10 @@ enum Currency: string implements HasLabel
     {
         $value = $get($field);
 
+        if ($value instanceof self) {
+            return $value->value;
+        }
+
         if (is_string($value) && trim($value) !== '') {
             return $value;
         }

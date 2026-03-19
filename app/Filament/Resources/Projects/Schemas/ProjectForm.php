@@ -8,14 +8,14 @@ use App\Enums\ProjectStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\ClientContact;
-use App\Models\Project as ProjectModel;
+use App\Models\Customer;
+use App\Support\Filament\HourlyRateCurrencyFields;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -54,7 +54,18 @@ class ProjectForm
                                     ->required()
                                     ->searchable()
                                     ->preload()
-                                    ->live(),
+                                    ->live()
+                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
+                                        if (! in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)) {
+                                            return;
+                                        }
+
+                                        if (filled($get('hourly_rate'))) {
+                                            return;
+                                        }
+
+                                        $set('hourly_rate', self::resolveInheritedHourlyRate($ownerId, $state, $get('currency')));
+                                    }),
                                 Select::make('primary_contact_id')
                                     ->label(__('Primary Contact'))
                                     ->options(function (Get $get) use ($ownerId): array {
@@ -83,47 +94,28 @@ class ProjectForm
                                     ->default(ProjectPricingModel::Fixed)
                                     ->required()
                                     ->live()
-                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
                                         $resolvedPricingModel = self::resolvePricingModelValue($state);
 
                                         if (in_array($resolvedPricingModel, [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)) {
+                                            if (blank($get('hourly_rate'))) {
+                                                $set('hourly_rate', self::resolveInheritedHourlyRate($ownerId, $get('customer_id'), $get('currency')));
+                                            }
+
                                             return;
                                         }
 
                                         $set('hourly_rate', null);
-                                        $set('use_custom_hourly_rate', false);
                                     }),
-                                Toggle::make('use_custom_currency')
-                                    ->label(__('Override inherited currency'))
-                                    ->dehydrated(false)
-                                    ->live()
-                                    ->default(fn (?ProjectModel $record): bool => $record?->currency !== null)
-                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                        if (! (bool) $state) {
-                                            $set('currency', null);
-                                        }
-                                    }),
-                                Select::make('currency')
-                                    ->label(__('Currency'))
-                                    ->options(Currency::class)
-                                    ->visible(fn (Get $get): bool => (bool) $get('use_custom_currency')),
-                                Toggle::make('use_custom_hourly_rate')
-                                    ->label(__('Override inherited hourly rate'))
-                                    ->dehydrated(false)
-                                    ->live()
-                                    ->default(fn (?ProjectModel $record): bool => $record?->hourly_rate !== null)
-                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                        if (! (bool) $state) {
-                                            $set('hourly_rate', null);
-                                        }
-                                    })
-                                    ->visible(fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)),
-                                TextInput::make('hourly_rate')
-                                    ->label(__('Hourly rate'))
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
-                                    ->visible(fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true) && (bool) $get('use_custom_hourly_rate')),
+
+                                ...HourlyRateCurrencyFields::make(
+                                    currencyField: 'currency',
+                                    rateField: 'hourly_rate',
+                                    rateRequired: fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true),
+                                    inheritedRateResolver: fn (Get $get, mixed $currency): ?float => self::resolveInheritedHourlyRate($ownerId, $get('customer_id'), $currency),
+                                    rateVisible: fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true),
+                                ),
+
                                 TextInput::make('fixed_price')
                                     ->label(__('Fixed price'))
                                     ->numeric()
@@ -182,5 +174,21 @@ class ProjectForm
         }
 
         return (string) $value;
+    }
+
+    private static function resolveInheritedHourlyRate(?int $ownerId, mixed $customerId, mixed $currency): ?float
+    {
+        if (is_numeric($customerId)) {
+            $customer = Customer::query()
+                ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
+                ->with('owner')
+                ->find((int) $customerId);
+
+            if ($customer instanceof Customer) {
+                return $customer->effectiveHourlyRate(is_string($currency) ? $currency : null);
+            }
+        }
+
+        return Filament::auth()->user()?->defaultHourlyRateForCurrency(is_string($currency) ? $currency : null);
     }
 }

@@ -5,8 +5,6 @@ namespace App\Filament\Resources\TimeEntries\Tables;
 use App\Models\TimeEntry;
 use App\Support\CurrencyConverter;
 use App\Support\Invoicing\InvoiceIssuer;
-use Carbon\CarbonImmutable;
-use Carbon\CarbonInterface;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -119,7 +117,7 @@ class TimeEntriesTable
             IconColumn::make('is_billable')
                 ->label(__('Billable'))
                 ->boolean()
-                ->state(fn (TimeEntry $record): bool => $record->effectiveBillable((bool) $record->task?->is_billable))
+                ->state(fn (TimeEntry $record): bool => $record->effectiveBillable($record->task?->is_billable))
                 ->toggleable(),
             IconColumn::make('is_invoiced')
                 ->label(__('Invoiced'))
@@ -136,7 +134,9 @@ class TimeEntriesTable
                         return __('N/A');
                     }
 
-                    $currency = $record->task?->effectiveCurrency() ?? 'CZK';
+                    $currency = $record->task?->effectiveCurrency()
+                        ?? $record->project?->effectiveCurrency()
+                        ?? 'CZK';
 
                     return CurrencyConverter::format($rate, $currency, 2);
                 })
@@ -150,7 +150,9 @@ class TimeEntriesTable
                         return __('N/A');
                     }
 
-                    $currency = $record->task?->effectiveCurrency() ?? 'CZK';
+                    $currency = $record->task?->effectiveCurrency()
+                        ?? $record->project?->effectiveCurrency()
+                        ?? 'CZK';
 
                     return CurrencyConverter::format($amount, $currency, 2);
                 })
@@ -166,7 +168,11 @@ class TimeEntriesTable
             ->columns([
                 TextColumn::make('task.title')
                     ->label(__('Task'))
-                    ->description(fn (TimeEntry $record): ?string => $record->task?->project?->name)
+                    ->placeholder(__('No task'))
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('project.name')
+                    ->label(__('Project'))
                     ->searchable()
                     ->sortable(),
 
@@ -190,9 +196,9 @@ class TimeEntriesTable
                 TrashedFilter::make(),
             ])
             ->groups([
-                Group::make('task.project.customer.name')
+                Group::make('project.customer.name')
                     ->label(__('Customer')),
-                Group::make('task.project.name')
+                Group::make('project.name')
                     ->label(__('Project')),
                 Group::make('started_at')
                     ->label(__('Start date'))
@@ -239,18 +245,5 @@ class TimeEntriesTable
                 ]),
             ])
             ->defaultSort('started_at', 'desc');
-    }
-
-    private static function toDateString(mixed $value): ?string
-    {
-        if ($value instanceof CarbonInterface) {
-            return $value->toDateString();
-        }
-
-        if (is_string($value) && trim($value) !== '') {
-            return CarbonImmutable::parse($value)->toDateString();
-        }
-
-        return null;
     }
 }

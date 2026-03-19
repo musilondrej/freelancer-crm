@@ -417,7 +417,6 @@ class DashboardMetricsBoard extends BaseWidget
             ->with('timeEntries:id,task_id,is_billable_override,minutes')
             ->select([
                 'billing_model',
-                'quantity',
                 'completed_at',
                 'is_billable',
             ])
@@ -443,7 +442,6 @@ class DashboardMetricsBoard extends BaseWidget
                 'status',
                 'is_billable',
                 'currency',
-                'quantity',
                 'hourly_rate_override',
                 'fixed_price',
                 'completed_at',
@@ -502,10 +500,6 @@ class DashboardMetricsBoard extends BaseWidget
 
         if ($trackedMinutes > 0) {
             return max($trackedMinutes / 60, 0.0);
-        }
-
-        if ($task->quantity !== null) {
-            return max((float) $task->quantity, 0.0);
         }
 
         return 0.0;

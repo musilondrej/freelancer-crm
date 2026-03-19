@@ -146,12 +146,17 @@ class Customer extends Model
         );
     }
 
-    public function effectiveHourlyRate(): ?float
+    public function effectiveHourlyRate(?string $currency = null): ?float
     {
+        if ($this->hourly_rate !== null) {
+            return (float) $this->hourly_rate;
+        }
+
         /** @var User|null $owner */
         $owner = $this->owner;
+        $resolvedCurrency = $currency ?? $this->effectiveCurrency();
 
-        return $this->hourly_rate ?? $owner?->default_hourly_rate;
+        return $owner?->defaultHourlyRateForCurrency($resolvedCurrency);
     }
 
     public function effectiveCurrency(): ?string

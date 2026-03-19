@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\RecurringService;
 use App\Models\RecurringServiceType;
 use App\Models\User;
+use App\Models\UserSetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -73,6 +74,53 @@ it('resolves project rates and currency from customer when project values are mi
         ->and($projectWithOwnValues->effectiveHourlyRate())->toBe(130.0)
         ->and($projectUsingCustomerDefaults->effectiveCurrency())->toBe('EUR')
         ->and($projectUsingCustomerDefaults->effectiveHourlyRate())->toBe(100.0);
+});
+
+it('uses per-currency profile default hourly rates when inherited rate is missing', function (): void {
+    $owner = User::factory()->create([
+        'default_currency' => 'CZK',
+        'default_hourly_rate' => 1400,
+    ]);
+
+    UserSetting::query()
+        ->where('user_id', $owner->id)
+        ->update([
+            'preferences' => array_replace_recursive(
+                UserSetting::defaultPreferences(),
+                [
+                    'billing' => [
+                        'hourly_rates' => [
+                            ['currency' => 'EUR', 'hourly_rate' => 100],
+                            ['currency' => 'USD', 'hourly_rate' => 125],
+                        ],
+                    ],
+                ],
+            ),
+        ]);
+
+    $customerUsingEuroProfileRate = Customer::factory()->for($owner, 'owner')->create([
+        'billing_currency' => 'EUR',
+        'hourly_rate' => null,
+    ]);
+
+    $customerWithProjectUsingUsdProfileRate = Customer::factory()->for($owner, 'owner')->create([
+        'billing_currency' => null,
+        'hourly_rate' => null,
+    ]);
+
+    $projectUsingUsdProfileRate = Project::query()->create([
+        'owner_id' => $owner->id,
+        'customer_id' => $customerWithProjectUsingUsdProfileRate->id,
+        'name' => 'Project USD Profile Rate',
+        'status' => 'in_progress',
+        'pipeline_stage' => ProjectPipelineStage::Proposal,
+        'pricing_model' => ProjectPricingModel::Hourly,
+        'currency' => 'USD',
+        'hourly_rate' => null,
+    ]);
+
+    expect($customerUsingEuroProfileRate->effectiveHourlyRate())->toBe(100.0)
+        ->and($projectUsingUsdProfileRate->effectiveHourlyRate())->toBe(125.0);
 });
 
 it('resolves recurring service currency by precedence service -> project -> customer -> owner', function (): void {

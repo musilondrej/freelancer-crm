@@ -24,6 +24,9 @@ final class UserSettingPreferences
             ?? UserSettingLocale::English;
 
         return [
+            'billing' => [
+                'hourly_rates' => [],
+            ],
             'time_tracking' => [
                 'rounding' => [
                     'enabled' => (bool) config('crm.time_tracking.rounding.enabled', true),

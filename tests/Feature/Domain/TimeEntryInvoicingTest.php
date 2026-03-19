@@ -116,6 +116,27 @@ it('inherits hourly rate from task then customer then owner default', function (
     expect($ownerRateEntry->effectiveHourlyRate())->toBe(1400.0);
 });
 
+it('inherits hourly rate from project before customer and owner defaults', function (): void {
+    $context = buildTimeEntryContext();
+
+    $context['task']->project()->update([
+        'hourly_rate' => 1600,
+    ]);
+    $context['task']->update([
+        'hourly_rate_override' => null,
+    ]);
+
+    $timeEntry = TimeEntry::query()->create([
+        'owner_id' => $context['task']->owner_id,
+        'task_id' => $context['task']->id,
+        'started_at' => now()->subHour(),
+        'ended_at' => now(),
+        'minutes' => 60,
+    ]);
+
+    expect($timeEntry->effectiveHourlyRate())->toBe(1600.0);
+});
+
 it('marks a finished billable time entry as invoiced', function (): void {
     $context = buildTimeEntryContext();
 

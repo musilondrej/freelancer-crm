@@ -224,24 +224,18 @@ class TimeEntry extends Model
         $resolvedTask = $task ?? $this->task;
 
         if (! $resolvedTask instanceof Task) {
-            return $this->owner?->default_hourly_rate !== null
-                ? (float) $this->owner->default_hourly_rate
-                : null;
+            return $this->owner?->defaultHourlyRateForCurrency();
         }
 
-        if ($resolvedTask->hourly_rate_override !== null) {
-            return (float) $resolvedTask->hourly_rate_override;
+        $resolvedTaskRate = $resolvedTask->effectiveHourlyRate();
+
+        if ($resolvedTaskRate !== null) {
+            return $resolvedTaskRate;
         }
 
-        $customerRate = $resolvedTask->project?->customer?->effectiveHourlyRate();
-
-        if ($customerRate !== null) {
-            return (float) $customerRate;
-        }
-
-        return $resolvedTask->owner?->default_hourly_rate !== null
-            ? (float) $resolvedTask->owner->default_hourly_rate
-            : null;
+        return $resolvedTask->owner?->defaultHourlyRateForCurrency(
+            $resolvedTask->effectiveCurrency(),
+        );
     }
 
     public function calculatedAmount(?Task $task = null): ?float

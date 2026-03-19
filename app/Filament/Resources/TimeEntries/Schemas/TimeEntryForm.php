@@ -65,7 +65,7 @@ class TimeEntryForm
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => self::rateCurrencySuffix($ownerId, $get('task_id'), $get('project_id')))
-                                    ->helperText(__('Leave empty to use the task or customer hourly rate.')),
+                                    ->helperText(__('Leave empty to use the task, project, customer, or profile hourly rate.')),
                                 Select::make('is_billable_override')
                                     ->label(__('Billable'))
                                     ->options([

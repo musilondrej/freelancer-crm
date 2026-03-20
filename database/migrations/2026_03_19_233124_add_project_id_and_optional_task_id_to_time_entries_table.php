@@ -12,22 +12,39 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('time_entries', function (Blueprint $table): void {
-            $table->foreignId('project_id')->nullable()->after('owner_id')->constrained('projects')->cascadeOnDelete();
-        });
+        if (! Schema::hasColumn('time_entries', 'project_id')) {
+            Schema::table('time_entries', function (Blueprint $table): void {
+                $table->foreignId('project_id')->nullable()->after('owner_id')->constrained('projects')->cascadeOnDelete();
+            });
+        }
 
-        DB::statement('
-            UPDATE time_entries
-            SET project_id = tasks.project_id
-            FROM tasks
-            WHERE time_entries.task_id = tasks.id
-        ');
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'mysql') {
+            DB::statement('
+                UPDATE time_entries
+                INNER JOIN tasks ON tasks.id = time_entries.task_id
+                SET time_entries.project_id = tasks.project_id
+            ');
+        } else {
+            DB::statement('
+                UPDATE time_entries
+                SET project_id = tasks.project_id
+                FROM tasks
+                WHERE time_entries.task_id = tasks.id
+            ');
+        }
 
         Schema::table('time_entries', function (Blueprint $table): void {
             $table->foreignId('project_id')->nullable(false)->change();
             $table->foreignId('task_id')->nullable()->change();
-            $table->index(['project_id', 'ended_at']);
         });
+
+        if (! $this->hasProjectEndedAtIndex()) {
+            Schema::table('time_entries', function (Blueprint $table): void {
+                $table->index(['project_id', 'ended_at']);
+            });
+        }
     }
 
     /**
@@ -35,10 +52,26 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if ($this->hasProjectEndedAtIndex()) {
+            Schema::table('time_entries', function (Blueprint $table): void {
+                $table->dropIndex('time_entries_project_id_ended_at_index');
+            });
+        }
+
+        if (Schema::hasColumn('time_entries', 'project_id')) {
+            Schema::table('time_entries', function (Blueprint $table): void {
+                $table->dropConstrainedForeignId('project_id');
+            });
+        }
+
         Schema::table('time_entries', function (Blueprint $table): void {
-            $table->dropIndex('time_entries_project_id_ended_at_index');
-            $table->dropConstrainedForeignId('project_id');
             $table->foreignId('task_id')->nullable(false)->change();
         });
+    }
+
+    private function hasProjectEndedAtIndex(): bool
+    {
+        return collect(Schema::getIndexes('time_entries'))
+            ->contains(fn (array $index): bool => ($index['name'] ?? null) === 'time_entries_project_id_ended_at_index');
     }
 };

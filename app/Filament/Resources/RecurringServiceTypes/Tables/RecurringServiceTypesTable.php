@@ -27,11 +27,6 @@ class RecurringServiceTypesTable
                     ->boolean()
                     ->label(__('Is active'))
                     ->sortable(),
-                TextColumn::make('updated_at')
-                    ->label(__('Updated at'))
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(),
             ])
             ->groups([
                 Group::make('is_active')

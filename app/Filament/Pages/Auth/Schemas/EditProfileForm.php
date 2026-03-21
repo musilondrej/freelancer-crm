@@ -64,8 +64,8 @@ class EditProfileForm
                             ->label(__('Default hourly rate'))
                             ->numeric()
                             ->minValue(0)
-                            ->suffix('/ h')
-                            ->placeholder('0'),
+                            ->required()
+                            ->suffix('/ h'),
                         Repeater::make('preferences.billing.hourly_rates')
                             ->label(__('Default hourly rates by currency'))
                             ->schema([

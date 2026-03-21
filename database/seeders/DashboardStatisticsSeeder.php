@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\CustomerStatus;
-use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use App\Enums\Priority;
 use App\Enums\ProjectPipelineStage;
@@ -102,7 +100,7 @@ class DashboardStatisticsSeeder extends Seeder
                 'timezone' => 'Europe/Prague',
                 'billing_currency' => 'CZK',
                 'hourly_rate' => 1650,
-                'status' => CustomerStatus::Active,
+                'is_active' => true,
                 'source' => 'repeat-client',
                 'last_contacted_at' => now()->subDays(5),
                 'next_follow_up_at' => now()->addDays(14),
@@ -123,7 +121,7 @@ class DashboardStatisticsSeeder extends Seeder
                 'timezone' => 'Europe/Berlin',
                 'billing_currency' => 'EUR',
                 'hourly_rate' => 95,
-                'status' => CustomerStatus::Active,
+                'is_active' => true,
                 'source' => 'linkedin',
                 'last_contacted_at' => now()->subDays(2),
                 'next_follow_up_at' => now()->addDays(10),
@@ -144,7 +142,7 @@ class DashboardStatisticsSeeder extends Seeder
                 'timezone' => 'America/Chicago',
                 'billing_currency' => 'USD',
                 'hourly_rate' => 120,
-                'status' => CustomerStatus::Active,
+                'is_active' => true,
                 'source' => 'referral',
                 'last_contacted_at' => now()->subDays(1),
                 'next_follow_up_at' => now()->addDays(8),
@@ -496,17 +494,17 @@ class DashboardStatisticsSeeder extends Seeder
             ->forceDelete();
 
         $definitions = [
-            [LeadStatus::New, LeadPipelineStage::Inbox, null, 'CZK'],
-            [LeadStatus::Contacted, LeadPipelineStage::Discovery, null, 'CZK'],
-            [LeadStatus::Qualified, LeadPipelineStage::Qualification, null, 'EUR'],
-            [LeadStatus::Proposal, LeadPipelineStage::Proposal, null, 'USD'],
-            [LeadStatus::Won, LeadPipelineStage::Closed, $customers['cz']->id, 'CZK'],
-            [LeadStatus::Won, LeadPipelineStage::Closed, $customers['eur']->id, 'EUR'],
-            [LeadStatus::Lost, LeadPipelineStage::Closed, null, 'USD'],
-            [LeadStatus::Archived, LeadPipelineStage::Closed, null, 'CZK'],
+            [LeadStatus::New, null, 'CZK'],
+            [LeadStatus::Discovery, null, 'CZK'],
+            [LeadStatus::Qualified, null, 'EUR'],
+            [LeadStatus::Proposal, null, 'USD'],
+            [LeadStatus::Won, $customers['cz']->id, 'CZK'],
+            [LeadStatus::Won, $customers['eur']->id, 'EUR'],
+            [LeadStatus::Lost, null, 'USD'],
+            [LeadStatus::Archived, null, 'CZK'],
         ];
 
-        foreach ($definitions as $index => [$status, $pipeline, $customerId, $currency]) {
+        foreach ($definitions as $index => [$status, $customerId, $currency]) {
             Lead::query()->create([
                 'owner_id' => $owner->id,
                 'lead_source_id' => $leadSources->isNotEmpty() ? $leadSources->random()->id : null,
@@ -517,7 +515,6 @@ class DashboardStatisticsSeeder extends Seeder
                 'phone' => '+420 777 '.str_pad((string) (200 + $index), 3, '0', STR_PAD_LEFT),
                 'website' => 'https://lead-'.($index + 1).'.example',
                 'status' => $status,
-                'pipeline_stage' => $pipeline,
                 'priority' => $index < 4 ? 4 : 2,
                 'currency' => $currency,
                 'estimated_value' => 4000 + ($index * 2750),

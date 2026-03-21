@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use App\Enums\Priority;
 use App\Models\Lead;
@@ -39,13 +38,13 @@ class LeadFactory extends Factory
             'website' => fake()->optional(0.6)->url(),
             'status' => fake()->randomElement([
                 LeadStatus::New,
-                LeadStatus::Contacted,
+                LeadStatus::Discovery,
                 LeadStatus::Qualified,
                 LeadStatus::Proposal,
+                LeadStatus::Negotiation,
                 LeadStatus::Won,
                 LeadStatus::Lost,
             ]),
-            'pipeline_stage' => fake()->randomElement(LeadPipelineStage::cases()),
             'priority' => fake()->randomElement(Priority::cases()),
             'currency' => fake()->optional(0.8)->randomElement(['CZK', 'EUR', 'USD']),
             'estimated_value' => fake()->optional(0.7)->randomFloat(2, 5000, 250000),
@@ -63,7 +62,6 @@ class LeadFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => LeadStatus::Won,
-            'pipeline_stage' => LeadPipelineStage::Closed,
         ]);
     }
 
@@ -71,7 +69,6 @@ class LeadFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => LeadStatus::Lost,
-            'pipeline_stage' => LeadPipelineStage::Closed,
         ]);
     }
 }

@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\CustomerStatus;
-use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use App\Enums\Priority;
 use App\Enums\ProjectPipelineStage;
@@ -109,7 +107,7 @@ class FreelancerStarterSeeder extends Seeder
                 'timezone' => 'Europe/Prague',
                 'billing_currency' => 'CZK',
                 'hourly_rate' => 1450,
-                'status' => CustomerStatus::Active,
+                'is_active' => true,
                 'source' => 'referral',
                 'internal_summary' => 'Long-term maintenance client.',
             ],
@@ -124,7 +122,7 @@ class FreelancerStarterSeeder extends Seeder
                 'timezone' => 'Europe/Berlin',
                 'billing_currency' => 'EUR',
                 'hourly_rate' => 95,
-                'status' => CustomerStatus::Active,
+                'is_active' => true,
                 'source' => 'linkedin',
                 'internal_summary' => 'Design and frontend delivery project.',
             ],
@@ -429,7 +427,6 @@ class FreelancerStarterSeeder extends Seeder
                 'full_name' => 'Marek Dvorak',
                 'company_name' => 'Automation Works',
                 'status' => LeadStatus::New,
-                'pipeline_stage' => LeadPipelineStage::Inbox,
                 'lead_source_id' => $leadSources['website']->id,
                 'currency' => 'CZK',
                 'estimated_value' => 60000,
@@ -440,7 +437,6 @@ class FreelancerStarterSeeder extends Seeder
                 'full_name' => 'Eva Kraus',
                 'company_name' => 'Alpen Digital GmbH',
                 'status' => LeadStatus::Proposal,
-                'pipeline_stage' => LeadPipelineStage::Proposal,
                 'lead_source_id' => $leadSources['linkedin']->id,
                 'currency' => 'EUR',
                 'estimated_value' => 5200,
@@ -451,7 +447,6 @@ class FreelancerStarterSeeder extends Seeder
                 'full_name' => 'Jana Novakova',
                 'company_name' => 'Novak eShop s.r.o.',
                 'status' => LeadStatus::Won,
-                'pipeline_stage' => LeadPipelineStage::Closed,
                 'lead_source_id' => $leadSources['existing-client']->id,
                 'currency' => 'CZK',
                 'estimated_value' => 90000,

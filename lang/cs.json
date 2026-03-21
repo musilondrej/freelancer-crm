@@ -64,9 +64,11 @@
     "Default activity rate: :rate / h": "Výchozí sazba aktivity: :rate / h",
     "Default currency": "Výchozí měna",
     "Default hourly rate": "Výchozí hodinová sazba",
+    "If empty, your default rate from preferences will be used.": "Pokud nevyplníte, použije se výchozí sazba z preferencí.",
     "Default project rate: :rate :currency / h": "Výchozí sazba projektu: :rate :currency / h",
     "Description": "Popis",
     "Details": "Podrobnosti",
+    "Discovery": "Průzkum",
     "Disabled": "Vypnuto",
     "Done at": "Dokončeno dne",
     "Due date": "Termín dokončení",
@@ -273,5 +275,6 @@
     "Worked hours this week": "Odpracované hodiny tento týden",
     "Worked hours": "Odpracované hodiny",
     "Year": "Rok",
+    "Critical": "Kritická",
     "Yes": "Ano"
 }

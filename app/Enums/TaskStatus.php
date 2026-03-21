@@ -53,7 +53,7 @@ enum TaskStatus: string implements HasColor, HasIcon, HasLabel
             self::Blocked => Heroicon::OutlinedNoSymbol,
             self::InReview => Heroicon::Eye,
             self::Done => Heroicon::OutlinedCheckCircle,
-            self::Cancelled => Heroicon::OutlinedXCircle,
+            self::Cancelled => Heroicon::XCircle,
         };
     }
 

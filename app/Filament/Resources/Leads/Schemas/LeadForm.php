@@ -3,12 +3,10 @@
 namespace App\Filament\Resources\Leads\Schemas;
 
 use App\Enums\Currency;
-use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use App\Enums\Priority;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Lead;
-use App\Support\EnumValue;
 use App\Support\Filament\FilteredByOwner;
 use App\Support\Filament\MetadataSection;
 use Filament\Forms\Components\DatePicker;
@@ -24,7 +22,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
@@ -107,16 +104,6 @@ class LeadForm
                                     ->label(__('Status'))
                                     ->options(LeadStatus::class)
                                     ->default(LeadStatus::New)
-                                    ->required()
-                                    ->live()
-                                    ->afterStateUpdated(function (mixed $state, Set $set): void {
-                                        if (in_array(EnumValue::from($state), [LeadStatus::Won->value, LeadStatus::Lost->value, LeadStatus::Archived->value], true)) {
-                                            $set('pipeline_stage', LeadPipelineStage::Closed->value);
-                                        }
-                                    }),
-                                Select::make('pipeline_stage')
-                                    ->options(LeadPipelineStage::class)
-                                    ->default(LeadPipelineStage::Inbox)
                                     ->required(),
                             ])
                             ->columns(1),
@@ -191,9 +178,6 @@ class LeadForm
                                 Placeholder::make('status_preview')
                                     ->label(__('Status'))
                                     ->content(fn (Get $get): string => self::leadStatusLabel($get('status'))),
-                                Placeholder::make('stage_preview')
-                                    ->label(__('Pipeline stage'))
-                                    ->content(fn (Get $get): string => self::leadPipelineStageLabel($get('pipeline_stage'))),
                                 Placeholder::make('estimated_value_preview')
                                     ->label(__('Estimated value'))
                                     ->content(function (Get $get): string {
@@ -239,19 +223,6 @@ class LeadForm
 
         if (is_string($value)) {
             return LeadStatus::tryFrom($value)?->getLabel() ?? 'Not set';
-        }
-
-        return 'Not set';
-    }
-
-    private static function leadPipelineStageLabel(mixed $value): string
-    {
-        if ($value instanceof LeadPipelineStage) {
-            return $value->getLabel();
-        }
-
-        if (is_string($value)) {
-            return LeadPipelineStage::tryFrom($value)?->getLabel() ?? 'Not set';
         }
 
         return 'Not set';

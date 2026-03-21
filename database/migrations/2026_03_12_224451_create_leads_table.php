@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -24,7 +23,7 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->string('website')->nullable();
             $table->enum('status', LeadStatus::values())->default(LeadStatus::New->value);
-            $table->enum('pipeline_stage', LeadPipelineStage::values())->default(LeadPipelineStage::Inbox->value);
+            $table->enum('pipeline_stage', ['inbox', 'discovery', 'qualification', 'proposal', 'negotiation', 'closed'])->default('inbox');
             $table->unsignedTinyInteger('priority')->default(3);
             $table->char('currency', 3)->nullable();
             $table->decimal('estimated_value', 12, 2)->nullable();

@@ -4,11 +4,11 @@ namespace App\Filament\Resources\Projects\Schemas;
 
 use App\Actions\ResolveInheritedFinancials;
 use App\Enums\Currency;
+use App\Enums\Priority;
 use App\Enums\ProjectPricingModel;
 use App\Enums\ProjectStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
-use App\Models\ClientContact;
 use App\Models\Project;
 use App\Support\EnumValue;
 use App\Support\Filament\FilteredByOwner;
@@ -24,7 +24,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use Illuminate\Database\Eloquent\Builder;
 
 class ProjectForm
 {
@@ -66,19 +65,6 @@ class ProjectForm
                                         $set('currency', $defaults->currency);
                                         $set('hourly_rate', $defaults->hourlyRate);
                                     }),
-                                Select::make('primary_contact_id')
-                                    ->label(__('Primary Contact'))
-                                    ->options(function (Get $get): array {
-                                        $customerId = $get('customer_id');
-
-                                        return FilteredByOwner::applyTo(ClientContact::query())
-                                            ->when($customerId !== null, fn (Builder $query): Builder => $query->where('customer_id', $customerId))
-                                            ->orderBy('full_name')
-                                            ->pluck('full_name', 'id')
-                                            ->all();
-                                    })
-                                    ->searchable()
-                                    ->preload(),
                                 Textarea::make('description')
                                     ->label(__('Description'))
                                     ->rows(7)
@@ -181,6 +167,11 @@ class ProjectForm
                                     ->label(__('Status'))
                                     ->options(ProjectStatus::class)
                                     ->default(ProjectStatus::defaultCase())
+                                    ->required(),
+                                Select::make('priority')
+                                    ->label(__('Priority'))
+                                    ->options(Priority::class)
+                                    ->default(Priority::Normal)
                                     ->required(),
                                 DatePicker::make('start_date')
                                     ->label(__('Start date')),

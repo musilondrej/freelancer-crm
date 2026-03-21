@@ -2,9 +2,7 @@
 
 namespace App\Filament\Resources\Leads\Tables;
 
-use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
-use App\Enums\Priority;
 use App\Models\Lead;
 use App\Models\UserSetting;
 use App\Support\Filament\FilteredByOwner;
@@ -73,16 +71,10 @@ class LeadsTable
                     ->badge()
                     ->label(__('Status'))
                     ->sortable(),
-                TextColumn::make('pipeline_stage')
-                    ->label(__('Pipeline stage'))
-                    ->badge()
-                    ->sortable(),
                 TextColumn::make('priority')
                     ->label(__('Priority'))
                     ->badge()
-                    ->sortable()
-                    ->formatStateUsing(fn (Priority|int|null $state): string => $state instanceof Priority ? $state->getLabel() : (Priority::tryFrom((int) $state) ?? Priority::Normal)->getLabel())
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
                 TextColumn::make('estimated_value_with_currency')
                     ->label(__('Potential'))
                     ->sortable(
@@ -115,9 +107,6 @@ class LeadsTable
             ->filters([
                 SelectFilter::make('status')
                     ->options(LeadStatus::class)
-                    ->multiple(),
-                SelectFilter::make('pipeline_stage')
-                    ->options(LeadPipelineStage::class)
                     ->multiple(),
                 SelectFilter::make('lead_source_id')
                     ->relationship('leadSource', 'name')

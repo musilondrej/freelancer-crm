@@ -82,10 +82,8 @@ class TimeEntryStats extends BaseWidget
                     return 0.0;
                 }
 
-                $entry = $model;
-                $amount = $entry->calculatedAmount() ?? 0.0;
-                $fromCurrency = $entry->task?->effectiveCurrency()
-                    ?? $entry->project?->effectiveCurrency();
+                $amount = $model->calculatedAmount() ?? 0.0;
+                $fromCurrency = $model->effectiveCurrency();
 
                 if ($amount <= 0 || $fromCurrency === null) {
                     return $amount;

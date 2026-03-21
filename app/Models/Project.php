@@ -146,14 +146,6 @@ class Project extends Model
     }
 
     /**
-     * @return HasMany<Invoice, $this>
-     */
-    public function invoices(): HasMany
-    {
-        return $this->hasMany(Invoice::class);
-    }
-
-    /**
      * @param  Builder<self>  $query
      * @return Builder<self>
      */

@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\Concerns\EnforcesOwner;
-use App\Support\Invoicing\InvoiceIssuer;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\TimeEntryFactory;
@@ -12,8 +11,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 
@@ -242,20 +239,40 @@ class TimeEntry extends Model
         return $this->belongsTo(Task::class);
     }
 
-    /**
-     * @return MorphMany<InvoiceItem, $this>
-     */
-    public function invoiceItems(): MorphMany
+    public function effectiveCurrency(): ?string
     {
-        return $this->morphMany(InvoiceItem::class, 'invoiceable');
+        return $this->task?->effectiveCurrency()
+            ?? $this->project?->effectiveCurrency()
+            ?? $this->owner?->default_currency;
     }
 
     /**
-     * @return MorphOne<InvoiceItem, $this>
+     * @param  Builder<self>  $query
+     * @return Builder<self>
      */
-    public function currentInvoiceItem(): MorphOne
+    #[Scope]
+    protected function billed(Builder $query): Builder
     {
-        return $this->morphOne(InvoiceItem::class, 'invoiceable')->latestOfMany();
+        return $query
+            ->where('is_invoiced', true)
+            ->whereNotNull('invoice_reference')
+            ->where('invoice_reference', '!=', '');
+    }
+
+    /**
+     * Locked entries are those assigned to a timesheet (have an invoice reference).
+     * This mirrors the isLocked() instance method for use in query context.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    #[Scope]
+    protected function locked(Builder $query): Builder
+    {
+        return $query
+            ->where('is_invoiced', true)
+            ->whereNotNull('invoice_reference')
+            ->where('invoice_reference', '!=', '');
     }
 
     /**
@@ -290,7 +307,6 @@ class TimeEntry extends Model
         $query->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId));
         $query->whereNotNull('started_at');
         $query->whereNotNull('ended_at');
-        $query->whereDoesntHave('invoiceItems');
         $query->where('is_invoiced', false);
         $query->where(fn (Builder $builder): Builder => $builder
             ->whereNull('invoice_reference')
@@ -405,10 +421,6 @@ class TimeEntry extends Model
 
     public function isInvoiced(): bool
     {
-        if ($this->currentInvoiceItem()->exists()) {
-            return true;
-        }
-
         if ((bool) $this->is_invoiced) {
             return true;
         }
@@ -418,6 +430,15 @@ class TimeEntry extends Model
         }
 
         return $this->invoiced_at !== null;
+    }
+
+    /**
+     * A time entry is locked once it has been assigned to a timesheet (has an invoice reference).
+     * This is derived state — no separate field needed.
+     */
+    public function isLocked(): bool
+    {
+        return (bool) $this->is_invoiced && $this->resolvedInvoiceReference() !== null;
     }
 
     public function isReadyToInvoice(): bool
@@ -435,9 +456,16 @@ class TimeEntry extends Model
             return;
         }
 
-        resolve(InvoiceIssuer::class)->issue([$this], $invoiceReference, $invoicedAt);
+        $resolvedAt = $invoicedAt instanceof CarbonInterface
+            ? $invoicedAt
+            : ($invoicedAt !== null ? CarbonImmutable::parse($invoicedAt) : now());
 
-        $this->unsetRelation('currentInvoiceItem');
+        $this->update([
+            'is_invoiced' => true,
+            'invoice_reference' => $invoiceReference ?? '',
+            'invoiced_at' => $resolvedAt,
+        ]);
+
         $this->refresh();
     }
 
@@ -457,31 +485,13 @@ class TimeEntry extends Model
 
     public function resolvedInvoiceReference(): ?string
     {
-        $invoice = $this->resolvedInvoice();
+        $ref = trim((string) $this->invoice_reference);
 
-        if ($invoice?->reference !== null && trim((string) $invoice->reference) !== '') {
-            return trim((string) $invoice->reference);
-        }
-
-        if (trim((string) $this->invoice_reference) !== '') {
-            return trim((string) $this->invoice_reference);
-        }
-
-        return null;
+        return $ref !== '' ? $ref : null;
     }
 
     public function resolvedInvoicedAt(): ?CarbonInterface
     {
-        $invoiceIssuedAt = $this->resolvedInvoice()?->getAttribute('issued_at');
-
-        if ($invoiceIssuedAt instanceof CarbonInterface) {
-            return $invoiceIssuedAt;
-        }
-
-        if (is_string($invoiceIssuedAt) && trim($invoiceIssuedAt) !== '') {
-            return CarbonImmutable::parse($invoiceIssuedAt);
-        }
-
         $rawInvoicedAt = $this->getAttribute('invoiced_at');
 
         if ($rawInvoicedAt instanceof CarbonInterface) {
@@ -493,20 +503,5 @@ class TimeEntry extends Model
         }
 
         return null;
-    }
-
-    private function resolvedInvoice(): ?Invoice
-    {
-        $invoiceItem = $this->relationLoaded('currentInvoiceItem')
-            ? $this->getRelation('currentInvoiceItem')
-            : $this->currentInvoiceItem()->with('invoice')->first();
-
-        if (! $invoiceItem instanceof InvoiceItem) {
-            return null;
-        }
-
-        return $invoiceItem->relationLoaded('invoice')
-            ? $invoiceItem->getRelation('invoice')
-            : $invoiceItem->invoice;
     }
 }

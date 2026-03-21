@@ -122,14 +122,6 @@ class Customer extends Model
         return $this->hasMany(RecurringService::class, 'customer_id');
     }
 
-    /**
-     * @return HasMany<Invoice, $this>
-     */
-    public function invoices(): HasMany
-    {
-        return $this->hasMany(Invoice::class, 'customer_id');
-    }
-
     protected function hourlyCurrencyColumn(): string
     {
         return 'billing_currency';

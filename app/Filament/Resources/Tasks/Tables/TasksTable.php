@@ -9,7 +9,6 @@ use App\Models\TimeEntry;
 use App\Models\UserSetting;
 use App\Support\CurrencyConverter;
 use App\Support\Filament\FilteredByOwner;
-use App\Support\Invoicing\InvoiceIssuer;
 use App\Support\TimeDuration;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -74,7 +73,6 @@ class TasksTable
         $timezone = UserSetting::timezoneForUser($ownerId);
 
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('currentInvoiceItem.invoice'))
             ->queryStringIdentifier('tasks')
             ->persistFiltersInSession()
             ->persistSearchInSession()
@@ -172,7 +170,6 @@ class TasksTable
                             ->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId))
                             ->billable()
                             ->done()
-                            ->whereDoesntHave('invoiceItems')
                             ->where('is_invoiced', false)
                             ->whereNull('invoice_reference')
                             ->whereNull('invoiced_at')
@@ -271,16 +268,16 @@ class TasksTable
                             ]);
 
                             Notification::make()
-                                ->title('Task marked as done')
+                                ->title(__('Task marked as done'))
                                 ->success()
                                 ->send();
                         }),
                     Action::make('mark_invoiced')
-                        ->label('Mark invoiced')
+                        ->label(__('Mark as invoiced'))
                         ->icon('heroicon-o-banknotes')
                         ->color('info')
                         ->visible(fn (Task $record): bool => (bool) $record->is_billable && ! $record->isInvoiced() && $record->isReadyToInvoice())
-                        ->form([
+                        ->schema([
                             TextInput::make('invoice_reference')
                                 ->label(__('Invoice reference'))
                                 ->maxLength(64),
@@ -300,7 +297,7 @@ class TasksTable
                             );
 
                             Notification::make()
-                                ->title('Task marked as invoiced')
+                                ->title(__('Task marked as invoiced'))
                                 ->success()
                                 ->send();
                         }),
@@ -313,7 +310,7 @@ class TasksTable
                         ->label(__('Invoice selected'))
                         ->icon('heroicon-o-banknotes')
                         ->color('info')
-                        ->form([
+                        ->schema([
                             TextInput::make('invoice_reference')
                                 ->label(__('Invoice reference'))
                                 ->maxLength(64),
@@ -358,13 +355,18 @@ class TasksTable
                                 return;
                             }
 
-                            resolve(InvoiceIssuer::class)->issue(
-                                $readyRecords->all(),
-                                $data['invoice_reference'] ?? null,
-                                $data['invoiced_at'] ?? null,
-                            );
+                            foreach ($readyRecords as $record) {
+                                if (! $record instanceof Task) {
+                                    continue;
+                                }
+
+                                $record->markAsInvoiced(
+                                    $data['invoice_reference'] ?? null,
+                                    $data['invoiced_at'] ?? null,
+                                );
+                            }
                         })
-                        ->successNotificationTitle(__('Selected tasks assigned to invoice'))
+                        ->successNotificationTitle(__('Selected tasks marked as invoiced'))
                         ->failureNotificationTitle(function (int $successCount, int $totalCount): string {
                             if ($successCount > 0) {
                                 return __(':count of :total selected tasks were assigned to an invoice.', [

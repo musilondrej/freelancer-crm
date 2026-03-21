@@ -2,7 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Enums\Currency;
 use App\Filament\Widgets\DashboardMetricsBoard;
 use App\Filament\Widgets\RevenueTrendChart;
 use App\Filament\Widgets\UnbilledDoneWorkTable;
@@ -12,7 +11,6 @@ use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
 use Filament\Schemas\Components\Section;
@@ -81,14 +79,6 @@ class Dashboard extends BaseDashboard
                             ->minDate(fn (Get $get): mixed => $get('startDate') ?: now()->startOfMonth())
                             ->maxDate(now())
                             ->native(false),
-                        Select::make('currency')
-                            ->label(__('Display currency'))
-                            ->options(Currency::options([
-                                Currency::CZK,
-                                Currency::EUR,
-                                Currency::USD,
-                            ]))
-                            ->default(fn (): string => strtoupper((string) (Filament::auth()->user()->default_currency ?? 'CZK'))),
                     ])
                     ->columns([
                         'md' => 3,

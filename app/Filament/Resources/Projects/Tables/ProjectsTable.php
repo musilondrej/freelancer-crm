@@ -64,10 +64,7 @@ class ProjectsTable
             ->columns([
                 TextColumn::make('name')
                     ->label(__('Name'))
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('customer.name')
-                    ->label(__('Customer'))
+                    ->description(fn (Project $record): ?string => $record->customer?->name)
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('status')

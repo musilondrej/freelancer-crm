@@ -2,10 +2,8 @@
 
 namespace App\Filament\Resources\Projects\Widgets;
 
-use App\Enums\Currency;
 use App\Filament\Resources\Projects\Pages\ListProjects;
 use App\Models\Project;
-use App\Support\CurrencyConverter;
 use Filament\Widgets\Concerns\InteractsWithPageTable;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -27,34 +25,22 @@ class ProjectStats extends BaseWidget
      */
     protected function getStats(): array
     {
-        $query = $this->getPageTableQuery();
         /** @var Builder<Project> $query */
-        $displayCurrency = Currency::userDefault();
+        $query = $this->getPageTableQuery();
 
-        $openProjects = (clone $query)
+        $openCount = (clone $query)->open()->count();
+
+        $overdueCount = (clone $query)
             ->open()
+            ->whereNotNull('target_end_date')
+            ->whereDate('target_end_date', '<', today())
             ->count();
 
-        $projects = (clone $query)
-            ->with('customer')
-            ->get(['id', 'customer_id', 'currency', 'estimated_value', 'actual_value', 'estimated_hours', 'actual_hours_minutes']);
-
-        $totalBudget = (float) $projects->sum(function (Project $project) use ($displayCurrency): float {
-            $amount = (float) ($project->estimated_value ?? 0);
-            $fromCurrency = $project->effectiveCurrency();
-
-            if ($amount <= 0 || $fromCurrency === null) {
-                return $amount;
-            }
-
-            return CurrencyConverter::convert($amount, $fromCurrency, $displayCurrency->value);
-        });
-
         return [
-            Stat::make(__('Open projects'), number_format($openProjects))
-                ->color('success'),
-            Stat::make(__('Total budget'), CurrencyConverter::format($totalBudget, $displayCurrency->value, 0))
-                ->color('info'),
+            Stat::make(__('Open projects'), number_format($openCount))
+                ->color('primary'),
+            Stat::make(__('Overdue projects'), number_format($overdueCount))
+                ->color($overdueCount > 0 ? 'danger' : 'gray'),
         ];
     }
 }

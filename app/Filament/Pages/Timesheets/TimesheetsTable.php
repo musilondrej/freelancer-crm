@@ -2,39 +2,66 @@
 
 namespace App\Filament\Pages\Timesheets;
 
-use App\Enums\Currency;
+use App\Filament\Pages\TimesheetShow;
 use App\Models\TimeEntry;
-use App\Support\CurrencyConverter;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
-use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class TimesheetsTable
 {
     public static function configure(Table $table): Table
     {
         return $table
-            ->query(
-                TimeEntry::query()
-                    ->billed()
-                    ->with(['project.customer', 'task', 'owner'])
-                    ->orderBy('invoiced_at', 'desc')
-                    ->orderBy('invoice_reference', 'desc')
-            )
-            ->groups([
-                Group::make('invoice_reference')
-                    ->label(__('Invoice reference'))
-                    ->titlePrefixedWithLabel(false)
-                    ->collapsible(),
-            ])
-            ->defaultGroup('invoice_reference')
+            ->query(self::invoiceSummaryQuery())
+            ->recordUrl(fn (TimeEntry $record): string => TimesheetShow::getUrl([
+                'invoiceReference' => $record->invoice_reference,
+            ]))
             ->columns(self::columns())
             ->filters(self::filters())
-            ->striped();
+            ->defaultSort('invoiced_at', 'desc')
+            ->paginated([10, 25, 50]);
+    }
+
+    /**
+     * Returns an Eloquent Builder wrapping an aggregated subquery (one row per invoice).
+     * The subquery handles GROUP BY, so the outer query can freely ORDER BY any column.
+     *
+     * @return Builder<TimeEntry>
+     */
+    private static function invoiceSummaryQuery(): Builder
+    {
+        $ownerId = auth()->id();
+
+        $subquery = DB::table('time_entries')
+            ->select([
+                DB::raw('MIN(time_entries.id) as id'),
+                'time_entries.invoice_reference',
+                DB::raw('MIN(time_entries.invoiced_at) as invoiced_at'),
+                DB::raw('COUNT(*) as entries_count'),
+                DB::raw('SUM(time_entries.minutes) as total_minutes'),
+                DB::raw("STRING_AGG(DISTINCT clients.name, ', ' ORDER BY clients.name) as customer_names"),
+            ])
+            ->join('projects', 'time_entries.project_id', '=', 'projects.id')
+            ->join('clients', 'projects.customer_id', '=', 'clients.id')
+            ->where('time_entries.is_invoiced', true)
+            ->whereNotNull('time_entries.invoice_reference')
+            ->where('time_entries.invoice_reference', '!=', '')
+            ->where('time_entries.owner_id', $ownerId)
+            ->whereNull('time_entries.deleted_at')
+            ->groupBy('time_entries.invoice_reference');
+
+        /** @var Builder<TimeEntry> $query */
+        $query = TimeEntry::query()
+            ->withoutGlobalScopes()
+            ->fromSub($subquery, 'invoice_summaries');
+
+        $query->getModel()->setTable('invoice_summaries');
+
+        return $query;
     }
 
     /**
@@ -42,67 +69,27 @@ class TimesheetsTable
      */
     private static function columns(): array
     {
-        $displayCurrency = Currency::userDefault();
-
         return [
-            TextColumn::make('project.customer.name')
-                ->label(__('Customer'))
+            TextColumn::make('invoice_reference')
+                ->label(__('Invoice reference'))
                 ->searchable()
-                ->sortable(),
-            TextColumn::make('project.name')
-                ->label(__('Project'))
-                ->searchable()
-                ->sortable(),
-            TextColumn::make('task.title')
-                ->label(__('Task'))
-                ->placeholder(__('No task'))
-                ->searchable(),
-            TextColumn::make('description')
-                ->label(__('Description'))
-                ->placeholder('—')
-                ->limit(60)
-                ->searchable()
-                ->toggleable(isToggledHiddenByDefault: true),
-            TextColumn::make('started_at')
-                ->label(__('Date'))
-                ->date()
-                ->sortable(),
-            TextColumn::make('hours')
-                ->label(__('Hours'))
-                ->state(fn (TimeEntry $record): string => number_format($record->resolvedHours(), 1, '.', ' ').' h')
-                ->tooltip(fn (TimeEntry $record): string => sprintf('%d min', $record->resolvedMinutes())),
-            TextColumn::make('hourly_rate')
-                ->label(__('Rate'))
-                ->state(function (TimeEntry $record) use ($displayCurrency): string {
-                    $rate = $record->effectiveHourlyRate();
-
-                    if ($rate === null) {
-                        return '—';
-                    }
-
-                    $currency = $record->effectiveCurrency() ?? $displayCurrency->value;
-
-                    return CurrencyConverter::format($rate, $currency, 0);
-                }),
-            TextColumn::make('amount')
-                ->label(__('Amount'))
-                ->state(function (TimeEntry $record) use ($displayCurrency): string {
-                    $amount = $record->calculatedAmount();
-
-                    if ($amount === null) {
-                        return '—';
-                    }
-
-                    $currency = $record->effectiveCurrency() ?? $displayCurrency->value;
-
-                    return CurrencyConverter::format($amount, $currency, 2);
-                })
+                ->sortable()
                 ->weight('semibold'),
+            TextColumn::make('customer_names')
+                ->label(__('Customer'))
+                ->searchable(),
             TextColumn::make('invoiced_at')
                 ->label(__('Invoiced at'))
                 ->date()
-                ->sortable()
-                ->toggleable(),
+                ->sortable(),
+            TextColumn::make('entries_count')
+                ->label(__('Entries'))
+                ->numeric()
+                ->sortable(),
+            TextColumn::make('total_hours')
+                ->label(__('Total hours'))
+                ->state(fn (TimeEntry $record): string => number_format((int) $record->getAttribute('total_minutes') / 60, 1, '.', ' ').' h')
+                ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('total_minutes', $direction)),
         ];
     }
 
@@ -112,19 +99,6 @@ class TimesheetsTable
     private static function filters(): array
     {
         return [
-            Filter::make('customer')
-                ->form([
-                    TextInput::make('customer_name')
-                        ->label(__('Customer name'))
-                        ->placeholder(__('Search by customer name')),
-                ])
-                ->query(fn (Builder $query, array $data): Builder => $query->when(
-                    $data['customer_name'],
-                    fn (Builder $builder, string $value): Builder => $builder->whereHas(
-                        'project.customer',
-                        fn (Builder $customer): Builder => $customer->where('name', 'like', sprintf('%%%s%%', $value))
-                    )
-                )),
             Filter::make('invoiced_period')
                 ->form([
                     DatePicker::make('invoiced_from')

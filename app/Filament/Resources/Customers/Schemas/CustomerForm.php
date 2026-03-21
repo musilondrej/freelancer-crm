@@ -18,7 +18,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
@@ -92,8 +91,6 @@ class CustomerForm
                                 ...HourlyRateCurrencyFields::make(
                                     currencyField: 'billing_currency',
                                     rateField: 'hourly_rate',
-                                    inheritedRateResolver: fn (Get $get, mixed $currency): ?float => Filament::auth()->user()?->defaultHourlyRateForCurrency(is_string($currency) ? $currency : null),
-                                    helperText: 'Prefilled from your profile defaults, but editable here.',
                                 ),
                             ])
                             ->columns(1),

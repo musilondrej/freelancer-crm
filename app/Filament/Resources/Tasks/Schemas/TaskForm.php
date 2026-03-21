@@ -9,7 +9,6 @@ use App\Enums\TaskStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Activity;
-use App\Models\Project;
 use App\Support\Filament\HourlyRateCurrencyFields;
 use App\Support\TimeDuration;
 use Filament\Facades\Filament;
@@ -59,18 +58,8 @@ class TaskForm
                                     ->searchable()
                                     ->preload()
                                     ->live()
-                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
+                                    ->afterStateUpdated(function (Set $set): void {
                                         $set('activity_id', null);
-
-                                        if (self::resolveTaskBillingModelValue($get('billing_model')) !== TaskBillingModel::Hourly->value) {
-                                            return;
-                                        }
-
-                                        if (filled($get('hourly_rate_override'))) {
-                                            return;
-                                        }
-
-                                        $set('hourly_rate_override', self::resolveInheritedHourlyRate($ownerId, $state, $get('currency')));
                                     }),
                                 Select::make('activity_id')
                                     ->label(__('Activity template'))
@@ -94,10 +83,6 @@ class TaskForm
 
                                         $set('title', $activity->name);
                                         $set('is_billable', $activity->is_billable);
-
-                                        if ($activity->default_hourly_rate !== null) {
-                                            $set('hourly_rate_override', $activity->default_hourly_rate);
-                                        }
                                     }),
                                 Select::make('billing_model')
                                     ->label(__('Billing model'))
@@ -105,15 +90,11 @@ class TaskForm
                                     ->default(TaskBillingModel::Hourly)
                                     ->required()
                                     ->live()
-                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
+                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
                                         $resolvedBillingModel = self::resolveTaskBillingModelValue($state);
 
                                         if ($resolvedBillingModel === TaskBillingModel::Hourly->value) {
                                             $set('fixed_price', null);
-
-                                            if (blank($get('hourly_rate_override'))) {
-                                                $set('hourly_rate_override', self::resolveInheritedHourlyRate($ownerId, $get('project_id'), $get('currency')));
-                                            }
 
                                             return;
                                         }
@@ -142,7 +123,6 @@ class TaskForm
                                     rateField: 'hourly_rate_override',
                                     rateLabel: 'Hourly rate',
                                     rateRequired: fn (Get $get): bool => self::resolveTaskBillingModelValue($get('billing_model')) === TaskBillingModel::Hourly->value,
-                                    inheritedRateResolver: fn (Get $get, mixed $currency): ?float => self::resolveInheritedHourlyRate($ownerId, $get('project_id'), $currency),
                                     rateVisible: fn (Get $get): bool => self::resolveTaskBillingModelValue($get('billing_model')) === TaskBillingModel::Hourly->value,
                                 ),
                                 TextInput::make('fixed_price')
@@ -236,21 +216,5 @@ class TaskForm
         }
 
         return (string) $value;
-    }
-
-    private static function resolveInheritedHourlyRate(?int $ownerId, mixed $projectId, mixed $currency): ?float
-    {
-        if (is_numeric($projectId)) {
-            $project = Project::query()
-                ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
-                ->with(['customer.owner'])
-                ->find((int) $projectId);
-
-            if ($project instanceof Project) {
-                return $project->effectiveHourlyRate(is_string($currency) ? $currency : null);
-            }
-        }
-
-        return Filament::auth()->user()?->defaultHourlyRateForCurrency(is_string($currency) ? $currency : null);
     }
 }

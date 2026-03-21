@@ -8,7 +8,6 @@ use App\Enums\ProjectStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\ClientContact;
-use App\Models\Customer;
 use App\Support\Filament\HourlyRateCurrencyFields;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
@@ -54,18 +53,7 @@ class ProjectForm
                                     ->required()
                                     ->searchable()
                                     ->preload()
-                                    ->live()
-                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
-                                        if (! in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)) {
-                                            return;
-                                        }
-
-                                        if (filled($get('hourly_rate'))) {
-                                            return;
-                                        }
-
-                                        $set('hourly_rate', self::resolveInheritedHourlyRate($ownerId, $state, $get('currency')));
-                                    }),
+                                    ->live(),
                                 Select::make('primary_contact_id')
                                     ->label(__('Primary Contact'))
                                     ->options(function (Get $get) use ($ownerId): array {
@@ -94,14 +82,10 @@ class ProjectForm
                                     ->default(ProjectPricingModel::Fixed)
                                     ->required()
                                     ->live()
-                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($ownerId): void {
+                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
                                         $resolvedPricingModel = self::resolvePricingModelValue($state);
 
                                         if (in_array($resolvedPricingModel, [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)) {
-                                            if (blank($get('hourly_rate'))) {
-                                                $set('hourly_rate', self::resolveInheritedHourlyRate($ownerId, $get('customer_id'), $get('currency')));
-                                            }
-
                                             return;
                                         }
 
@@ -112,7 +96,6 @@ class ProjectForm
                                     currencyField: 'currency',
                                     rateField: 'hourly_rate',
                                     rateRequired: fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true),
-                                    inheritedRateResolver: fn (Get $get, mixed $currency): ?float => self::resolveInheritedHourlyRate($ownerId, $get('customer_id'), $currency),
                                     rateVisible: fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true),
                                 ),
 
@@ -174,21 +157,5 @@ class ProjectForm
         }
 
         return (string) $value;
-    }
-
-    private static function resolveInheritedHourlyRate(?int $ownerId, mixed $customerId, mixed $currency): ?float
-    {
-        if (is_numeric($customerId)) {
-            $customer = Customer::query()
-                ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
-                ->with('owner')
-                ->find((int) $customerId);
-
-            if ($customer instanceof Customer) {
-                return $customer->effectiveHourlyRate(is_string($currency) ? $currency : null);
-            }
-        }
-
-        return Filament::auth()->user()?->defaultHourlyRateForCurrency(is_string($currency) ? $currency : null);
     }
 }

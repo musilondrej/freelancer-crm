@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -104,11 +105,11 @@ class Customer extends Model
     }
 
     /**
-     * @return HasMany<Lead, $this>
+     * @return HasOne<Lead, $this>
      */
-    public function leads(): HasMany
+    public function lead(): HasOne
     {
-        return $this->hasMany(Lead::class, 'customer_id');
+        return $this->hasOne(Lead::class, 'customer_id');
     }
 
     /**

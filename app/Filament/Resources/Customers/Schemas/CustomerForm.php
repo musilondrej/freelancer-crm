@@ -37,12 +37,14 @@ class CustomerForm
                                 Hidden::make('owner_id')
                                     ->default($ownerId),
                                 TextInput::make('name')
-                                    ->label(__('Company name'))
+                                    ->label(__('Client name'))
+                                    ->hint(__('Short name used throughout the app'))
                                     ->required()
                                     ->maxLength(255)
                                     ->columnSpanFull(),
                                 TextInput::make('legal_name')
                                     ->label(__('Legal name'))
+                                    ->hint(__('Full registered company name, used on invoices'))
                                     ->maxLength(255)
                                     ->columnSpanFull(),
                                 TextInput::make('registration_number')

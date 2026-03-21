@@ -4,7 +4,6 @@ namespace App\Filament\Resources\Customers\Tables;
 
 use App\Enums\CustomerStatus;
 use App\Models\Customer;
-use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -57,21 +56,14 @@ class CustomersTable
                     ->searchable()
                     ->sortable()
                     ->description(fn (Customer $record): ?string => $record->legal_name),
+                TextColumn::make('email')
+                    ->label(__('E-mail'))
+                    ->searchable()
+                    ->copyable(),
                 TextColumn::make('status')
                     ->label(__('Status'))
                     ->badge()
                     ->sortable(),
-                TextColumn::make('projects_count')
-                    ->label(__('Projects'))
-                    ->counts('projects')
-                    ->badge()
-                    ->color(fn (int $state): string => $state > 0 ? 'primary' : 'gray')
-                    ->sortable(),
-                TextColumn::make('email')
-                    ->label(__('E-mail'))
-                    ->searchable()
-                    ->copyable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('phone')
                     ->label(__('Phone'))
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -85,41 +77,7 @@ class CustomersTable
                         query: fn (Builder $query, string $direction): Builder => $query
                             ->orderBy('hourly_rate', $direction)
                             ->orderBy('billing_currency', $direction),
-                    )
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('leads_count')
-                    ->label(__('Leads'))
-                    ->counts('leads')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('recurring_services_count')
-                    ->label(__('Services'))
-                    ->counts('recurringServices')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('next_follow_up_at')
-                    ->label(__('Next follow-up'))
-                    ->dateTime('d.m.Y')
-                    ->sortable()
-                    ->color(function (Customer $record): string {
-                        $followUp = $record->getAttribute('next_follow_up_at');
-
-                        if (! $followUp instanceof Carbon) {
-                            return 'gray';
-                        }
-
-                        if ($followUp->isPast()) {
-                            return 'danger';
-                        }
-
-                        return $followUp->isToday() ? 'warning' : 'gray';
-                    })
-                    ->toggleable(),
-                TextColumn::make('last_contacted_at')
-                    ->label(__('Last contacted'))
-                    ->since()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ),
             ])
             ->defaultSort('name')
             ->filters([

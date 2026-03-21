@@ -6,7 +6,6 @@ use App\Enums\NavigationGroup;
 use App\Filament\Resources\Customers\Pages\CreateCustomer;
 use App\Filament\Resources\Customers\Pages\EditCustomer;
 use App\Filament\Resources\Customers\Pages\ListCustomers;
-use App\Filament\Resources\Customers\RelationManagers\LeadsRelationManager;
 use App\Filament\Resources\Customers\RelationManagers\ProjectsRelationManager;
 use App\Filament\Resources\Customers\RelationManagers\RecurringServicesRelationManager;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
@@ -63,11 +62,10 @@ class CustomerResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationGroup::make('Delivery', [
+            RelationGroup::make(__('Relations'), [
                 ProjectsRelationManager::class,
                 RecurringServicesRelationManager::class,
             ]),
-            LeadsRelationManager::class,
         ];
     }
 

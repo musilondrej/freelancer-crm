@@ -6,8 +6,8 @@ use App\Enums\NavigationGroup;
 use App\Filament\Resources\Invoices\Pages\ListInvoices;
 use App\Filament\Resources\Invoices\Tables\InvoicesTable;
 use App\Models\Invoice;
+use App\Support\Filament\FilteredByOwner;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
@@ -60,8 +60,8 @@ class InvoiceResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->with(['customer', 'project', 'items'])
-            ->when(Filament::auth()->id() !== null, fn (Builder $query): Builder => $query->where('owner_id', Filament::auth()->id()));
+        return FilteredByOwner::applyTo(
+            parent::getEloquentQuery()->with(['customer', 'project', 'items'])
+        );
     }
 }

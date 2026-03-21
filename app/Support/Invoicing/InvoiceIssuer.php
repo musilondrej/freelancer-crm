@@ -2,7 +2,6 @@
 
 namespace App\Support\Invoicing;
 
-use App\Enums\TaskBillingModel;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -199,7 +198,7 @@ class InvoiceIssuer
             return round($invoiceable->resolvedMinutes() / 60, 2);
         }
 
-        if ($invoiceable->billing_model === TaskBillingModel::Hourly) {
+        if ($invoiceable->isHourly()) {
             $trackedHours = round($invoiceable->billableTrackedMinutes() / 60, 2);
 
             if ($trackedHours > 0) {
@@ -218,7 +217,7 @@ class InvoiceIssuer
             return $invoiceable->effectiveHourlyRate();
         }
 
-        if ($invoiceable->billing_model === TaskBillingModel::Hourly) {
+        if ($invoiceable->isHourly()) {
             return $invoiceable->effectiveHourlyRate();
         }
 

@@ -8,7 +8,9 @@ use App\Enums\LeadStatus;
 use App\Enums\Priority;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Lead;
-use Filament\Facades\Filament;
+use App\Support\EnumValue;
+use App\Support\Filament\FilteredByOwner;
+use App\Support\Filament\MetadataSection;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
@@ -19,14 +21,12 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
@@ -35,7 +35,7 @@ class LeadForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
 
         return $schema
             ->components([
@@ -90,9 +90,7 @@ class LeadForm
                                     ->relationship(
                                         name: 'leadSource',
                                         titleAttribute: 'name',
-                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
-                                            ? $query->where('owner_id', $ownerId)
-                                            : $query,
+                                        modifyQueryUsing: FilteredByOwner::closure(),
                                     )
                                     ->searchable()
                                     ->preload(),
@@ -101,9 +99,7 @@ class LeadForm
                                     ->relationship(
                                         name: 'customer',
                                         titleAttribute: 'name',
-                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
-                                            ? $query->where('owner_id', $ownerId)
-                                            : $query,
+                                        modifyQueryUsing: FilteredByOwner::closure(),
                                     )
                                     ->searchable()
                                     ->preload(),
@@ -114,7 +110,7 @@ class LeadForm
                                     ->required()
                                     ->live()
                                     ->afterStateUpdated(function (mixed $state, Set $set): void {
-                                        if (in_array(self::resolveLeadStatusValue($state), [LeadStatus::Won->value, LeadStatus::Lost->value, LeadStatus::Archived->value], true)) {
+                                        if (in_array(EnumValue::from($state), [LeadStatus::Won->value, LeadStatus::Lost->value, LeadStatus::Archived->value], true)) {
                                             $set('pipeline_stage', LeadPipelineStage::Closed->value);
                                         }
                                     }),
@@ -223,16 +219,7 @@ class LeadForm
                                         return $expectedCloseDate->format('j M Y');
                                     }),
                             ]),
-                        Section::make(__('Metadata'))
-                            ->schema([
-                                TextEntry::make('created_at')
-                                    ->label(__('Created at'))
-                                    ->state(fn (?Lead $record): ?string => $record?->created_at?->diffForHumans()),
-                                TextEntry::make('updated_at')
-                                    ->label(__('Last modified at'))
-                                    ->state(fn (?Lead $record): ?string => $record?->updated_at?->diffForHumans()),
-                            ])
-                            ->hidden(fn (?Lead $record): bool => ! $record instanceof Lead),
+                        MetadataSection::make(Lead::class),
                     ])
                     ->columnSpan([
                         'lg' => 4,
@@ -242,15 +229,6 @@ class LeadForm
                 'default' => 1,
                 'lg' => 12,
             ]);
-    }
-
-    private static function resolveLeadStatusValue(mixed $value): string
-    {
-        if ($value instanceof LeadStatus) {
-            return $value->value;
-        }
-
-        return (string) $value;
     }
 
     private static function leadStatusLabel(mixed $value): string

@@ -9,9 +9,9 @@ use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
 use App\Models\RecurringService;
 use App\Models\UserSetting;
 use App\Support\CurrencyConverter;
+use App\Support\Filament\FilteredByOwner;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
-use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -30,7 +30,7 @@ class UpcomingRevenueTable extends TableWidget
     public function table(Table $table): Table
     {
         [$rangeStart, $rangeEnd] = $this->resolvedRange();
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
         $dateFormat = UserSetting::dateFormatForUser($ownerId);
 
         return $table

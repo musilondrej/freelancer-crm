@@ -3,11 +3,11 @@
 namespace App\Filament\Resources\RecurringServiceTypes\Schemas;
 
 use App\Models\RecurringServiceType;
-use Filament\Facades\Filament;
+use App\Support\Filament\FilteredByOwner;
+use App\Support\Filament\MetadataSection;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Set;
@@ -25,7 +25,7 @@ class RecurringServiceTypeForm
                         Section::make(__('Recurring service type details'))
                             ->schema([
                                 Hidden::make('owner_id')
-                                    ->default(Filament::auth()->id()),
+                                    ->default(FilteredByOwner::ownerId()),
                                 TextInput::make('name')
                                     ->label(__('Name'))
                                     ->required()
@@ -44,16 +44,7 @@ class RecurringServiceTypeForm
                     ]),
                 Group::make()
                     ->schema([
-                        Section::make(__('System'))
-                            ->schema([
-                                TextEntry::make('created_at')
-                                    ->label(__('Created at'))
-                                    ->state(fn (?RecurringServiceType $record): ?string => $record?->created_at?->diffForHumans()),
-                                TextEntry::make('updated_at')
-                                    ->label(__('Updated at'))
-                                    ->state(fn (?RecurringServiceType $record): ?string => $record?->updated_at?->diffForHumans()),
-                            ])
-                            ->hidden(fn (?RecurringServiceType $record): bool => ! $record instanceof RecurringServiceType),
+                        MetadataSection::make(RecurringServiceType::class),
                     ])
                     ->columnSpan([
                         'lg' => 4,

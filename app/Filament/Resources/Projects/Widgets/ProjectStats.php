@@ -3,14 +3,13 @@
 namespace App\Filament\Resources\Projects\Widgets;
 
 use App\Enums\Currency;
-use App\Enums\ProjectStatus;
 use App\Filament\Resources\Projects\Pages\ListProjects;
 use App\Models\Project;
 use App\Support\CurrencyConverter;
 use Filament\Widgets\Concerns\InteractsWithPageTable;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class ProjectStats extends BaseWidget
 {
@@ -29,22 +28,18 @@ class ProjectStats extends BaseWidget
     protected function getStats(): array
     {
         $query = $this->getPageTableQuery();
+        /** @var Builder<Project> $query */
         $displayCurrency = Currency::userDefault();
 
         $openProjects = (clone $query)
-            ->whereIn('status', ProjectStatus::openValues())
+            ->open()
             ->count();
 
         $projects = (clone $query)
             ->with('customer')
             ->get(['id', 'customer_id', 'currency', 'estimated_value', 'actual_value', 'estimated_hours', 'actual_hours_minutes']);
 
-        $totalBudget = (float) $projects->sum(function (Model $model) use ($displayCurrency): float {
-            if (! $model instanceof Project) {
-                return 0.0;
-            }
-
-            $project = $model;
+        $totalBudget = (float) $projects->sum(function (Project $project) use ($displayCurrency): float {
             $amount = (float) ($project->estimated_value ?? 0);
             $fromCurrency = $project->effectiveCurrency();
 

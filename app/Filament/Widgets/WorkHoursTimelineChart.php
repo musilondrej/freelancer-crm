@@ -3,8 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Models\TimeEntry;
+use App\Support\Filament\FilteredByOwner;
 use Carbon\CarbonImmutable;
-use Filament\Facades\Filament;
 use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -102,7 +102,7 @@ class WorkHoursTimelineChart extends ChartWidget
     private function seriesData(): array
     {
         [$rangeStart, $rangeEnd, $bucket] = $this->resolvedRange();
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
 
         $cacheKey = sprintf(
             'dashboard.work-hours.owner.%s.start.%s.end.%s.bucket.%s',

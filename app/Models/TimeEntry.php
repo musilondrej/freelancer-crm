@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\TaskBillingModel;
 use App\Models\Concerns\EnforcesOwner;
 use App\Support\Invoicing\InvoiceIssuer;
 use Carbon\CarbonImmutable;
@@ -109,7 +108,7 @@ class TimeEntry extends Model
                     ]);
                 }
 
-                if ($resolvedTask->billing_model !== TaskBillingModel::Hourly) {
+                if (! $resolvedTask->isHourly()) {
                     throw ValidationException::withMessages([
                         'task_id' => __('Time entries can only be added to hourly tasks.'),
                     ]);

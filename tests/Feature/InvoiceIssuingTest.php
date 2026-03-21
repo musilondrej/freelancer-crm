@@ -4,7 +4,6 @@ use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
-use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Models\Task;
@@ -36,19 +35,9 @@ it('creates one invoice with polymorphic items for records from the same custome
         'currency' => 'EUR',
     ]);
 
-    $activity = Activity::query()->create([
-        'owner_id' => $owner->id,
-        'project_id' => $project->id,
-        'name' => 'Development',
-        'default_hourly_rate' => 1800,
-        'is_billable' => true,
-        'is_active' => true,
-    ]);
-
     $fixedPriceTask = Task::query()->create([
         'owner_id' => $owner->id,
         'project_id' => $project->id,
-        'activity_id' => $activity->id,
         'title' => 'Fixed-price discovery',
         'billing_model' => TaskBillingModel::FixedPrice,
         'status' => TaskStatus::Done,
@@ -60,7 +49,6 @@ it('creates one invoice with polymorphic items for records from the same custome
     $taskForTimeEntry = Task::query()->create([
         'owner_id' => $owner->id,
         'project_id' => $project->id,
-        'activity_id' => $activity->id,
         'title' => 'Tracked implementation',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Done,
@@ -111,18 +99,9 @@ it('creates separate invoices per customer', function (): void {
         'customer_id' => $secondCustomer->id,
     ]);
 
-    $activity = Activity::query()->create([
-        'owner_id' => $owner->id,
-        'project_id' => $firstProject->id,
-        'name' => 'Shared activity',
-        'is_billable' => true,
-        'is_active' => true,
-    ]);
-
     $firstTask = Task::query()->create([
         'owner_id' => $owner->id,
         'project_id' => $firstProject->id,
-        'activity_id' => $activity->id,
         'title' => 'First customer task',
         'billing_model' => TaskBillingModel::FixedPrice,
         'status' => TaskStatus::Done,
@@ -134,7 +113,6 @@ it('creates separate invoices per customer', function (): void {
     $secondTask = Task::query()->create([
         'owner_id' => $owner->id,
         'project_id' => $secondProject->id,
-        'activity_id' => $activity->id,
         'title' => 'Second customer task',
         'billing_model' => TaskBillingModel::FixedPrice,
         'status' => TaskStatus::Done,

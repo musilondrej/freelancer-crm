@@ -10,8 +10,8 @@ use App\Filament\Resources\Leads\Pages\ListLeads;
 use App\Filament\Resources\Leads\Schemas\LeadForm;
 use App\Filament\Resources\Leads\Tables\LeadsTable;
 use App\Models\Lead;
+use App\Support\Filament\FilteredByOwner;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -66,12 +66,9 @@ class LeadResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $ownerId = Filament::auth()->id();
-
-        $count = Lead::query()
-            ->where('status', LeadStatus::New)
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
-            ->count();
+        $count = FilteredByOwner::applyTo(
+            Lead::query()->where('status', LeadStatus::New)
+        )->count();
 
         return $count > 0 ? (string) $count : null;
     }
@@ -92,21 +89,15 @@ class LeadResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $ownerId = Filament::auth()->id();
-
-        return parent::getEloquentQuery()
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+        return FilteredByOwner::applyTo(parent::getEloquentQuery());
     }
 
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        $ownerId = Filament::auth()->id();
-
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ])
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+        return FilteredByOwner::applyTo(
+            parent::getRecordRouteBindingEloquentQuery()
+                ->withoutGlobalScopes([SoftDeletingScope::class])
+        );
     }
 
     public function getTitle(): string

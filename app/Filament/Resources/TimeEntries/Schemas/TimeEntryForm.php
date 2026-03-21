@@ -7,8 +7,8 @@ use App\Enums\TaskBillingModel;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
+use App\Support\Filament\FilteredByOwner;
 use Carbon\CarbonInterface;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
@@ -24,7 +24,7 @@ class TimeEntryForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
 
         return $schema
             ->columns(12)

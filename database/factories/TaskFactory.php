@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Enums\Priority;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
-use App\Models\Activity;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -28,31 +27,12 @@ class TaskFactory extends Factory
         return [
             'project_id' => Project::factory(),
             'owner_id' => fn (array $attributes): ?int => Project::query()->find($attributes['project_id'])?->owner_id,
-            'activity_id' => fn (array $attributes): ?int => $this->resolveActivityForOwner($attributes['owner_id'] ?? null)?->id,
             'priority' => fake()->randomElement(Priority::cases()),
-            'title' => function (array $attributes): string {
-                $activityId = $attributes['activity_id'] ?? null;
-                $activity = Activity::query()->find($activityId);
-
-                if ($activity instanceof Activity) {
-                    return $activity->name;
-                }
-
-                return ucfirst(fake()->words(4, true));
-            },
+            'title' => ucfirst(fake()->words(4, true)),
             'description' => fake()->optional(0.7)->sentence(),
             'billing_model' => $billingModel,
             'status' => fake()->randomElement(TaskStatus::cases()),
-            'is_billable' => function (array $attributes): bool {
-                $activityId = $attributes['activity_id'] ?? null;
-                $activity = Activity::query()->find($activityId);
-
-                if ($activity instanceof Activity) {
-                    return $activity->is_billable;
-                }
-
-                return fake()->boolean(90);
-            },
+            'is_billable' => fake()->boolean(90),
             'track_time' => $isHourly,
             'is_invoiced' => false,
             'invoice_reference' => null,
@@ -62,13 +42,6 @@ class TaskFactory extends Factory
             'hourly_rate_override' => function (array $attributes) use ($isHourly): ?float {
                 if (! $isHourly) {
                     return null;
-                }
-
-                $activityId = $attributes['activity_id'] ?? null;
-                $activityRate = Activity::query()->find($activityId)?->default_hourly_rate;
-
-                if ($activityRate !== null) {
-                    return (float) $activityRate;
                 }
 
                 return fake()->randomFloat(2, 500, 3200);
@@ -97,19 +70,6 @@ class TaskFactory extends Factory
                 'category' => fake()->randomElement(['development', 'consulting', 'support', 'design']),
             ],
         ];
-    }
-
-    private function resolveActivityForOwner(mixed $ownerId): ?Activity
-    {
-        if (! is_numeric($ownerId)) {
-            return null;
-        }
-
-        return Activity::query()
-            ->where('owner_id', (int) $ownerId)
-            ->where('is_active', true)
-            ->inRandomOrder()
-            ->first();
     }
 
     public function hourly(): static

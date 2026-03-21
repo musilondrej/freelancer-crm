@@ -3,11 +3,11 @@
 namespace App\Filament\Resources\Tags\Schemas;
 
 use App\Models\Tag;
-use Filament\Facades\Filament;
+use App\Support\Filament\FilteredByOwner;
+use App\Support\Filament\MetadataSection;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -23,7 +23,7 @@ class TagForm
                         Section::make(__('Tag details'))
                             ->schema([
                                 Hidden::make('owner_id')
-                                    ->default(Filament::auth()->id()),
+                                    ->default(FilteredByOwner::ownerId()),
 
                                 TextInput::make('name')
                                     ->label(__('Name'))
@@ -45,16 +45,7 @@ class TagForm
                     ]),
                 Group::make()
                     ->schema([
-                        Section::make('System')
-                            ->schema([
-                                TextEntry::make('created_at')
-                                    ->label(__('Created at'))
-                                    ->state(fn (?Tag $record): ?string => $record?->created_at?->diffForHumans()),
-                                TextEntry::make('updated_at')
-                                    ->label(__('Updated at'))
-                                    ->state(fn (?Tag $record): ?string => $record?->updated_at?->diffForHumans()),
-                            ])
-                            ->hidden(fn (?Tag $record): bool => ! $record instanceof Tag),
+                        MetadataSection::make(Tag::class),
                     ])
                     ->columnSpan([
                         'lg' => 4,

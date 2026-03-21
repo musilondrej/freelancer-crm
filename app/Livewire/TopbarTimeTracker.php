@@ -3,8 +3,6 @@
 namespace App\Livewire;
 
 use App\Enums\ProjectStatus;
-use App\Enums\TaskBillingModel;
-use App\Enums\TaskStatus;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Models\Task;
@@ -517,8 +515,8 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         return Task::query()
             ->where('owner_id', $ownerId)
             ->where('project_id', (int) $projectId)
-            ->where('billing_model', TaskBillingModel::Hourly->value)
-            ->whereIn('status', TaskStatus::openValues())
+            ->hourly()
+            ->open()
             ->orderBy('title')
             ->pluck('title', 'id')
             ->all();
@@ -560,8 +558,8 @@ class TopbarTimeTracker extends Component implements HasActions, HasSchemas
         return Task::query()
             ->where('owner_id', $ownerId)
             ->where('project_id', $projectId)
-            ->where('billing_model', TaskBillingModel::Hourly->value)
-            ->whereIn('status', TaskStatus::openValues())
+            ->hourly()
+            ->open()
             ->whereKey((int) $taskId)
             ->first();
     }

@@ -2,13 +2,13 @@
 
 namespace App\Filament\Resources\Tasks\Tables;
 
-use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
 use App\Filament\Resources\Tasks\TaskResource;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\UserSetting;
 use App\Support\CurrencyConverter;
+use App\Support\Filament\FilteredByOwner;
 use App\Support\Invoicing\InvoiceIssuer;
 use App\Support\TimeDuration;
 use Carbon\CarbonImmutable;
@@ -21,7 +21,6 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -69,7 +68,7 @@ class TasksTable
 
     public static function configure(Table $table): Table
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
         $dateFormat = UserSetting::dateFormatForUser($ownerId);
         $dateTimeFormat = UserSetting::dateTimeFormatForUser($ownerId);
         $timezone = UserSetting::timezoneForUser($ownerId);
@@ -85,7 +84,6 @@ class TasksTable
             ->columns([
                 TextColumn::make('title')
                     ->label(__('Title'))
-                    ->description(fn (Task $record): ?string => $record->activity?->name)
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('project.name')
@@ -168,15 +166,18 @@ class TasksTable
                     ->preload(),
                 Filter::make('ready_to_invoice')
                     ->label(__('Ready to invoice'))
-                    ->query(fn (Builder $query): Builder => $query
-                        ->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId))
-                        ->where('is_billable', true)
-                        ->whereIn('status', TaskStatus::doneValues())
-                        ->whereDoesntHave('invoiceItems')
-                        ->where('is_invoiced', false)
-                        ->whereNull('invoice_reference')
-                        ->whereNull('invoiced_at')
-                        ->whereNotNull('completed_at')),
+                    ->query(function (Builder $query) use ($ownerId): Builder {
+                        /** @var Builder<Task> $query */
+                        return $query
+                            ->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId))
+                            ->billable()
+                            ->done()
+                            ->whereDoesntHave('invoiceItems')
+                            ->where('is_invoiced', false)
+                            ->whereNull('invoice_reference')
+                            ->whereNull('invoiced_at')
+                            ->whereNotNull('completed_at');
+                    }),
                 Filter::make('completed_range')
                     ->label(__('Completed in period'))
                     ->form([
@@ -208,7 +209,7 @@ class TasksTable
                         ->icon('heroicon-o-play-circle')
                         ->color('gray')
                         ->visible(function (Task $record): bool {
-                            if ($record->billing_model !== TaskBillingModel::Hourly) {
+                            if (! $record->isHourly()) {
                                 return false;
                             }
 

@@ -14,7 +14,6 @@ use App\Enums\RecurringServiceCadenceUnit;
 use App\Enums\RecurringServiceStatus;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
-use App\Models\Activity;
 use App\Models\ClientContact;
 use App\Models\Customer;
 use App\Models\Lead;
@@ -55,9 +54,8 @@ class FreelancerStarterSeeder extends Seeder
         $customers = $this->seedCustomers($owner);
         $contacts = $this->seedContacts($owner, $customers);
         $projects = $this->seedProjects($owner, $customers, $contacts);
-        $activities = $this->seedActivities($owner);
 
-        $this->seedProjectActivities($owner, $projects, $activities);
+        $this->seedProjectActivities($owner, $projects);
         $this->seedLeads($owner, $customers, $leadSources);
         $this->seedRecurringServices($owner, $customers, $projects);
         $this->seedTagsAndNotes($owner, $customers, $projects);
@@ -263,81 +261,15 @@ class FreelancerStarterSeeder extends Seeder
     }
 
     /**
-     * @return array<string, Activity>
-     */
-    private function seedActivities(User $owner): array
-    {
-        $definitions = [
-            'global-development' => [
-                'name' => 'Development',
-                'description' => 'Default development activity.',
-                'default_hourly_rate' => $owner->default_hourly_rate,
-                'is_billable' => true,
-                'sort_order' => 10,
-            ],
-            'global-meeting' => [
-                'name' => 'Meeting',
-                'description' => 'Client meetings and calls.',
-                'default_hourly_rate' => $owner->default_hourly_rate,
-                'is_billable' => true,
-                'sort_order' => 20,
-            ],
-            'global-admin' => [
-                'name' => 'Internal Admin',
-                'description' => 'Non-billable operations.',
-                'default_hourly_rate' => null,
-                'is_billable' => false,
-                'sort_order' => 30,
-            ],
-            'eshop-bugfix' => [
-                'name' => 'Bugfix & Support',
-                'description' => 'Bugfixing and support tasks.',
-                'default_hourly_rate' => 1500,
-                'is_billable' => true,
-                'sort_order' => 40,
-            ],
-            'landing-design' => [
-                'name' => 'Design & Implementation',
-                'description' => 'Design handoff and frontend implementation.',
-                'default_hourly_rate' => 95,
-                'is_billable' => true,
-                'sort_order' => 50,
-            ],
-        ];
-
-        $activities = [];
-
-        foreach ($definitions as $key => $definition) {
-            $activities[$key] = Activity::query()->updateOrCreate(
-                [
-                    'owner_id' => $owner->id,
-                    'name' => $definition['name'],
-                ],
-                [
-                    'description' => $definition['description'],
-                    'default_hourly_rate' => $definition['default_hourly_rate'],
-                    'is_billable' => $definition['is_billable'],
-                    'is_active' => true,
-                    'sort_order' => $definition['sort_order'],
-                ],
-            );
-        }
-
-        return $activities;
-    }
-
-    /**
      * @param  array<string, Project>  $projects
-     * @param  array<string, Activity>  $activities
      */
-    private function seedProjectActivities(User $owner, array $projects, array $activities): void
+    private function seedProjectActivities(User $owner, array $projects): void
     {
         $taskStatusCodes = $this->resolveTaskStatusCodes();
 
         $entries = [
             [
                 'project' => $projects['eshop-maintenance'],
-                'activity' => $activities['eshop-bugfix'],
                 'title' => 'Weekly maintenance batch',
                 'billing_model' => TaskBillingModel::Hourly,
                 'status' => $taskStatusCodes['done'],
@@ -352,7 +284,6 @@ class FreelancerStarterSeeder extends Seeder
             ],
             [
                 'project' => $projects['eshop-maintenance'],
-                'activity' => $activities['global-meeting'],
                 'title' => 'Sprint planning call',
                 'billing_model' => TaskBillingModel::Hourly,
                 'status' => $taskStatusCodes['done'],
@@ -367,7 +298,6 @@ class FreelancerStarterSeeder extends Seeder
             ],
             [
                 'project' => $projects['eshop-maintenance'],
-                'activity' => $activities['global-admin'],
                 'title' => 'Internal reporting',
                 'billing_model' => TaskBillingModel::Hourly,
                 'status' => $taskStatusCodes['done'],
@@ -382,7 +312,6 @@ class FreelancerStarterSeeder extends Seeder
             ],
             [
                 'project' => $projects['eshop-maintenance'],
-                'activity' => $activities['eshop-bugfix'],
                 'title' => 'Production hotfix',
                 'billing_model' => TaskBillingModel::FixedPrice,
                 'status' => $taskStatusCodes['done'],
@@ -397,7 +326,6 @@ class FreelancerStarterSeeder extends Seeder
             ],
             [
                 'project' => $projects['eshop-maintenance'],
-                'activity' => $activities['eshop-bugfix'],
                 'title' => 'API endpoint hardening',
                 'billing_model' => TaskBillingModel::Hourly,
                 'status' => $taskStatusCodes['done'],
@@ -414,7 +342,6 @@ class FreelancerStarterSeeder extends Seeder
             ],
             [
                 'project' => $projects['landing-redesign'],
-                'activity' => $activities['landing-design'],
                 'title' => 'Wireframes and UX direction',
                 'billing_model' => TaskBillingModel::FixedPrice,
                 'status' => $taskStatusCodes['planned'],
@@ -429,7 +356,6 @@ class FreelancerStarterSeeder extends Seeder
             ],
             [
                 'project' => $projects['landing-redesign'],
-                'activity' => $activities['landing-design'],
                 'title' => 'UI implementation - section A',
                 'billing_model' => TaskBillingModel::Hourly,
                 'status' => $taskStatusCodes['in_progress'],
@@ -446,7 +372,6 @@ class FreelancerStarterSeeder extends Seeder
 
         foreach ($entries as $entry) {
             $project = $entry['project'];
-            $activity = $entry['activity'];
             $startedAt = $entry['started_at'];
             $completedAt = $entry['completed_at'];
 
@@ -457,7 +382,6 @@ class FreelancerStarterSeeder extends Seeder
                     'title' => $entry['title'],
                 ],
                 [
-                    'activity_id' => $activity?->id,
                     'description' => null,
                     'billing_model' => $entry['billing_model'],
                     'status' => $entry['status'],

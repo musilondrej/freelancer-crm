@@ -9,8 +9,8 @@ use App\Filament\Resources\TimeEntries\Pages\ListTimeEntries;
 use App\Filament\Resources\TimeEntries\Schemas\TimeEntryForm;
 use App\Filament\Resources\TimeEntries\Tables\TimeEntriesTable;
 use App\Models\TimeEntry;
+use App\Support\Filament\FilteredByOwner;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -72,17 +72,17 @@ class TimeEntryResource extends Resource
 
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ])
-            ->when(Filament::auth()->id() !== null, fn (Builder $query): Builder => $query->where('owner_id', Filament::auth()->id()));
+        return FilteredByOwner::applyTo(
+            parent::getRecordRouteBindingEloquentQuery()
+                ->withoutGlobalScopes([SoftDeletingScope::class])
+        );
     }
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->with(['project.customer', 'project.owner', 'task.project.customer', 'task.owner', 'owner'])
-            ->when(Filament::auth()->id() !== null, fn (Builder $query): Builder => $query->where('owner_id', Filament::auth()->id()));
+        return FilteredByOwner::applyTo(
+            parent::getEloquentQuery()
+                ->with(['project.customer', 'project.owner', 'task.project.customer', 'task.owner', 'owner'])
+        );
     }
 }

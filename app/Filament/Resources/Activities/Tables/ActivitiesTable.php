@@ -23,12 +23,6 @@ class ActivitiesTable
                     ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('default_hourly_rate')
-                    ->label(__('Default hourly rate'))
-                    ->numeric(decimalPlaces: 2)
-                    ->placeholder('-')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_billable')
                     ->boolean()
                     ->label(__('Is billable'))

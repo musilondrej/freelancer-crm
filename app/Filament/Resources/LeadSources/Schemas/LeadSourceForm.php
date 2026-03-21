@@ -3,11 +3,11 @@
 namespace App\Filament\Resources\LeadSources\Schemas;
 
 use App\Models\LeadSource;
-use Filament\Facades\Filament;
+use App\Support\Filament\FilteredByOwner;
+use App\Support\Filament\MetadataSection;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Set;
@@ -25,7 +25,7 @@ class LeadSourceForm
                         Section::make(__('Lead source details'))
                             ->schema([
                                 Hidden::make('owner_id')
-                                    ->default(Filament::auth()->id()),
+                                    ->default(FilteredByOwner::ownerId()),
                                 TextInput::make('name')
                                     ->label(__('Name'))
                                     ->required()
@@ -50,16 +50,7 @@ class LeadSourceForm
                     ]),
                 Group::make()
                     ->schema([
-                        Section::make(__('System'))
-                            ->schema([
-                                TextEntry::make('created_at')
-                                    ->label(__('Created at'))
-                                    ->state(fn (?LeadSource $record): ?string => $record?->created_at?->diffForHumans()),
-                                TextEntry::make('updated_at')
-                                    ->label(__('Updated at'))
-                                    ->state(fn (?LeadSource $record): ?string => $record?->updated_at?->diffForHumans()),
-                            ])
-                            ->hidden(fn (?LeadSource $record): bool => ! $record instanceof LeadSource),
+                        MetadataSection::make(LeadSource::class),
                     ])
                     ->columnSpan([
                         'lg' => 4,

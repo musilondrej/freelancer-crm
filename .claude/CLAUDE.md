@@ -28,8 +28,6 @@ vendor/bin/sail composer run test:type-coverage           # Pest type coverage (
 - **Customer** → has many **Projects** → has many **Worklogs** (DB table: `project_activities`)
 - **Customer** → has many **ClientContacts**, **RecurringServices**
 - **Lead** → has **LeadSource**, tracks pipeline stages and estimated value
-- **Activity** = category/type applied to worklogs (has default billable flag and hourly rate)
-- **BacklogItem** → convertible to Worklog via `convertToWorklog()`
 - **Note** and **Tag** are polymorphic (morphable to multiple entities)
 - **UserSetting** stores JSON preferences (time tracking rounding, UI locale/timezone/formats)
 
@@ -43,10 +41,6 @@ Rates and currency cascade: **Worklog → Project → Customer → User defaults
 - `Project::effectiveHourlyRate()`, `Project::effectiveCurrency()`
 - `Worklog::effectiveUnitRate()` — depends on type (Hourly vs OneTime)
 - FX rates and symbols in `config/crm.php`
-
-### Custom Status Workflows
-
-Projects and Worklogs have per-user customizable statuses (`ProjectStatusOption`, `ProjectActivityStatusOption`). These are cached, enforce single-default rules, and cascade code renames to related records.
 
 ### Filament Resource Structure
 

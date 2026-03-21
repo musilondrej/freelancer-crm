@@ -6,7 +6,6 @@ use App\Enums\ProjectPricingModel;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
 use App\Models\Customer;
-use App\Models\Invoice;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
@@ -298,9 +297,7 @@ it('marks a ready task as invoiced with a shared invoice reference', function ()
     expect($task->isInvoiced())->toBeTrue()
         ->and($task->isReadyToInvoice())->toBeFalse()
         ->and($task->resolvedInvoiceReference())->toBe('INV-2026-003')
-        ->and($task->resolvedInvoicedAt()?->toDateTimeString())->toBe($invoiceDate->toDateTimeString())
-        ->and($task->currentInvoiceItem)->not->toBeNull()
-        ->and($task->currentInvoiceItem?->invoice)->toBeInstanceOf(Invoice::class);
+        ->and($task->resolvedInvoicedAt()?->toDateTimeString())->toBe($invoiceDate->toDateTimeString());
 });
 
 it('normalizes blank invoice references when marking a task as invoiced', function (): void {

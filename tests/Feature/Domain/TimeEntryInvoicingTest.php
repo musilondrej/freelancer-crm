@@ -5,7 +5,6 @@ use App\Enums\ProjectPricingModel;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
 use App\Models\Customer;
-use App\Models\Invoice;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
@@ -191,9 +190,7 @@ it('marks a finished billable time entry as invoiced', function (): void {
     expect($timeEntry->isInvoiced())->toBeTrue()
         ->and($timeEntry->isReadyToInvoice())->toBeFalse()
         ->and($timeEntry->resolvedInvoiceReference())->toBe('INV-2026-003')
-        ->and($timeEntry->resolvedInvoicedAt()?->toDateTimeString())->toBe($invoiceDate->toDateTimeString())
-        ->and($timeEntry->currentInvoiceItem)->not->toBeNull()
-        ->and($timeEntry->currentInvoiceItem?->invoice)->toBeInstanceOf(Invoice::class);
+        ->and($timeEntry->resolvedInvoicedAt()?->toDateTimeString())->toBe($invoiceDate->toDateTimeString());
 });
 
 it('requires invoice reference when marking time entries as invoiced', function (): void {
@@ -208,7 +205,7 @@ it('requires invoice reference when marking time entries as invoiced', function 
     ]);
 
     expect(fn () => $timeEntry->markAsInvoiced('   '))
-        ->toThrow(InvalidArgumentException::class, 'Invoice reference is required for time entry invoicing.');
+        ->toThrow(ValidationException::class);
 
     $timeEntry->refresh();
 

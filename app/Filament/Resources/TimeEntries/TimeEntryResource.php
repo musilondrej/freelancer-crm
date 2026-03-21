@@ -27,13 +27,13 @@ class TimeEntryResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = NavigationGroup::Reports;
 
-    protected static ?int $navigationSort = 11;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'started_at';
 
     public static function getNavigationLabel(): string
     {
-        return __('Reporting timesheets');
+        return __('Time entries');
     }
 
     public static function getModelLabel(): string

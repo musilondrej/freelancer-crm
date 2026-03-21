@@ -8,7 +8,6 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Support\Filament\FilteredByOwner;
-use Carbon\CarbonInterface;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
@@ -105,20 +104,10 @@ class TimeEntryForm
                                     ->label(__('Tracked minutes'))
                                     ->readOnly()
                                     ->numeric()
-                                    ->state(function (?TimeEntry $record): ?float {
-                                        if (! $record instanceof TimeEntry) {
-                                            return null;
-                                        }
-
-                                        $rawStartedAt = $record->getAttribute('started_at');
-                                        $rawEndedAt = $record->getAttribute('ended_at');
-
-                                        if (! $rawStartedAt instanceof CarbonInterface || ! $rawEndedAt instanceof CarbonInterface) {
-                                            return null;
-                                        }
-
-                                        return $rawStartedAt->diffInMinutes($rawEndedAt);
-                                    })
+                                    ->formatStateUsing(fn (mixed $_state, ?TimeEntry $record): ?int => $record instanceof TimeEntry
+                                        ? ($record->resolvedMinutes() ?: null)
+                                        : null
+                                    )
                                     ->suffix(__('min'))
                                     ->minValue(0),
                             ]),

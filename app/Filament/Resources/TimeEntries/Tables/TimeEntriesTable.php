@@ -4,7 +4,6 @@ namespace App\Filament\Resources\TimeEntries\Tables;
 
 use App\Models\TimeEntry;
 use App\Support\CurrencyConverter;
-use App\Support\Invoicing\InvoiceIssuer;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -32,7 +31,7 @@ class TimeEntriesTable
             ->label(__('Invoice selected'))
             ->icon('heroicon-o-banknotes')
             ->color('info')
-            ->form([
+            ->schema([
                 TextInput::make('invoice_reference')
                     ->label(__('Invoice reference'))
                     ->required()
@@ -78,13 +77,18 @@ class TimeEntriesTable
                     return;
                 }
 
-                resolve(InvoiceIssuer::class)->issue(
-                    $readyRecords->all(),
-                    $data['invoice_reference'] ?? null,
-                    $data['invoiced_at'] ?? null,
-                );
+                foreach ($readyRecords as $record) {
+                    if (! $record instanceof TimeEntry) {
+                        continue;
+                    }
+
+                    $record->markAsInvoiced(
+                        $data['invoice_reference'] ?? null,
+                        $data['invoiced_at'] ?? null,
+                    );
+                }
             })
-            ->successNotificationTitle(__('Selected time entries assigned to invoice'))
+            ->successNotificationTitle(__('Selected time entries marked as invoiced'))
             ->failureNotificationTitle(function (int $successCount, int $totalCount): string {
                 if ($successCount > 0) {
                     return __(':count of :total selected time entries were assigned to an invoice.', [
@@ -134,11 +138,7 @@ class TimeEntriesTable
                         return __('N/A');
                     }
 
-                    $currency = $record->task?->effectiveCurrency()
-                        ?? $record->project?->effectiveCurrency()
-                        ?? 'CZK';
-
-                    return CurrencyConverter::format($rate, $currency, 2);
+                    return CurrencyConverter::format($rate, $record->effectiveCurrency() ?? 'CZK', 2);
                 })
                 ->toggleable(),
             TextColumn::make('amount')
@@ -150,22 +150,25 @@ class TimeEntriesTable
                         return __('N/A');
                     }
 
-                    $currency = $record->task?->effectiveCurrency()
-                        ?? $record->project?->effectiveCurrency()
-                        ?? 'CZK';
-
-                    return CurrencyConverter::format($amount, $currency, 2);
+                    return CurrencyConverter::format($amount, $record->effectiveCurrency() ?? 'CZK', 2);
                 })
                 ->toggleable(),
-
         ];
     }
 
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('currentInvoiceItem.invoice'))
             ->columns([
+                IconColumn::make('is_locked')
+                    ->label('')
+                    ->state(fn (TimeEntry $record): bool => $record->isLocked())
+                    ->boolean()
+                    ->trueIcon('heroicon-m-lock-closed')
+                    ->falseIcon('')
+                    ->trueColor('warning')
+                    ->falseColor('gray')
+                    ->tooltip(fn (TimeEntry $record): ?string => $record->isLocked() ? __('Locked') : null),
                 TextColumn::make('task.title')
                     ->label(__('Task'))
                     ->placeholder(__('No task'))
@@ -178,6 +181,11 @@ class TimeEntriesTable
 
                 ...self::relationColumns(),
             ])
+            ->recordClasses(fn (TimeEntry $record): ?string => match (true) {
+                $record->isLocked() => 'bg-yellow-50',
+                $record->isInvoiced() => 'bg-green-50',
+                default => null,
+            })
             ->filters([
                 Filter::make('running')
                     ->label(__('Running'))
@@ -188,11 +196,13 @@ class TimeEntriesTable
                 Filter::make('invoiced')
                     ->label(__('Invoiced'))
                     ->query(fn (Builder $query): Builder => $query->where(function (Builder $builder): void {
-                        $builder->whereHas('invoiceItems')
-                            ->orWhere('is_invoiced', true)
+                        $builder->where('is_invoiced', true)
                             ->orWhere('invoice_reference', '<>', '')
                             ->orWhereNotNull('invoiced_at');
                     })),
+                Filter::make('locked')
+                    ->label(__('Locked'))
+                    ->query(fn ($query) => $query->locked()),
                 TrashedFilter::make(),
             ])
             ->groups([
@@ -206,7 +216,7 @@ class TimeEntriesTable
             ])
             ->recordActions([
                 Action::make('mark_invoiced')
-                    ->label(__('Mark invoiced'))
+                    ->label(__('Mark as invoiced'))
                     ->icon('heroicon-o-document-text')
                     ->visible(fn (TimeEntry $record): bool => $record->isReadyToInvoice())
                     ->schema([
@@ -234,7 +244,8 @@ class TimeEntriesTable
                             ->title(__('Time entry marked as invoiced'))
                             ->send();
                     }),
-                EditAction::make(),
+                EditAction::make()
+                    ->visible(fn (TimeEntry $record): bool => ! $record->isLocked()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

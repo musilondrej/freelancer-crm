@@ -33,17 +33,6 @@ class RecurringServiceTypeForm
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn (?string $state, Set $set): mixed => $set('slug', Str::slug((string) $state)))
                                     ->columnSpanFull(),
-                                TextInput::make('slug')
-                                    ->label(__('Slug'))
-                                    ->required()
-                                    ->maxLength(255)
-                                    ->scopedUnique(RecurringServiceType::class, 'slug', ignoreRecord: true)
-                                    ->columnSpanFull(),
-                                TextInput::make('sort_order')
-                                    ->label(__('Sort order'))
-                                    ->numeric()
-                                    ->default(10)
-                                    ->required(),
                                 Toggle::make('is_active')
                                     ->label(__('Is active'))
                                     ->default(true),

@@ -137,11 +137,6 @@ class TasksTable
                     ->state(fn (Task $record): ?string => TimeDuration::format($record->estimated_minutes))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('completed_at')
-                    ->label(__('Completed at'))
-                    ->dateTime($dateTimeFormat, timezone: $timezone)
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('due_date')
                     ->label(__('Due date'))
                     ->date($dateFormat)

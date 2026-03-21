@@ -10,9 +10,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Str;
 
 class TagForm
 {
@@ -26,23 +24,14 @@ class TagForm
                             ->schema([
                                 Hidden::make('owner_id')
                                     ->default(Filament::auth()->id()),
+
                                 TextInput::make('name')
                                     ->label(__('Name'))
                                     ->required()
                                     ->maxLength(255)
                                     ->live(onBlur: true)
-                                    ->afterStateUpdated(fn (?string $state, Set $set): mixed => $set('slug', Str::slug((string) $state)))
                                     ->columnSpanFull(),
-                                TextInput::make('slug')
-                                    ->label(__('Slug'))
-                                    ->required()
-                                    ->maxLength(255)
-                                    ->unique(Tag::class, 'slug', ignoreRecord: true)
-                                    ->columnSpanFull(),
-                            ])
-                            ->columns(1),
-                        Section::make(__('Appearance'))
-                            ->schema([
+
                                 ColorPicker::make('color')
                                     ->label(__('Color'))
                                     ->required()

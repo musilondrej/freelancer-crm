@@ -8,8 +8,8 @@ use App\Filament\Resources\Notes\Pages\ListNotes;
 use App\Filament\Resources\Notes\Schemas\NoteForm;
 use App\Filament\Resources\Notes\Tables\NotesTable;
 use App\Models\Note;
+use App\Support\Filament\FilteredByOwner;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -58,20 +58,14 @@ class NoteResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $ownerId = Filament::auth()->id();
-
-        return parent::getEloquentQuery()
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+        return FilteredByOwner::applyTo(parent::getEloquentQuery());
     }
 
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        $ownerId = Filament::auth()->id();
-
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ])
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+        return FilteredByOwner::applyTo(
+            parent::getRecordRouteBindingEloquentQuery()
+                ->withoutGlobalScopes([SoftDeletingScope::class])
+        );
     }
 }

@@ -4,7 +4,6 @@ use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
-use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Project;
@@ -36,18 +35,9 @@ function buildTimeEntryContext(): array
         'pricing_model' => ProjectPricingModel::Hourly,
     ]);
 
-    $activity = Activity::query()->create([
-        'owner_id' => $owner->id,
-        'project_id' => $project->id,
-        'name' => 'Implementation',
-        'is_billable' => true,
-        'is_active' => true,
-    ]);
-
     $task = Task::query()->create([
         'owner_id' => $owner->id,
         'project_id' => $project->id,
-        'activity_id' => $activity->id,
         'title' => 'Build reporting endpoint',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Done,

@@ -147,7 +147,10 @@ final class UserSettingPreferences
             return $fallback;
         }
 
-        if (! in_array($timezone, timezone_identifiers_list(), true)) {
+        static $identifiers = null;
+        $identifiers ??= timezone_identifiers_list();
+
+        if (! in_array($timezone, $identifiers, true)) {
             return $fallback;
         }
 

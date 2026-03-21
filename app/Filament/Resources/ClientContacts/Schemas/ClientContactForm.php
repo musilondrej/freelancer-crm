@@ -3,27 +3,26 @@
 namespace App\Filament\Resources\ClientContacts\Schemas;
 
 use App\Models\ClientContact;
-use Filament\Facades\Filament;
+use App\Support\Filament\FilteredByOwner;
+use App\Support\Filament\MetadataSection;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Database\Eloquent\Builder;
 
 class ClientContactForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
 
         return $schema
             ->components([
@@ -43,9 +42,7 @@ class ClientContactForm
                                                     ->relationship(
                                                         name: 'customer',
                                                         titleAttribute: 'name',
-                                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
-                                                            ? $query->where('owner_id', $ownerId)
-                                                            : $query,
+                                                        modifyQueryUsing: FilteredByOwner::closure(),
                                                     )
                                                     ->required()
                                                     ->searchable()
@@ -85,16 +82,7 @@ class ClientContactForm
                     ]),
                 Group::make()
                     ->schema([
-                        Section::make('System')
-                            ->schema([
-                                TextEntry::make('created_at')
-                                    ->label(__('Created at'))
-                                    ->state(fn (?ClientContact $record): ?string => $record?->created_at?->diffForHumans()),
-                                TextEntry::make('updated_at')
-                                    ->label(__('Updated at'))
-                                    ->state(fn (?ClientContact $record): ?string => $record?->updated_at?->diffForHumans()),
-                            ])
-                            ->hidden(fn (?ClientContact $record): bool => ! $record instanceof ClientContact),
+                        MetadataSection::make(ClientContact::class),
                         Section::make('Technical Metadata')
                             ->schema([
                                 KeyValue::make('meta')

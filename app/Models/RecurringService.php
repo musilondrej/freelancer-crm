@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use App\Enums\Currency;
 use App\Enums\RecurringServiceBillingModel;
 use App\Enums\RecurringServiceCadenceUnit;
 use App\Enums\RecurringServiceStatus;
 use App\Models\Concerns\EnforcesOwner;
+use App\Models\Concerns\FormatsHourlyRate;
 use Carbon\CarbonImmutable;
 use Database\Factories\RecurringServiceFactory;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,6 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class RecurringService extends Model
 {
     use EnforcesOwner;
+    use FormatsHourlyRate;
 
     /** @use HasFactory<RecurringServiceFactory> */
     use HasFactory;
@@ -139,38 +139,11 @@ class RecurringService extends Model
     }
 
     /**
-     * @return MorphMany<Note, $this>
-     */
-    public function quickNotes(): MorphMany
-    {
-        return $this->morphMany(Note::class, 'noteable');
-    }
-
-    /**
      * @return MorphToMany<Tag, $this>
      */
     public function tags(): MorphToMany
     {
         return $this->morphToMany(Tag::class, 'taggable');
-    }
-
-    protected function hourlyRateWithCurrency(): Attribute
-    {
-        return Attribute::make(
-            get: function (mixed $value, array $attributes): ?string {
-                $hourlyRate = $attributes['hourly_rate'] ?? null;
-
-                if ($hourlyRate === null) {
-                    return null;
-                }
-
-                $currency = Currency::tryFrom((string) ($attributes['currency'] ?? ''));
-
-                return $currency !== null
-                    ? $currency->formatWithCode((float) $hourlyRate)
-                    : Currency::userDefault()->formatWithCode((float) $hourlyRate);
-            },
-        );
     }
 
     public function effectiveCurrency(): ?string

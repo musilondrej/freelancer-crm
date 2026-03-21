@@ -2,16 +2,18 @@
 
 namespace App\Filament\Resources\Tasks\Schemas;
 
+use App\Actions\ResolveInheritedFinancials;
 use App\Enums\Currency;
 use App\Enums\Priority;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
-use App\Models\Activity;
+use App\Models\Task;
+use App\Support\EnumValue;
+use App\Support\Filament\FilteredByOwner;
 use App\Support\Filament\HourlyRateCurrencyFields;
 use App\Support\TimeDuration;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
@@ -23,17 +25,15 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use Illuminate\Database\Eloquent\Builder;
 
 class TaskForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
+        $financials = new ResolveInheritedFinancials($ownerId);
         $requestedProjectId = request()->query('project_id');
-        $requestedActivityId = request()->query('activity_id');
         $defaultProjectId = is_numeric($requestedProjectId) ? (int) $requestedProjectId : null;
-        $defaultActivityId = is_numeric($requestedActivityId) ? (int) $requestedActivityId : null;
 
         return $schema
             ->components([
@@ -48,40 +48,21 @@ class TaskForm
                                     ->relationship(
                                         name: 'project',
                                         titleAttribute: 'name',
-                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
-                                            ? $query->where('owner_id', $ownerId)
-                                            : $query,
+                                        modifyQueryUsing: FilteredByOwner::closure(),
                                     )
                                     ->default($defaultProjectId)
                                     ->required()
                                     ->searchable()
                                     ->preload()
                                     ->live()
-                                    ->afterStateUpdated(function (Set $set): void {
-                                        $set('activity_id', null);
-                                    }),
-                                Select::make('activity_id')
-                                    ->label(__('Activity template'))
-                                    ->default($defaultActivityId)
-                                    ->required()
-                                    ->options(fn (Get $get): array => self::activityOptions($ownerId, $get('project_id')))
-                                    ->searchable()
-                                    ->preload()
-                                    ->disabled(fn (Get $get): bool => ! is_numeric($get('project_id')))
-                                    ->live()
-                                    ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                        if (! is_numeric($state)) {
+                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($financials): void {
+                                        if (! (bool) $get('use_custom_financials')) {
                                             return;
                                         }
 
-                                        $activity = Activity::query()->find((int) $state);
-
-                                        if (! $activity instanceof Activity) {
-                                            return;
-                                        }
-
-                                        $set('title', $activity->name);
-                                        $set('is_billable', $activity->is_billable);
+                                        $defaults = $financials->fromProject($state);
+                                        $set('currency', $defaults->currency);
+                                        $set('hourly_rate_override', $defaults->hourlyRate);
                                     }),
                                 Select::make('billing_model')
                                     ->label(__('Billing model'))
@@ -90,7 +71,7 @@ class TaskForm
                                     ->required()
                                     ->live()
                                     ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                        $resolvedBillingModel = self::resolveTaskBillingModelValue($state);
+                                        $resolvedBillingModel = EnumValue::from($state);
 
                                         if ($resolvedBillingModel === TaskBillingModel::Hourly->value) {
                                             $set('fixed_price', null);
@@ -106,7 +87,6 @@ class TaskForm
                                     ->label(__('Title'))
                                     ->required()
                                     ->maxLength(255)
-                                    ->readOnly(fn (Get $get): bool => is_numeric($get('activity_id')))
                                     ->columnSpanFull(),
                                 Textarea::make('description')
                                     ->label(__('Description'))
@@ -117,19 +97,55 @@ class TaskForm
 
                         Section::make(__('Billing details'))
                             ->schema([
+                                Toggle::make('use_custom_financials')
+                                    ->label(__('Use custom currency and hourly rate for this task'))
+                                    ->default(fn (?Task $record): bool => $record instanceof Task && ($record->currency !== null || $record->hourly_rate_override !== null))
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->afterStateHydrated(function (Set $set, mixed $state): void {
+                                        if ((bool) $state) {
+                                            return;
+                                        }
+
+                                        $set('currency', null);
+                                        $set('hourly_rate_override', null);
+                                    })
+                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($financials): void {
+                                        if (! (bool) $state) {
+                                            $set('currency', null);
+                                            $set('hourly_rate_override', null);
+
+                                            return;
+                                        }
+
+                                        $defaults = $financials->fromProject($get('project_id'));
+
+                                        if (blank($get('currency'))) {
+                                            $set('currency', $defaults->currency);
+                                        }
+
+                                        if (blank($get('hourly_rate_override'))) {
+                                            $set('hourly_rate_override', $defaults->hourlyRate);
+                                        }
+                                    })
+                                    ->helperText(__('When turned off, currency and hourly rate are inherited automatically from the project.')),
                                 ...HourlyRateCurrencyFields::make(
                                     currencyField: 'currency',
                                     rateField: 'hourly_rate_override',
                                     rateLabel: 'Hourly rate',
-                                    rateRequired: fn (Get $get): bool => self::resolveTaskBillingModelValue($get('billing_model')) === TaskBillingModel::Hourly->value,
-                                    rateVisible: fn (Get $get): bool => self::resolveTaskBillingModelValue($get('billing_model')) === TaskBillingModel::Hourly->value,
+                                    currencyRequired: fn (Get $get): bool => (bool) $get('use_custom_financials'),
+                                    rateRequired: fn (Get $get): bool => (bool) $get('use_custom_financials')
+                                        && EnumValue::from($get('billing_model')) === TaskBillingModel::Hourly->value,
+                                    currencyVisible: fn (Get $get): bool => (bool) $get('use_custom_financials'),
+                                    rateVisible: fn (Get $get): bool => (bool) $get('use_custom_financials')
+                                        && EnumValue::from($get('billing_model')) === TaskBillingModel::Hourly->value,
                                 ),
                                 TextInput::make('fixed_price')
                                     ->label(__('Fixed price'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
-                                    ->visible(fn (Get $get): bool => self::resolveTaskBillingModelValue($get('billing_model')) === TaskBillingModel::FixedPrice->value),
+                                    ->visible(fn (Get $get): bool => EnumValue::from($get('billing_model')) === TaskBillingModel::FixedPrice->value),
                                 Toggle::make('is_billable')
                                     ->label(__('Is billable'))
                                     ->default(true),
@@ -187,32 +203,5 @@ class TaskForm
                 'default' => 1,
                 'lg' => 12,
             ]);
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private static function activityOptions(?int $ownerId, mixed $projectId): array
-    {
-        if ($ownerId === null || ! is_numeric($projectId)) {
-            return [];
-        }
-
-        return Activity::query()
-            ->where('owner_id', $ownerId)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
-    }
-
-    private static function resolveTaskBillingModelValue(mixed $value): string
-    {
-        if ($value instanceof TaskBillingModel) {
-            return $value->value;
-        }
-
-        return (string) $value;
     }
 }

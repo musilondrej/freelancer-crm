@@ -8,7 +8,8 @@ use App\Enums\RecurringServiceCadenceUnit;
 use App\Enums\RecurringServiceStatus;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\RecurringServiceType as RecurringServiceTypeModel;
-use Filament\Facades\Filament;
+use App\Support\EnumValue;
+use App\Support\Filament\FilteredByOwner;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -28,7 +29,7 @@ class RecurringServiceForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
 
         return $schema
             ->components([
@@ -47,9 +48,7 @@ class RecurringServiceForm
                                     ->relationship(
                                         name: 'customer',
                                         titleAttribute: 'name',
-                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
-                                            ? $query->where('owner_id', $ownerId)
-                                            : $query,
+                                        modifyQueryUsing: FilteredByOwner::closure(),
                                     )
                                     ->searchable()
                                     ->preload(),
@@ -58,9 +57,7 @@ class RecurringServiceForm
                                     ->relationship(
                                         name: 'project',
                                         titleAttribute: 'name',
-                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
-                                            ? $query->where('owner_id', $ownerId)
-                                            : $query,
+                                        modifyQueryUsing: FilteredByOwner::closure(),
                                     )
                                     ->searchable()
                                     ->preload(),
@@ -92,7 +89,7 @@ class RecurringServiceForm
                                             ->default(true),
                                     ])
                                     ->createOptionUsing(function (array $data) use ($ownerId): int {
-                                        $resolvedOwnerId = (int) ($ownerId ?? Filament::auth()->id());
+                                        $resolvedOwnerId = (int) ($ownerId ?? FilteredByOwner::ownerId());
 
                                         $serviceType = RecurringServiceTypeModel::query()->firstOrCreate(
                                             [
@@ -187,17 +184,17 @@ class RecurringServiceForm
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
-                                    ->visible(fn (Get $get): bool => self::resolveBillingModelValue($get('billing_model')) === RecurringServiceBillingModel::Fixed->value),
+                                    ->visible(fn (Get $get): bool => EnumValue::from($get('billing_model')) === RecurringServiceBillingModel::Fixed->value),
                                 TextInput::make('hourly_rate')
                                     ->label(__('Hourly rate'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
-                                    ->visible(fn (Get $get): bool => self::resolveBillingModelValue($get('billing_model')) === RecurringServiceBillingModel::Hourly->value),
+                                    ->visible(fn (Get $get): bool => EnumValue::from($get('billing_model')) === RecurringServiceBillingModel::Hourly->value),
                                 TextInput::make('included_quantity')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->visible(fn (Get $get): bool => self::resolveBillingModelValue($get('billing_model')) === RecurringServiceBillingModel::Hourly->value),
+                                    ->visible(fn (Get $get): bool => EnumValue::from($get('billing_model')) === RecurringServiceBillingModel::Hourly->value),
                             ]),
                     ])
                     ->columnSpan([
@@ -208,14 +205,5 @@ class RecurringServiceForm
                 'default' => 1,
                 'lg' => 12,
             ]);
-    }
-
-    private static function resolveBillingModelValue(mixed $value): string
-    {
-        if ($value instanceof RecurringServiceBillingModel) {
-            return $value->value;
-        }
-
-        return (string) $value;
     }
 }

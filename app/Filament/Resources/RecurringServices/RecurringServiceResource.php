@@ -10,8 +10,8 @@ use App\Filament\Resources\RecurringServices\Pages\ListRecurringServices;
 use App\Filament\Resources\RecurringServices\Schemas\RecurringServiceForm;
 use App\Filament\Resources\RecurringServices\Tables\RecurringServicesTable;
 use App\Models\RecurringService;
+use App\Support\Filament\FilteredByOwner;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -66,17 +66,16 @@ class RecurringServiceResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $ownerId = Filament::auth()->id();
         $today = today()->toDateString();
         $expiresUntil = today()->addDays(self::EXPIRING_SOON_DAYS)->toDateString();
 
-        $count = RecurringService::query()
-            ->where('status', RecurringServiceStatus::Active)
-            ->whereNotNull('ends_on')
-            ->whereDate('ends_on', '>=', $today)
-            ->whereDate('ends_on', '<=', $expiresUntil)
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
-            ->count();
+        $count = FilteredByOwner::applyTo(
+            RecurringService::query()
+                ->where('status', RecurringServiceStatus::Active)
+                ->whereNotNull('ends_on')
+                ->whereDate('ends_on', '>=', $today)
+                ->whereDate('ends_on', '<=', $expiresUntil)
+        )->count();
 
         return $count > 0 ? (string) $count : null;
     }
@@ -104,21 +103,16 @@ class RecurringServiceResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $ownerId = Filament::auth()->id();
-
-        return parent::getEloquentQuery()
-            ->with(['serviceType'])
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+        return FilteredByOwner::applyTo(
+            parent::getEloquentQuery()->with(['serviceType'])
+        );
     }
 
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        $ownerId = Filament::auth()->id();
-
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ])
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+        return FilteredByOwner::applyTo(
+            parent::getRecordRouteBindingEloquentQuery()
+                ->withoutGlobalScopes([SoftDeletingScope::class])
+        );
     }
 }

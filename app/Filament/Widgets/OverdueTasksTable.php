@@ -2,10 +2,9 @@
 
 namespace App\Filament\Widgets;
 
-use App\Enums\TaskStatus;
 use App\Models\Task;
 use App\Models\UserSetting;
-use Filament\Facades\Filament;
+use App\Support\Filament\FilteredByOwner;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -19,14 +18,14 @@ class OverdueTasksTable extends TableWidget
 
     public function table(Table $table): Table
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
         $dateFormat = UserSetting::dateFormatForUser($ownerId);
 
         return $table
             ->query(fn (): Builder => Task::query()
                 ->whereNotNull('due_date')
                 ->whereDate('due_date', '<', today())
-                ->whereIn('status', TaskStatus::openValues())
+                ->open()
                 ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
                 ->with(['project:id,name']))
             ->heading(__('Overdue tasks'))

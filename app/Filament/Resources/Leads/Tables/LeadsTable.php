@@ -7,12 +7,12 @@ use App\Enums\LeadStatus;
 use App\Enums\Priority;
 use App\Models\Lead;
 use App\Models\UserSetting;
+use App\Support\Filament\FilteredByOwner;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -58,7 +58,7 @@ class LeadsTable
 
     public static function configure(Table $table): Table
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
         $dateFormat = UserSetting::dateFormatForUser($ownerId);
 
         return $table

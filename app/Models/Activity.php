@@ -9,7 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class Activity extends Model
 {
     use EnforcesOwner;
@@ -26,7 +31,6 @@ class Activity extends Model
         'owner_id',
         'name',
         'description',
-        'default_hourly_rate',
         'is_billable',
         'is_active',
         'sort_order',
@@ -39,7 +43,6 @@ class Activity extends Model
     protected function casts(): array
     {
         return [
-            'default_hourly_rate' => 'decimal:2',
             'is_billable' => 'boolean',
             'is_active' => 'boolean',
             'sort_order' => 'integer',

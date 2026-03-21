@@ -6,6 +6,7 @@ use App\Enums\Priority;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
 use App\Models\Concerns\EnforcesOwner;
+use App\Support\EnumValue;
 use App\Support\Invoicing\InvoiceIssuer;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -50,7 +51,6 @@ class Task extends Model
     protected $fillable = [
         'owner_id',
         'project_id',
-        'activity_id',
         'title',
         'description',
         'billing_model',
@@ -101,7 +101,7 @@ class Task extends Model
                 $task->priority = Priority::Normal;
             }
 
-            $resolvedBillingModel = $task->resolvedBillingModelValue();
+            $resolvedBillingModel = EnumValue::from($task->getAttribute('billing_model'));
 
             if ($resolvedBillingModel === TaskBillingModel::Hourly->value) {
                 $task->track_time = true;
@@ -159,14 +159,6 @@ class Task extends Model
     }
 
     /**
-     * @return BelongsTo<Activity, $this>
-     */
-    public function activity(): BelongsTo
-    {
-        return $this->belongsTo(Activity::class);
-    }
-
-    /**
      * @return HasMany<TimeEntry, $this>
      */
     public function timeEntries(): HasMany
@@ -216,7 +208,7 @@ class Task extends Model
 
     public function effectiveHourlyRate(): ?float
     {
-        $billingModel = $this->resolvedBillingModelValue();
+        $billingModel = EnumValue::from($this->getAttribute('billing_model'));
 
         if ($billingModel !== TaskBillingModel::Hourly->value) {
             return null;
@@ -224,16 +216,10 @@ class Task extends Model
 
         /** @var Project|null $project */
         $project = $this->project;
-        /** @var Activity|null $activity */
-        $activity = $this->activity;
         $effectiveCurrency = $this->effectiveCurrency();
 
         if ($this->hourly_rate_override !== null) {
             return (float) $this->hourly_rate_override;
-        }
-
-        if ($activity?->default_hourly_rate !== null) {
-            return (float) $activity->default_hourly_rate;
         }
 
         $effectiveHourlyRate = $project?->effectiveHourlyRate($effectiveCurrency);
@@ -247,7 +233,7 @@ class Task extends Model
 
     public function calculatedAmount(): ?float
     {
-        $billingModel = $this->resolvedBillingModelValue();
+        $billingModel = EnumValue::from($this->getAttribute('billing_model'));
 
         if (! $this->is_billable) {
             return 0.0;
@@ -337,6 +323,46 @@ class Task extends Model
      * @return Builder<self>
      */
     #[Scope]
+    protected function open(Builder $query): Builder
+    {
+        return $query->whereIn('status', TaskStatus::openValues());
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    #[Scope]
+    protected function done(Builder $query): Builder
+    {
+        return $query->whereIn('status', TaskStatus::doneValues());
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    #[Scope]
+    protected function billable(Builder $query): Builder
+    {
+        return $query->where('is_billable', true);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    #[Scope]
+    protected function hourly(Builder $query): Builder
+    {
+        return $query->where('billing_model', TaskBillingModel::Hourly);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    #[Scope]
     protected function readyToInvoice(Builder $query, ?int $ownerId = null): Builder
     {
         $query->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId));
@@ -348,6 +374,16 @@ class Task extends Model
         $query->whereNull('invoiced_at');
 
         return $query;
+    }
+
+    public function isHourly(): bool
+    {
+        return $this->billing_model === TaskBillingModel::Hourly;
+    }
+
+    public function isFixedPrice(): bool
+    {
+        return $this->billing_model === TaskBillingModel::FixedPrice;
     }
 
     public function isInvoiced(): bool
@@ -426,17 +462,6 @@ class Task extends Model
         }
 
         return null;
-    }
-
-    private function resolvedBillingModelValue(): string
-    {
-        $rawBillingModel = $this->getAttribute('billing_model');
-
-        if ($rawBillingModel instanceof TaskBillingModel) {
-            return $rawBillingModel->value;
-        }
-
-        return (string) $rawBillingModel;
     }
 
     private function resolvedInvoice(): ?Invoice

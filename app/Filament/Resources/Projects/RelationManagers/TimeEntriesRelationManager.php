@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Projects\RelationManagers;
 
 use App\Filament\Resources\TimeEntries\Tables\TimeEntriesTable;
-use App\Models\TimeEntry;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -31,7 +30,6 @@ class TimeEntriesRelationManager extends RelationManager
                 TextColumn::make('task.title')
                     ->label(__('Task'))
                     ->placeholder(__('No task'))
-                    ->description(fn (TimeEntry $record): ?string => $record->task?->activity?->name)
                     ->searchable()
                     ->sortable(),
                 ...TimeEntriesTable::relationColumns(),
@@ -54,6 +52,6 @@ class TimeEntriesRelationManager extends RelationManager
                 ->withoutGlobalScopes([
                     SoftDeletingScope::class,
                 ])
-                ->with(['project.customer', 'task.activity', 'task.project.customer']));
+                ->with(['project.customer', 'task.project.customer']));
     }
 }

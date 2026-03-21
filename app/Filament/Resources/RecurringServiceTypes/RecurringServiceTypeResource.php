@@ -9,8 +9,8 @@ use App\Filament\Resources\RecurringServiceTypes\Pages\ListRecurringServiceTypes
 use App\Filament\Resources\RecurringServiceTypes\Schemas\RecurringServiceTypeForm;
 use App\Filament\Resources\RecurringServiceTypes\Tables\RecurringServiceTypesTable;
 use App\Models\RecurringServiceType;
+use App\Support\Filament\FilteredByOwner;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -69,17 +69,11 @@ class RecurringServiceTypeResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $ownerId = Filament::auth()->id();
-
-        return parent::getEloquentQuery()
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+        return FilteredByOwner::applyTo(parent::getEloquentQuery());
     }
 
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        $ownerId = Filament::auth()->id();
-
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+        return FilteredByOwner::applyTo(parent::getRecordRouteBindingEloquentQuery());
     }
 }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Tags\Schemas;
 
 use App\Models\Tag;
-use Filament\Facades\Filament;
+use App\Support\Filament\FilteredByOwner;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -41,7 +41,7 @@ final class TagsSelect
 
     private static function createTag(array $data, ?int $ownerId = null): int
     {
-        $resolvedOwnerId = (int) ($ownerId ?? Filament::auth()->id());
+        $resolvedOwnerId = (int) ($ownerId ?? FilteredByOwner::ownerId());
 
         $name = trim((string) ($data['name'] ?? ''));
         $slug = Str::slug($name);

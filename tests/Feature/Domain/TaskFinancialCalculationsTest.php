@@ -5,7 +5,6 @@ use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
-use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Project;
@@ -19,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 uses(RefreshDatabase::class);
 
 /**
- * @return array{owner: User, customer: Customer, project: Project, activity: Activity}
+ * @return array{owner: User, customer: Customer, project: Project}
  */
 function buildActivityCalculationContext(): array
 {
@@ -44,20 +43,10 @@ function buildActivityCalculationContext(): array
         'hourly_rate' => 1200,
     ]);
 
-    $activity = Activity::query()->create([
-        'owner_id' => $owner->id,
-        'project_id' => $project->id,
-        'name' => 'Implementation',
-        'default_hourly_rate' => 1300,
-        'is_billable' => true,
-        'is_active' => true,
-    ]);
-
     return [
         'owner' => $owner,
         'customer' => $customer,
         'project' => $project,
-        'activity' => $activity,
     ];
 }
 
@@ -80,7 +69,6 @@ it('calculates one-time amount from flat amount', function (): void {
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'One-time setup',
         'billing_model' => TaskBillingModel::FixedPrice,
         'status' => TaskStatus::Done,
@@ -97,7 +85,6 @@ it('defaults task priority to backlog when omitted', function (): void {
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'Priority fallback task',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Todo,
@@ -113,7 +100,6 @@ it('calculates one-time amount from unit rate and quantity when flat amount is m
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'One-time adjustment',
         'billing_model' => TaskBillingModel::FixedPrice,
         'status' => TaskStatus::Done,
@@ -130,7 +116,6 @@ it('calculates hourly amount from explicit unit rate and tracked minutes', funct
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'Tracked coding',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Done,
@@ -150,7 +135,6 @@ it('uses individual time entry hourly rates for task amount calculation', functi
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'Mixed-rate implementation',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Done,
@@ -184,7 +168,6 @@ it('ignores quantity for hourly tasks and requires time entries as source of tru
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'Quantity based hourly',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Done,
@@ -198,18 +181,13 @@ it('ignores quantity for hourly tasks and requires time entries as source of tru
         ->and($task->calculatedAmount())->toBeNull();
 });
 
-it('uses the time entry inheritance chain for hourly amount calculation when task rate is missing', function (): void {
+it('uses project rate for hourly amount calculation when task rate is missing', function (): void {
     $context = buildActivityCalculationContext();
-
-    $context['activity']->update([
-        'default_hourly_rate' => 1600,
-    ]);
 
     $projectActivity = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
-        'title' => 'Fallback to activity rate',
+        'title' => 'Fallback to project rate',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Done,
         'is_billable' => true,
@@ -218,20 +196,18 @@ it('uses the time entry inheritance chain for hourly amount calculation when tas
 
     logTaskTime($projectActivity, 60);
 
-    expect($projectActivity->effectiveHourlyRate())->toBe(1600.0)
-        ->and($projectActivity->calculatedAmount())->toBe(1600.0);
+    expect($projectActivity->effectiveHourlyRate())->toBe(1200.0)
+        ->and($projectActivity->calculatedAmount())->toBe(1200.0);
 });
 
 it('falls back to project, customer and owner rates in order', function (): void {
     $context = buildActivityCalculationContext();
     $context['project']->update(['hourly_rate' => null]);
     $context['customer']->update(['hourly_rate' => null]);
-    $context['activity']->update(['default_hourly_rate' => null]);
 
     $projectActivity = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'Fallback to owner rate',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Done,
@@ -251,7 +227,6 @@ it('returns zero for non-billable activities', function (): void {
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'Internal work',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Done,
@@ -270,7 +245,6 @@ it('returns null for hourly amount when no tracked time is available', function 
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'Missing measure',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::InProgress,
@@ -287,7 +261,6 @@ it('blocks switching a task to fixed price when time entries already exist', fun
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'Tracked implementation',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::InProgress,
@@ -309,7 +282,6 @@ it('marks a ready task as invoiced with a shared invoice reference', function ()
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'Monthly optimization batch',
         'billing_model' => TaskBillingModel::FixedPrice,
         'status' => TaskStatus::Done,
@@ -337,7 +309,6 @@ it('normalizes blank invoice references when marking a task as invoiced', functi
     $task = Task::query()->create([
         'owner_id' => $context['owner']->id,
         'project_id' => $context['project']->id,
-        'activity_id' => $context['activity']->id,
         'title' => 'Hourly maintenance review',
         'billing_model' => TaskBillingModel::Hourly,
         'status' => TaskStatus::Done,

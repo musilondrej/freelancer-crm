@@ -5,9 +5,9 @@ namespace App\Filament\Widgets;
 use App\Enums\TaskStatus;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
 use App\Models\Task;
+use App\Support\Filament\FilteredByOwner;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use Filament\Facades\Filament;
 use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -116,7 +116,7 @@ class RevenueTrendChart extends ChartWidget
     {
         [$currentStart, $currentEnd] = $this->resolvedCurrentRange();
         $displayCurrency = $this->resolveDisplayCurrency();
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
         $doneStatuses = TaskStatus::doneValues();
         $cacheKey = sprintf(
             'dashboard.revenue-trend.owner.%s.start.%s.end.%s.currency.%s.statuses.%s',

@@ -40,11 +40,6 @@ class ActivityForm
 
                         Section::make(__('Settings'))
                             ->schema([
-                                TextInput::make('default_hourly_rate')
-                                    ->label(__('Default hourly rate'))
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->suffix(fn (): string => (string) (data_get(Filament::auth()->user(), 'default_currency', 'CZK'))),
                                 Toggle::make('is_billable')
                                     ->label(__('Is billable'))
                                     ->default(true),

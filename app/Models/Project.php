@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use App\Enums\Currency;
 use App\Enums\Priority;
 use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
 use App\Enums\ProjectStatus;
 use App\Models\Concerns\EnforcesOwner;
+use App\Models\Concerns\FormatsHourlyRate;
 use Database\Factories\ProjectFactory;
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,6 +25,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Project extends Model
 {
     use EnforcesOwner;
+    use FormatsHourlyRate;
 
     /** @use HasFactory<ProjectFactory> */
     use HasFactory;
@@ -151,23 +153,14 @@ class Project extends Model
         return $this->hasMany(Invoice::class);
     }
 
-    protected function hourlyRateWithCurrency(): Attribute
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    #[Scope]
+    protected function open(Builder $query): Builder
     {
-        return Attribute::make(
-            get: function (mixed $value, array $attributes): ?string {
-                $hourlyRate = $attributes['hourly_rate'] ?? null;
-
-                if ($hourlyRate === null) {
-                    return null;
-                }
-
-                $currency = Currency::tryFrom((string) ($attributes['currency'] ?? ''));
-
-                return $currency !== null
-                    ? $currency->formatWithCode((float) $hourlyRate)
-                    : Currency::userDefault()->formatWithCode((float) $hourlyRate);
-            },
-        );
+        return $query->whereIn('status', ProjectStatus::openValues());
     }
 
     public function effectiveHourlyRate(?string $currency = null): ?float

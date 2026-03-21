@@ -6,8 +6,9 @@ use App\Enums\CustomerStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Customer;
+use App\Support\Filament\FilteredByOwner;
 use App\Support\Filament\HourlyRateCurrencyFields;
-use Filament\Facades\Filament;
+use App\Support\Filament\MetadataSection;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
@@ -15,7 +16,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -26,7 +26,7 @@ class CustomerForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
 
         return $schema
             ->components([
@@ -56,7 +56,7 @@ class CustomerForm
                                         'vat_id',
                                         ignoreRecord: true,
                                         modifyRuleUsing: fn (Unique $rule): Unique => $rule
-                                            ->where('owner_id', Filament::auth()->id())
+                                            ->where('owner_id', FilteredByOwner::ownerId())
                                             ->whereNull('deleted_at'),
                                     ),
                                 Textarea::make('internal_summary')
@@ -77,7 +77,7 @@ class CustomerForm
                                         'email',
                                         ignoreRecord: true,
                                         modifyRuleUsing: fn (Unique $rule): Unique => $rule
-                                            ->where('owner_id', Filament::auth()->id())
+                                            ->where('owner_id', FilteredByOwner::ownerId())
                                             ->whereNull('deleted_at'),
                                     ),
                                 TextInput::make('phone')
@@ -154,16 +154,7 @@ class CustomerForm
                                 DateTimePicker::make('next_follow_up_at'),
                             ]),
 
-                        Section::make(__('Metadata'))
-                            ->schema([
-                                TextEntry::make('created_at')
-                                    ->label(__('Created at'))
-                                    ->state(fn (?Customer $record): ?string => $record?->created_at?->diffForHumans()),
-                                TextEntry::make('updated_at')
-                                    ->label(__('Last modified at'))
-                                    ->state(fn (?Customer $record): ?string => $record?->updated_at?->diffForHumans()),
-                            ])
-                            ->hidden(fn (?Customer $record): bool => ! $record instanceof Customer),
+                        MetadataSection::make(Customer::class),
                     ])
                     ->columnSpan([
                         'lg' => 4,

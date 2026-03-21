@@ -22,7 +22,6 @@ class ActivityFactory extends Factory
             'owner_id' => User::factory(),
             'name' => ucfirst(fake()->words(fake()->numberBetween(1, 3), true)),
             'description' => fake()->optional(0.6)->sentence(),
-            'default_hourly_rate' => fake()->optional(0.7)->randomFloat(2, 500, 3500),
             'is_billable' => fake()->boolean(90),
             'is_active' => fake()->boolean(95),
             'sort_order' => fake()->numberBetween(0, 100),

@@ -2,19 +2,23 @@
 
 namespace App\Filament\Resources\Projects\Schemas;
 
+use App\Actions\ResolveInheritedFinancials;
 use App\Enums\Currency;
 use App\Enums\ProjectPricingModel;
 use App\Enums\ProjectStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\ClientContact;
+use App\Models\Project;
+use App\Support\EnumValue;
+use App\Support\Filament\FilteredByOwner;
 use App\Support\Filament\HourlyRateCurrencyFields;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -26,7 +30,8 @@ class ProjectForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
+        $financials = new ResolveInheritedFinancials($ownerId);
 
         return $schema
             ->components([
@@ -46,21 +51,27 @@ class ProjectForm
                                     ->relationship(
                                         name: 'customer',
                                         titleAttribute: 'name',
-                                        modifyQueryUsing: fn (Builder $query): Builder => $ownerId !== null
-                                            ? $query->where('owner_id', $ownerId)
-                                            : $query,
+                                        modifyQueryUsing: FilteredByOwner::closure(),
                                     )
                                     ->required()
                                     ->searchable()
                                     ->preload()
-                                    ->live(),
+                                    ->live()
+                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($financials): void {
+                                        if (! (bool) $get('use_custom_financials')) {
+                                            return;
+                                        }
+
+                                        $defaults = $financials->fromCustomer($state);
+                                        $set('currency', $defaults->currency);
+                                        $set('hourly_rate', $defaults->hourlyRate);
+                                    }),
                                 Select::make('primary_contact_id')
                                     ->label(__('Primary Contact'))
-                                    ->options(function (Get $get) use ($ownerId): array {
+                                    ->options(function (Get $get): array {
                                         $customerId = $get('customer_id');
 
-                                        return ClientContact::query()
-                                            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
+                                        return FilteredByOwner::applyTo(ClientContact::query())
                                             ->when($customerId !== null, fn (Builder $query): Builder => $query->where('customer_id', $customerId))
                                             ->orderBy('full_name')
                                             ->pluck('full_name', 'id')
@@ -76,6 +87,37 @@ class ProjectForm
 
                         Section::make(__('Financial details'))
                             ->schema([
+                                Toggle::make('use_custom_financials')
+                                    ->label(__('Use custom currency and hourly rate for this project'))
+                                    ->default(fn (?Project $record): bool => $record instanceof Project && ($record->currency !== null || $record->hourly_rate !== null))
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->afterStateHydrated(function (Get $get, Set $set, mixed $state): void {
+                                        if ((bool) $state) {
+                                            return;
+                                        }
+
+                                        $set('currency', null);
+                                        $set('hourly_rate', null);
+                                    })
+                                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($financials): void {
+                                        if (! (bool) $state) {
+                                            $set('currency', null);
+                                            $set('hourly_rate', null);
+
+                                            return;
+                                        }
+
+                                        $defaults = $financials->fromCustomer($get('customer_id'));
+
+                                        if (blank($get('currency'))) {
+                                            $set('currency', $defaults->currency);
+                                        }
+
+                                        if (blank($get('hourly_rate'))) {
+                                            $set('hourly_rate', $defaults->hourlyRate);
+                                        }
+                                    }),
                                 Select::make('pricing_model')
                                     ->label(__('Pricing model'))
                                     ->options(ProjectPricingModel::class)
@@ -83,7 +125,7 @@ class ProjectForm
                                     ->required()
                                     ->live()
                                     ->afterStateUpdated(function (Set $set, mixed $state): void {
-                                        $resolvedPricingModel = self::resolvePricingModelValue($state);
+                                        $resolvedPricingModel = EnumValue::from($state);
 
                                         if (in_array($resolvedPricingModel, [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true)) {
                                             return;
@@ -95,8 +137,12 @@ class ProjectForm
                                 ...HourlyRateCurrencyFields::make(
                                     currencyField: 'currency',
                                     rateField: 'hourly_rate',
-                                    rateRequired: fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true),
-                                    rateVisible: fn (Get $get): bool => in_array(self::resolvePricingModelValue($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true),
+                                    currencyRequired: fn (Get $get): bool => (bool) $get('use_custom_financials'),
+                                    rateRequired: fn (Get $get): bool => (bool) $get('use_custom_financials')
+                                        && in_array(EnumValue::from($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true),
+                                    currencyVisible: fn (Get $get): bool => (bool) $get('use_custom_financials'),
+                                    rateVisible: fn (Get $get): bool => (bool) $get('use_custom_financials')
+                                        && in_array(EnumValue::from($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true),
                                 ),
 
                                 TextInput::make('fixed_price')
@@ -104,7 +150,7 @@ class ProjectForm
                                     ->numeric()
                                     ->minValue(0)
                                     ->suffix(fn (Get $get): string => Currency::resolveFromForm($get))
-                                    ->visible(fn (Get $get): bool => self::resolvePricingModelValue($get('pricing_model')) === ProjectPricingModel::Fixed->value),
+                                    ->visible(fn (Get $get): bool => EnumValue::from($get('pricing_model')) === ProjectPricingModel::Fixed->value),
                                 TextInput::make('estimated_hours')
                                     ->label(__('Estimated hours'))
                                     ->numeric()
@@ -151,14 +197,5 @@ class ProjectForm
                 'default' => 1,
                 'lg' => 12,
             ]);
-    }
-
-    private static function resolvePricingModelValue(mixed $value): string
-    {
-        if ($value instanceof ProjectPricingModel) {
-            return $value->value;
-        }
-
-        return (string) $value;
     }
 }

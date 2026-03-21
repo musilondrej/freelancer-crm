@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
-use App\Enums\Currency;
 use App\Enums\CustomerStatus;
 use App\Models\Concerns\EnforcesOwner;
+use App\Models\Concerns\FormatsHourlyRate;
 use Database\Factories\CustomerFactory;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Customer extends Model
 {
     use EnforcesOwner;
+    use FormatsHourlyRate;
 
     /** @use HasFactory<CustomerFactory> */
     use HasFactory;
@@ -127,23 +127,9 @@ class Customer extends Model
         return $this->hasMany(Invoice::class, 'customer_id');
     }
 
-    protected function hourlyRateWithCurrency(): Attribute
+    protected function hourlyCurrencyColumn(): string
     {
-        return Attribute::make(
-            get: function (mixed $value, array $attributes): ?string {
-                $hourlyRate = $attributes['hourly_rate'] ?? null;
-
-                if ($hourlyRate === null) {
-                    return null;
-                }
-
-                $currency = Currency::tryFrom((string) ($attributes['billing_currency'] ?? ''));
-
-                return $currency !== null
-                    ? $currency->formatWithCode((float) $hourlyRate)
-                    : Currency::userDefault()->formatWithCode((float) $hourlyRate);
-            },
-        );
+        return 'billing_currency';
     }
 
     public function effectiveHourlyRate(?string $currency = null): ?float

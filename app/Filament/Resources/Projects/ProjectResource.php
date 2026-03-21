@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Projects;
 
 use App\Enums\NavigationGroup;
-use App\Enums\ProjectStatus;
 use App\Filament\Resources\Projects\Pages\CreateProject;
 use App\Filament\Resources\Projects\Pages\EditProject;
 use App\Filament\Resources\Projects\Pages\ListProjects;
@@ -13,8 +12,8 @@ use App\Filament\Resources\Projects\RelationManagers\TimeEntriesRelationManager;
 use App\Filament\Resources\Projects\Schemas\ProjectForm;
 use App\Filament\Resources\Projects\Tables\ProjectsTable;
 use App\Models\Project;
+use App\Support\Filament\FilteredByOwner;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Resources\RelationManagers\RelationGroup;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -74,12 +73,9 @@ class ProjectResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $ownerId = Filament::auth()->id();
-
-        $count = Project::query()
-            ->whereIn('status', ProjectStatus::openValues())
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId))
-            ->count();
+        $count = FilteredByOwner::applyTo(
+            Project::query()->open()
+        )->count();
 
         return $count > 0 ? (string) $count : null;
     }
@@ -100,20 +96,14 @@ class ProjectResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $ownerId = Filament::auth()->id();
-
-        return parent::getEloquentQuery()
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+        return FilteredByOwner::applyTo(parent::getEloquentQuery());
     }
 
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        $ownerId = Filament::auth()->id();
-
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ])
-            ->when($ownerId !== null, fn (Builder $query): Builder => $query->where('owner_id', $ownerId));
+        return FilteredByOwner::applyTo(
+            parent::getRecordRouteBindingEloquentQuery()
+                ->withoutGlobalScopes([SoftDeletingScope::class])
+        );
     }
 }

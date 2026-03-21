@@ -6,9 +6,9 @@ use App\Filament\Resources\Tasks\TaskResource;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
 use App\Models\Task;
 use App\Models\UserSetting;
+use App\Support\Filament\FilteredByOwner;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
-use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -33,7 +33,7 @@ class UnbilledDoneWorkTable extends TableWidget
     public function table(Table $table): Table
     {
         [$startDate, $endDate] = $this->resolvedDateRange();
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
         $dateTimeFormat = UserSetting::dateTimeFormatForUser($ownerId);
         $timezone = UserSetting::timezoneForUser($ownerId);
 

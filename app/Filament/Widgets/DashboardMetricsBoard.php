@@ -4,16 +4,14 @@ namespace App\Filament\Widgets;
 
 use App\Enums\Currency;
 use App\Enums\LeadStatus;
-use App\Enums\ProjectStatus;
 use App\Enums\TaskBillingModel;
-use App\Enums\TaskStatus;
 use App\Filament\Widgets\Concerns\InteractsWithCurrencyConversion;
 use App\Models\Lead;
 use App\Models\Project;
 use App\Models\Task;
+use App\Support\Filament\FilteredByOwner;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use Filament\Facades\Filament;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -173,7 +171,7 @@ class DashboardMetricsBoard extends BaseWidget
             return $this->snapshotCache;
         }
 
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
         $displayCurrency = $this->resolveDisplayCurrency();
 
         if ($ownerId === null) {
@@ -198,7 +196,7 @@ class DashboardMetricsBoard extends BaseWidget
      */
     private function buildSnapshot(): array
     {
-        $ownerId = Filament::auth()->id();
+        $ownerId = FilteredByOwner::ownerId();
         $displayCurrency = $this->resolveDisplayCurrency();
 
         if ($ownerId === null) {
@@ -371,8 +369,8 @@ class DashboardMetricsBoard extends BaseWidget
         CarbonImmutable $endDate,
     ): EloquentCollection {
         return $this->amountActivityQuery($ownerId)
-            ->whereIn('status', $this->doneTaskStatusCodes())
-            ->where('is_billable', true)
+            ->done()
+            ->billable()
             ->whereNotNull('completed_at')
             ->whereBetween('completed_at', [$startDate, $endDate])
             ->get();
@@ -395,8 +393,8 @@ class DashboardMetricsBoard extends BaseWidget
     private function loadPipelineTasks(int $ownerId): EloquentCollection
     {
         return $this->amountActivityQuery($ownerId)
-            ->whereIn('status', $this->openTaskStatusCodes())
-            ->where('is_billable', true)
+            ->open()
+            ->billable()
             ->get();
     }
 
@@ -410,8 +408,8 @@ class DashboardMetricsBoard extends BaseWidget
     ): EloquentCollection {
         return Task::query()
             ->where('owner_id', $ownerId)
-            ->whereIn('status', $this->doneTaskStatusCodes())
-            ->where('billing_model', TaskBillingModel::Hourly->value)
+            ->done()
+            ->hourly()
             ->whereNotNull('completed_at')
             ->whereBetween('completed_at', [$startDate, $endDate])
             ->with('timeEntries:id,task_id,is_billable_override,minutes')
@@ -509,7 +507,7 @@ class DashboardMetricsBoard extends BaseWidget
     {
         return Project::query()
             ->where('owner_id', $ownerId)
-            ->whereIn('status', ProjectStatus::openValues())
+            ->open()
             ->count();
     }
 
@@ -527,23 +525,7 @@ class DashboardMetricsBoard extends BaseWidget
             ->where('owner_id', $ownerId)
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', now()->toDateString())
-            ->whereIn('status', $this->openTaskStatusCodes())
+            ->open()
             ->count();
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function doneTaskStatusCodes(): array
-    {
-        return TaskStatus::doneValues();
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function openTaskStatusCodes(): array
-    {
-        return TaskStatus::openValues();
     }
 }

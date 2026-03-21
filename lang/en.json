@@ -68,6 +68,8 @@
     "Minimum billable minutes": "Minimum billable minutes",
     "Monday": "Monday",
     "Money In flight": "Pending revenue",
+    "Utilization (month)": "Utilization (month)",
+    "Work in progress": "Work in progress",
     "N/A": "-",
     "Name": "Name",
     "No running timer": "No active timer",
@@ -139,7 +141,9 @@
     "Week starts on": "Week starts on",
     "Work hours": "Working hours",
     "Worked hours (month)": "Hours worked (month)",
+    "Worked hours (week)": "Hours worked (week)",
     "Worked hours this month": "Hours worked this month",
+    "Worked hours this week": "Hours worked this week",
     "Worked hours": "Hours worked",
     "Yes": "Yes"
 }

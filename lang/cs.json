@@ -137,6 +137,8 @@
     "Minimum billable minutes": "Minimální fakturovatelné minuty",
     "Monday": "Pondělí",
     "Money In flight": "Očekávané příjmy",
+    "Utilization (month)": "Využití kapacity (měsíc)",
+    "Work in progress": "Práce v realizaci",
     "Month": "Měsíc",
     "N/A": "-",
     "Name": "Název",
@@ -259,7 +261,9 @@
     "Won": "Vyhráno",
     "Work hours": "Odpracované hodiny",
     "Worked hours (month)": "Odpracované hodiny (měsíc)",
+    "Worked hours (week)": "Odpracované hodiny (týden)",
     "Worked hours this month": "Odpracované hodiny tento měsíc",
+    "Worked hours this week": "Odpracované hodiny tento týden",
     "Worked hours": "Odpracované hodiny",
     "Year": "Rok",
     "Yes": "Ano"

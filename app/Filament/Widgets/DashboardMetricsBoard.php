@@ -63,9 +63,11 @@ class DashboardMetricsBoard extends BaseWidget
             'revenue_week' => __('Revenue this week'),
             'revenue_today' => __('Revenue today'),
             'unbilled_done' => __('Unbilled done work'),
-            'money_in_flight' => __('Money In flight'),
+            'money_in_flight' => __('Work in progress'),
             'billable_hours_month' => __('Billable hours (month)'),
             'worked_hours_month' => __('Worked hours (month)'),
+            'worked_hours_week' => __('Worked hours (week)'),
+            'utilization_month' => __('Utilization (month)'),
             'open_projects' => __('Open projects'),
             'overdue_activities' => __('Overdue tasks'),
             'open_leads' => __('Open leads'),
@@ -79,12 +81,13 @@ class DashboardMetricsBoard extends BaseWidget
     {
         return [
             'revenue_month',
-            'revenue_week',
-            'revenue_today',
             'unbilled_done',
             'money_in_flight',
+            'billable_hours_month',
+            'worked_hours_month',
             'utilization_month',
-            'overdue_activities',
+            'open_projects',
+            'open_leads',
         ];
     }
 
@@ -138,7 +141,7 @@ class DashboardMetricsBoard extends BaseWidget
             'unbilled_done' => Stat::make(__('Unbilled done work'), $this->formatMoneyMetric($snapshot['unbilled_done']))
                 ->icon('heroicon-o-receipt-percent')
                 ->color('danger'),
-            'money_in_flight' => Stat::make(__('Money In flight'), $this->formatMoneyMetric($snapshot['money_in_flight']))
+            'money_in_flight' => Stat::make(__('Work in progress'), $this->formatMoneyMetric($snapshot['money_in_flight']))
                 ->icon('heroicon-o-cloud')
                 ->color('warning'),
             'billable_hours_month' => Stat::make(__('Billable hours this month'), $this->formatHoursMetric($snapshot['billable_hours_month']))
@@ -147,6 +150,12 @@ class DashboardMetricsBoard extends BaseWidget
             'worked_hours_month' => Stat::make(__('Worked hours this month'), $this->formatHoursMetric($snapshot['worked_hours_month']))
                 ->icon('heroicon-o-clock')
                 ->color('gray'),
+            'worked_hours_week' => Stat::make(__('Worked hours this week'), $this->formatHoursMetric($snapshot['worked_hours_week']))
+                ->icon('heroicon-o-clock')
+                ->color('gray'),
+            'utilization_month' => Stat::make(__('Utilization (month)'), $this->formatUtilizationMetric($snapshot['utilization_month']))
+                ->icon('heroicon-o-chart-pie')
+                ->color('primary'),
             'open_projects' => Stat::make(__('Open projects'), $this->formatCountMetric($snapshot['open_projects']))
                 ->icon('heroicon-o-briefcase')
                 ->color('warning'),
@@ -215,6 +224,7 @@ class DashboardMetricsBoard extends BaseWidget
         $unbilledDone = 0.0;
         $moneyInFlight = 0.0;
         $workedHoursMonth = 0.0;
+        $workedHoursWeek = 0.0;
         $billableHoursMonth = 0.0;
 
         $yearlyBillableTasks = $this->loadBillableDoneTasksForRange(
@@ -292,6 +302,15 @@ class DashboardMetricsBoard extends BaseWidget
                 }
             });
 
+        $this->loadWorkedHourlyTasksForRange($ownerId, $startOfWeek, $now)
+            ->each(function (Task $task) use (&$workedHoursWeek): void {
+                $hours = $this->resolvedHourlyAmount($task);
+
+                if ($hours > 0) {
+                    $workedHoursWeek += $hours;
+                }
+            });
+
         $utilization = $workedHoursMonth > 0
             ? ($billableHoursMonth / $workedHoursMonth) * 100
             : null;
@@ -304,6 +323,7 @@ class DashboardMetricsBoard extends BaseWidget
             'unbilled_done' => $unbilledDone,
             'money_in_flight' => $moneyInFlight,
             'worked_hours_month' => $workedHoursMonth,
+            'worked_hours_week' => $workedHoursWeek,
             'billable_hours_month' => $billableHoursMonth,
             'utilization_month' => $utilization,
             'open_projects' => $this->openProjectsCount($ownerId),
@@ -325,6 +345,7 @@ class DashboardMetricsBoard extends BaseWidget
             'unbilled_done' => 0.0,
             'money_in_flight' => 0.0,
             'worked_hours_month' => 0.0,
+            'worked_hours_week' => 0.0,
             'billable_hours_month' => 0.0,
             'utilization_month' => null,
             'open_projects' => 0,
@@ -349,6 +370,15 @@ class DashboardMetricsBoard extends BaseWidget
         }
 
         return number_format(round((float) $value), 0, '.', ' ').' h';
+    }
+
+    private function formatUtilizationMetric(float|int|string|null $value): string
+    {
+        if (! is_numeric($value)) {
+            return '-';
+        }
+
+        return number_format((float) $value, 0).' %';
     }
 
     private function formatCountMetric(float|int|string|null $value): string

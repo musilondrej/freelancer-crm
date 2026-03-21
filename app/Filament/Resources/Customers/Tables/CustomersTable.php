@@ -55,21 +55,6 @@ class CustomersTable
                     ->searchable()
                     ->sortable()
                     ->description(fn (Customer $record): ?string => $record->legal_name),
-                TextColumn::make('email')
-                    ->label(__('E-mail'))
-                    ->searchable()
-                    ->copyable(),
-                TextColumn::make('status')
-                    ->label(__('Status'))
-                    ->badge()
-                    ->sortable(),
-                TextColumn::make('phone')
-                    ->label(__('Phone'))
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('billing_currency')
-                    ->label(__('Currency'))
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('hourly_rate_with_currency')
                     ->label(__('Hourly rate'))
                     ->sortable(
@@ -77,6 +62,20 @@ class CustomersTable
                             ->orderBy('hourly_rate', $direction)
                             ->orderBy('billing_currency', $direction),
                     ),
+                IconColumn::make('lead_id')
+                    ->label(__('Lead'))
+                    ->state(fn (Customer $record): bool => $record->lead !== null)
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('recurring_services_count')
+                    ->label(__('Services'))
+                    ->counts('recurringServices')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                IconColumn::make('is_active')
+                    ->label(__('Active'))
+                    ->boolean()
+                    ->sortable(),
             ])
             ->defaultSort('name')
             ->filters([

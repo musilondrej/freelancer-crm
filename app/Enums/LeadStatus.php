@@ -11,9 +11,10 @@ use Filament\Support\Icons\Heroicon;
 enum LeadStatus: string implements HasColor, HasIcon, HasLabel
 {
     case New = 'new';
-    case Contacted = 'contacted';
+    case Discovery = 'discovery';
     case Qualified = 'qualified';
     case Proposal = 'proposal';
+    case Negotiation = 'negotiation';
     case Won = 'won';
     case Lost = 'lost';
     case Archived = 'archived';
@@ -22,9 +23,10 @@ enum LeadStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::New => __('New'),
-            self::Contacted => __('Contacted'),
+            self::Discovery => __('Discovery'),
             self::Qualified => __('Qualified'),
             self::Proposal => __('Proposal'),
+            self::Negotiation => __('Negotiation'),
             self::Won => __('Won'),
             self::Lost => __('Lost'),
             self::Archived => __('Archived'),
@@ -35,9 +37,10 @@ enum LeadStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::New => 'gray',
-            self::Contacted => 'info',
+            self::Discovery => 'info',
             self::Qualified => 'primary',
             self::Proposal => 'warning',
+            self::Negotiation => 'warning',
             self::Won => 'success',
             self::Lost => 'danger',
             self::Archived => 'gray',
@@ -48,9 +51,10 @@ enum LeadStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::New => Heroicon::OutlinedSparkles,
-            self::Contacted => Heroicon::OutlinedPhone,
+            self::Discovery => Heroicon::OutlinedMagnifyingGlass,
             self::Qualified => Heroicon::OutlinedCheckBadge,
             self::Proposal => Heroicon::OutlinedDocumentText,
+            self::Negotiation => Heroicon::OutlinedChatBubbleLeftRight,
             self::Won => Heroicon::OutlinedTrophy,
             self::Lost => Heroicon::OutlinedXCircle,
             self::Archived => Heroicon::OutlinedArchiveBox,
@@ -69,9 +73,10 @@ enum LeadStatus: string implements HasColor, HasIcon, HasLabel
     {
         return [
             self::New->value,
-            self::Contacted->value,
+            self::Discovery->value,
             self::Qualified->value,
             self::Proposal->value,
+            self::Negotiation->value,
         ];
     }
 }

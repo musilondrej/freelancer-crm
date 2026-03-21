@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\Currency;
-use App\Enums\LeadPipelineStage;
 use App\Enums\LeadStatus;
 use App\Enums\Priority;
 use App\Models\Concerns\EnforcesOwner;
@@ -38,7 +37,6 @@ class Lead extends Model
         'phone',
         'website',
         'status',
-        'pipeline_stage',
         'priority',
         'currency',
         'estimated_value',
@@ -56,7 +54,6 @@ class Lead extends Model
     {
         return [
             'status' => LeadStatus::class,
-            'pipeline_stage' => LeadPipelineStage::class,
             'priority' => Priority::class,
             'estimated_value' => 'decimal:2',
             'expected_close_date' => 'date',

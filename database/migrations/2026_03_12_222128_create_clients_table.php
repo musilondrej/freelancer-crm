@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\CustomerStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -25,7 +24,7 @@ return new class extends Migration
             $table->string('timezone')->nullable();
             $table->char('billing_currency', 3)->nullable();
             $table->decimal('hourly_rate', 10, 2)->nullable();
-            $table->enum('status', CustomerStatus::values())->default(CustomerStatus::Lead->value);
+            $table->enum('status', ['lead', 'active', 'inactive'])->default('lead');
             $table->string('source')->nullable();
             $table->timestampTz('last_contacted_at')->nullable();
             $table->timestampTz('next_follow_up_at')->nullable();

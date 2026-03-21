@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\CustomerStatus;
 use App\Models\Concerns\EnforcesOwner;
 use App\Models\Concerns\FormatsHourlyRate;
 use Database\Factories\CustomerFactory;
@@ -15,6 +14,9 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property Lead|null $lead
+ */
 class Customer extends Model
 {
     use EnforcesOwner;
@@ -42,7 +44,7 @@ class Customer extends Model
         'timezone',
         'billing_currency',
         'hourly_rate',
-        'status',
+        'is_active',
         'source',
         'last_contacted_at',
         'next_follow_up_at',
@@ -56,7 +58,7 @@ class Customer extends Model
     protected function casts(): array
     {
         return [
-            'status' => CustomerStatus::class,
+            'is_active' => 'boolean',
             'hourly_rate' => 'decimal:2',
             'last_contacted_at' => 'datetime',
             'next_follow_up_at' => 'datetime',

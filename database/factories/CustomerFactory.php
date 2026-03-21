@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Enums\CustomerStatus;
 use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -50,7 +49,7 @@ class CustomerFactory extends Factory
             'timezone' => fake()->randomElement(['Europe/Prague', 'Europe/Berlin', 'America/New_York']),
             'billing_currency' => fake()->randomElement(['CZK', 'EUR', 'USD']),
             'hourly_rate' => fake()->optional(0.7)->randomFloat(2, 600, 2500),
-            'status' => fake()->randomElement(CustomerStatus::cases()),
+            'is_active' => fake()->boolean(80),
             'source' => fake()->optional(0.7)->randomElement(['referral', 'linkedin', 'web', 'repeat-client']),
             'last_contacted_at' => fake()->optional(0.7)->dateTimeBetween('-6 months', 'now'),
             'next_follow_up_at' => fake()->optional(0.6)->dateTimeBetween('now', '+2 months'),
@@ -62,17 +61,17 @@ class CustomerFactory extends Factory
         ];
     }
 
-    public function lead(): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'status' => CustomerStatus::Lead,
-        ]);
-    }
-
     public function active(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'status' => CustomerStatus::Active,
+            'is_active' => true,
+        ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_active' => false,
         ]);
     }
 }

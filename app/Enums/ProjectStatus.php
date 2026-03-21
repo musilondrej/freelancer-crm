@@ -42,10 +42,10 @@ enum ProjectStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::Planning => Heroicon::PencilSquare,
-            self::InProgress => Heroicon::Play,
-            self::Blocked => Heroicon::OutlinedExclamationTriangle,
+            self::InProgress => Heroicon::ArrowPath,
+            self::Blocked => Heroicon::Pause,
             self::Completed => Heroicon::OutlinedCheckCircle,
-            self::Cancelled => Heroicon::OutlinedNoSymbol,
+            self::Cancelled => Heroicon::XMark,
         };
     }
 

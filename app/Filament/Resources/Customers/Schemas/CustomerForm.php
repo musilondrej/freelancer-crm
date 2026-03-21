@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Customers\Schemas;
 
-use App\Enums\CustomerStatus;
 use App\Filament\Resources\Notes\Schemas\NoteRepeater;
 use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Customer;
@@ -12,7 +11,6 @@ use App\Support\Filament\MetadataSection;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -93,6 +91,9 @@ class CustomerForm
                                 ...HourlyRateCurrencyFields::make(
                                     currencyField: 'billing_currency',
                                     rateField: 'hourly_rate',
+                                    currencyRequired: false,
+                                    rateRequired: false,
+                                    helperText: 'If empty, your default rate from preferences will be used.',
                                 ),
                             ])
                             ->columns(1),
@@ -149,10 +150,9 @@ class CustomerForm
 
                         Section::make(__('Status'))
                             ->schema([
-                                Select::make('status')
-                                    ->options(CustomerStatus::class)
-                                    ->default(CustomerStatus::Lead)
-                                    ->required(),
+                                Toggle::make('is_active')
+                                    ->label(__('Active'))
+                                    ->default(true),
                                 DateTimePicker::make('next_follow_up_at'),
                             ]),
 

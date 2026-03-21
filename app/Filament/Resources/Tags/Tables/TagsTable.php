@@ -21,10 +21,6 @@ class TagsTable
                     ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('slug')
-                    ->label(__('Slug'))
-                    ->searchable()
-                    ->sortable(),
                 ColorColumn::make('color')
                     ->label(__('Color'))
                     ->copyable()

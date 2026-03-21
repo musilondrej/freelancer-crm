@@ -5,6 +5,7 @@ namespace App\Enums;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Icons\Heroicon;
 
 enum Priority: int implements HasColor, HasIcon, HasLabel
 {
@@ -26,20 +27,20 @@ enum Priority: int implements HasColor, HasIcon, HasLabel
     public function getColor(): string
     {
         return match ($this) {
-            self::Low => 'info',
-            self::Normal => 'primary',
+            self::Low => 'gray',
+            self::Normal => 'info',
             self::High => 'warning',
             self::Critical => 'danger',
         };
     }
 
-    public function getIcon(): string
+    public function getIcon(): Heroicon
     {
         return match ($this) {
-            self::Low => 'heroicon-o-arrow-trending-down',
-            self::Normal => 'heroicon-o-arrow-trending-up',
-            self::High => 'heroicon-o-fire',
-            self::Critical => 'heroicon-o-exclamation-triangle',
+            self::Low => Heroicon::ChevronDown,
+            self::Normal => Heroicon::Minus,
+            self::High => Heroicon::ChevronUp,
+            self::Critical => Heroicon::Fire,
         };
     }
 

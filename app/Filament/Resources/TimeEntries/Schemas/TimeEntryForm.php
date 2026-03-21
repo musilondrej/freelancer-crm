@@ -7,6 +7,7 @@ use App\Enums\TaskBillingModel;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
+use Carbon\CarbonInterface;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
@@ -102,11 +103,24 @@ class TimeEntryForm
                                     ->seconds(false),
                                 TextInput::make('minutes')
                                     ->label(__('Tracked minutes'))
+                                    ->readOnly()
                                     ->numeric()
+                                    ->state(function (?TimeEntry $record): ?float {
+                                        if (! $record instanceof TimeEntry) {
+                                            return null;
+                                        }
+
+                                        $rawStartedAt = $record->getAttribute('started_at');
+                                        $rawEndedAt = $record->getAttribute('ended_at');
+
+                                        if (! $rawStartedAt instanceof CarbonInterface || ! $rawEndedAt instanceof CarbonInterface) {
+                                            return null;
+                                        }
+
+                                        return $rawStartedAt->diffInMinutes($rawEndedAt);
+                                    })
+                                    ->suffix(__('min'))
                                     ->minValue(0),
-                                DateTimePicker::make('locked_at')
-                                    ->label(__('Locked at'))
-                                    ->seconds(false),
                             ]),
                     ])
                     ->columnSpan(['lg' => 4]),

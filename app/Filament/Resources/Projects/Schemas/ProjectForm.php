@@ -136,8 +136,11 @@ class ProjectForm
                                     ->options(ProjectStatus::class)
                                     ->default(ProjectStatus::defaultCase())
                                     ->required(),
-                                DatePicker::make('start_date'),
-                                DatePicker::make('target_end_date'),
+                                DatePicker::make('start_date')
+                                    ->label(__('Start date')),
+                                DatePicker::make('target_end_date')
+                                    ->label(__('Target end date')),
+
                             ]),
                     ])
                     ->columnSpan([

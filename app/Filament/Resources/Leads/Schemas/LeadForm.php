@@ -55,6 +55,11 @@ class LeadForm
                                     ->label(__('Company name'))
                                     ->maxLength(255)
                                     ->prefixIcon(Heroicon::OutlinedBuildingOffice2),
+                                Select::make('priority')
+                                    ->label(__('Priority'))
+                                    ->options(Priority::class)
+                                    ->default(Priority::defaultCase())
+                                    ->required(),
                                 TextInput::make('email')
                                     ->label(__('E-mail'))
                                     ->email()
@@ -72,7 +77,7 @@ class LeadForm
                                     ->prefixIcon(Heroicon::OutlinedGlobeAlt)
                                     ->columnSpanFull(),
                                 Textarea::make('summary')
-                                    ->hiddenLabel(true)
+                                    ->label(__('Summary'))
                                     ->rows(7)
                                     ->autosize()
                                     ->columnSpanFull(),
@@ -116,11 +121,6 @@ class LeadForm
                                 Select::make('pipeline_stage')
                                     ->options(LeadPipelineStage::class)
                                     ->default(LeadPipelineStage::Inbox)
-                                    ->required(),
-                                Select::make('priority')
-                                    ->label(__('Priority'))
-                                    ->options(Priority::class)
-                                    ->default(Priority::defaultCase())
                                     ->required(),
                             ])
                             ->columns(1),

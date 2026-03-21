@@ -13,7 +13,6 @@ use App\Support\Filament\HourlyRateCurrencyFields;
 use App\Support\TimeDuration;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -148,13 +147,15 @@ class TaskForm
 
                 Group::make()
                     ->schema([
-                        Section::make('Workflow')
+                        Section::make(__('Classification'))
                             ->schema([
                                 Select::make('status')
+                                    ->label(__('Status'))
                                     ->options(TaskStatus::class)
                                     ->default(TaskStatus::defaultCase())
                                     ->required(),
                                 Select::make('priority')
+                                    ->label(__('Priority'))
                                     ->options(Priority::class)
                                     ->default(Priority::Normal)
                                     ->required(),
@@ -167,9 +168,6 @@ class TaskForm
 
                         Section::make(__('Planning'))
                             ->schema([
-                                DateTimePicker::make('completed_at')
-                                    ->label(__('Completed at'))
-                                    ->seconds(false),
                                 TextInput::make('estimated_minutes')
                                     ->label(__('Estimate'))
                                     ->placeholder('e.g. 2h 30m, 1d, 45m')

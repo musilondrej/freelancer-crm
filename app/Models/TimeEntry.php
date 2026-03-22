@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BillingReportStatus;
 use App\Models\Concerns\EnforcesOwner;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 
@@ -40,9 +42,6 @@ class TimeEntry extends Model
         'description',
         'is_billable_override',
         'hourly_rate_override',
-        'is_invoiced',
-        'invoice_reference',
-        'invoiced_at',
         'started_at',
         'ended_at',
         'minutes',
@@ -58,8 +57,6 @@ class TimeEntry extends Model
         return [
             'is_billable_override' => 'boolean',
             'hourly_rate_override' => 'decimal:2',
-            'is_invoiced' => 'boolean',
-            'invoiced_at' => 'datetime',
             'started_at' => 'datetime',
             'ended_at' => 'datetime',
             'minutes' => 'integer',
@@ -132,31 +129,6 @@ class TimeEntry extends Model
                     'hourly_rate_override' => __('Hourly rate is required for time entries.'),
                 ]);
             }
-
-            $normalizedInvoiceReference = trim((string) ($timeEntry->invoice_reference ?? ''));
-            $hasInvoiceReference = $normalizedInvoiceReference !== '';
-            $hasInvoicedAt = $timeEntry->invoiced_at !== null;
-
-            if ((bool) $timeEntry->is_invoiced || $hasInvoiceReference || $hasInvoicedAt) {
-                if (! $hasInvoiceReference) {
-                    throw ValidationException::withMessages([
-                        'invoice_reference' => __('Invoice reference is required for invoiced time entries.'),
-                    ]);
-                }
-
-                $timeEntry->is_invoiced = true;
-                $timeEntry->invoice_reference = $normalizedInvoiceReference;
-
-                if ($timeEntry->invoiced_at === null) {
-                    $timeEntry->invoiced_at = now();
-                }
-
-                return;
-            }
-
-            $timeEntry->is_invoiced = false;
-            $timeEntry->invoice_reference = '';
-            $timeEntry->invoiced_at = null;
         });
     }
 
@@ -239,6 +211,19 @@ class TimeEntry extends Model
         return $this->belongsTo(Task::class);
     }
 
+    /**
+     * @return BelongsToMany<BillingReportLine, $this>
+     */
+    public function billingReportLines(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            BillingReportLine::class,
+            'billing_report_line_time_entries',
+            'time_entry_id',
+            'billing_report_line_id',
+        );
+    }
+
     public function effectiveCurrency(): ?string
     {
         return $this->task?->effectiveCurrency()
@@ -251,28 +236,12 @@ class TimeEntry extends Model
      * @return Builder<self>
      */
     #[Scope]
-    protected function billed(Builder $query): Builder
-    {
-        return $query
-            ->where('is_invoiced', true)
-            ->whereNotNull('invoice_reference')
-            ->where('invoice_reference', '!=', '');
-    }
-
-    /**
-     * Locked entries are those assigned to a timesheet (have an invoice reference).
-     * This mirrors the isLocked() instance method for use in query context.
-     *
-     * @param  Builder<self>  $query
-     * @return Builder<self>
-     */
-    #[Scope]
     protected function locked(Builder $query): Builder
     {
-        return $query
-            ->where('is_invoiced', true)
-            ->whereNotNull('invoice_reference')
-            ->where('invoice_reference', '!=', '');
+        return $query->where(function (Builder $builder): void {
+            $builder->whereNotNull('locked_at')
+                ->orWhereHas('billingReportLines');
+        });
     }
 
     /**
@@ -307,11 +276,7 @@ class TimeEntry extends Model
         $query->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId));
         $query->whereNotNull('started_at');
         $query->whereNotNull('ended_at');
-        $query->where('is_invoiced', false);
-        $query->where(fn (Builder $builder): Builder => $builder
-            ->whereNull('invoice_reference')
-            ->orWhere('invoice_reference', ''));
-        $query->whereNull('invoiced_at');
+        $query->whereDoesntHave('billingReportLines');
         $query->where(function (Builder $builder): void {
             $builder->where('is_billable_override', true)
                 ->orWhere(function (Builder $nested): void {
@@ -421,52 +386,42 @@ class TimeEntry extends Model
 
     public function isInvoiced(): bool
     {
-        if ((bool) $this->is_invoiced) {
-            return true;
+        if ($this->relationLoaded('billingReportLines')) {
+            return $this->billingReportLines->contains(
+                fn (BillingReportLine $line): bool => $line->relationLoaded('billingReport')
+                    && $line->billingReport?->isFinalized() === true
+            );
         }
 
-        if (trim((string) $this->invoice_reference) !== '') {
-            return true;
-        }
-
-        return $this->invoiced_at !== null;
+        return $this->billingReportLines()
+            ->whereHas('billingReport', fn (Builder $q): Builder => $q->where('status', BillingReportStatus::Finalized))
+            ->exists();
     }
 
-    /**
-     * A time entry is locked once it has been assigned to a timesheet (has an invoice reference).
-     * This is derived state — no separate field needed.
-     */
     public function isLocked(): bool
     {
-        return (bool) $this->is_invoiced && $this->resolvedInvoiceReference() !== null;
+        if ($this->locked_at !== null) {
+            return true;
+        }
+
+        if ($this->relationLoaded('billingReportLines')) {
+            return $this->billingReportLines->isNotEmpty();
+        }
+
+        return $this->billingReportLines()->exists();
     }
 
     public function isReadyToInvoice(): bool
     {
-        if ($this->isRunning() || $this->isInvoiced() || $this->resolvedMinutes() <= 0) {
+        if ($this->isRunning() || $this->resolvedMinutes() <= 0) {
+            return false;
+        }
+
+        if ($this->isLocked()) {
             return false;
         }
 
         return $this->effectiveBillable($this->task?->is_billable);
-    }
-
-    public function markAsInvoiced(?string $invoiceReference = null, CarbonInterface|string|null $invoicedAt = null): void
-    {
-        if ($this->isInvoiced()) {
-            return;
-        }
-
-        $resolvedAt = $invoicedAt instanceof CarbonInterface
-            ? $invoicedAt
-            : ($invoicedAt !== null ? CarbonImmutable::parse($invoicedAt) : now());
-
-        $this->update([
-            'is_invoiced' => true,
-            'invoice_reference' => $invoiceReference ?? '',
-            'invoiced_at' => $resolvedAt,
-        ]);
-
-        $this->refresh();
     }
 
     public function lock(): void
@@ -481,27 +436,5 @@ class TimeEntry extends Model
         $this->forceFill([
             'locked_at' => null,
         ])->save();
-    }
-
-    public function resolvedInvoiceReference(): ?string
-    {
-        $ref = trim((string) $this->invoice_reference);
-
-        return $ref !== '' ? $ref : null;
-    }
-
-    public function resolvedInvoicedAt(): ?CarbonInterface
-    {
-        $rawInvoicedAt = $this->getAttribute('invoiced_at');
-
-        if ($rawInvoicedAt instanceof CarbonInterface) {
-            return $rawInvoicedAt;
-        }
-
-        if (is_string($rawInvoicedAt) && trim($rawInvoicedAt) !== '') {
-            return CarbonImmutable::parse($rawInvoicedAt);
-        }
-
-        return null;
     }
 }

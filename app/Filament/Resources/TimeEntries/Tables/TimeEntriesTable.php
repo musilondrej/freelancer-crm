@@ -2,17 +2,17 @@
 
 namespace App\Filament\Resources\TimeEntries\Tables;
 
+use App\Enums\BillingReportStatus;
+use App\Models\BillingReport;
 use App\Models\TimeEntry;
 use App\Support\CurrencyConverter;
-use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -25,79 +25,50 @@ use Illuminate\Database\Eloquent\Collection;
 
 class TimeEntriesTable
 {
-    public static function invoiceBulkAction(): BulkAction
+    public static function addToBillingReportBulkAction(): BulkAction
     {
-        return BulkAction::make('invoice_selected')
-            ->label(__('Invoice selected'))
-            ->icon('heroicon-o-banknotes')
-            ->color('info')
+        return BulkAction::make('add_to_billing_report')
+            ->label(__('Add to Billing Report'))
+            ->icon('heroicon-o-document-text')
+            ->color('primary')
             ->schema([
-                TextInput::make('invoice_reference')
-                    ->label(__('Invoice reference'))
+                Select::make('billing_report_id')
+                    ->label(__('Billing Report'))
+                    ->options(fn (): array => BillingReport::query()
+                        ->draft()
+                        ->with('customer')
+                        ->orderByDesc('created_at')
+                        ->get()
+                        ->mapWithKeys(fn (BillingReport $report): array => [
+                            $report->id => sprintf('%s — %s', $report->title, $report->customer->name),
+                        ])
+                        ->toArray())
                     ->required()
-                    ->maxLength(255),
-                DatePicker::make('invoiced_at')
-                    ->label(__('Invoiced at'))
-                    ->default(today()->toDateString())
-                    ->required(),
+                    ->searchable(),
             ])
-            ->action(function (BulkAction $action, Collection $records, array $data): void {
-                $readyRecords = $records->filter(function ($record) use ($action): bool {
-                    if (! $record instanceof TimeEntry) {
-                        return false;
-                    }
+            ->action(function (Collection $records, array $data): void {
+                $report = BillingReport::query()->find($data['billing_report_id']);
 
-                    if (! $record->isReadyToInvoice()) {
-                        $action->reportBulkProcessingFailure(
-                            'not_ready_to_invoice',
-                            message: function (int $failureCount, int $totalCount): string {
-                                if (($failureCount === 1) && ($totalCount === 1)) {
-                                    return __('The selected time entry is not ready to invoice.');
-                                }
-
-                                if ($failureCount === $totalCount) {
-                                    return __('All selected time entries are already invoiced, running, or not billable.');
-                                }
-
-                                if ($failureCount === 1) {
-                                    return __('One selected time entry was skipped because it is not ready to invoice.');
-                                }
-
-                                return __(':count selected time entries were skipped because they are not ready to invoice.', ['count' => $failureCount]);
-                            },
-                        );
-
-                        return false;
-                    }
-
-                    return true;
-                });
-
-                if ($readyRecords->isEmpty()) {
+                if (! $report instanceof BillingReport) {
                     return;
                 }
 
-                foreach ($readyRecords as $record) {
-                    if (! $record instanceof TimeEntry) {
-                        continue;
-                    }
+                $attached = $report->addSpecificEntries($records);
 
-                    $record->markAsInvoiced(
-                        $data['invoice_reference'] ?? null,
-                        $data['invoiced_at'] ?? null,
-                    );
-                }
-            })
-            ->successNotificationTitle(__('Selected time entries marked as invoiced'))
-            ->failureNotificationTitle(function (int $successCount, int $totalCount): string {
-                if ($successCount > 0) {
-                    return __(':count of :total selected time entries were assigned to an invoice.', [
-                        'count' => $successCount,
-                        'total' => $totalCount,
-                    ]);
+                if ($attached === 0) {
+                    Notification::make()
+                        ->warning()
+                        ->title(__('No entries were added'))
+                        ->body(__('All selected entries are already in a billing report.'))
+                        ->send();
+
+                    return;
                 }
 
-                return __('No selected time entries were ready to invoice.');
+                Notification::make()
+                    ->success()
+                    ->title(__(':count entries added to billing report', ['count' => $attached]))
+                    ->send();
             })
             ->deselectRecordsAfterCompletion();
     }
@@ -123,11 +94,14 @@ class TimeEntriesTable
                 ->boolean()
                 ->state(fn (TimeEntry $record): bool => $record->effectiveBillable($record->task?->is_billable))
                 ->toggleable(),
-            IconColumn::make('is_invoiced')
-                ->label(__('Invoiced'))
+            IconColumn::make('in_billing_report')
+                ->label(__('Billed'))
                 ->boolean()
                 ->state(fn (TimeEntry $record): bool => $record->isInvoiced())
-                ->sortable()
+                ->trueIcon('heroicon-o-document-check')
+                ->falseIcon('heroicon-o-minus')
+                ->trueColor('success')
+                ->falseColor('gray')
                 ->toggleable(),
             TextColumn::make('hourly_rate')
                 ->label(__('Hourly rate'))
@@ -159,8 +133,9 @@ class TimeEntriesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['billingReportLines.billingReport']))
             ->columns([
-                IconColumn::make('is_locked')
+                IconColumn::make('in_report')
                     ->label('')
                     ->state(fn (TimeEntry $record): bool => $record->isLocked())
                     ->boolean()
@@ -168,7 +143,7 @@ class TimeEntriesTable
                     ->falseIcon('')
                     ->trueColor('warning')
                     ->falseColor('gray')
-                    ->tooltip(fn (TimeEntry $record): ?string => $record->isLocked() ? __('Locked') : null),
+                    ->tooltip(fn (TimeEntry $record): ?string => $record->isLocked() ? __('In billing report') : null),
                 TextColumn::make('task.title')
                     ->label(__('Task'))
                     ->placeholder(__('No task'))
@@ -182,26 +157,25 @@ class TimeEntriesTable
                 ...self::relationColumns(),
             ])
             ->recordClasses(fn (TimeEntry $record): ?string => match (true) {
-                $record->isLocked() => 'bg-yellow-50',
                 $record->isInvoiced() => 'bg-green-50',
+                $record->isLocked() => 'bg-yellow-50',
                 default => null,
             })
             ->filters([
                 Filter::make('running')
                     ->label(__('Running'))
                     ->query(fn ($query) => $query->running()),
-                Filter::make('ready_to_invoice')
-                    ->label(__('Ready to invoice'))
+                Filter::make('ready_to_bill')
+                    ->label(__('Ready to bill'))
                     ->query(fn ($query) => $query->readyToInvoice()),
-                Filter::make('invoiced')
-                    ->label(__('Invoiced'))
-                    ->query(fn (Builder $query): Builder => $query->where(function (Builder $builder): void {
-                        $builder->where('is_invoiced', true)
-                            ->orWhere('invoice_reference', '<>', '')
-                            ->orWhereNotNull('invoiced_at');
-                    })),
-                Filter::make('locked')
-                    ->label(__('Locked'))
+                Filter::make('billed')
+                    ->label(__('Billed'))
+                    ->query(fn (Builder $query): Builder => $query->whereHas(
+                        'billingReportLines.billingReport',
+                        fn (Builder $q): Builder => $q->where('status', BillingReportStatus::Finalized)
+                    )),
+                Filter::make('in_draft_report')
+                    ->label(__('In draft report'))
                     ->query(fn ($query) => $query->locked()),
                 TrashedFilter::make(),
             ])
@@ -215,41 +189,12 @@ class TimeEntriesTable
                     ->date(),
             ])
             ->recordActions([
-                Action::make('mark_invoiced')
-                    ->label(__('Mark as invoiced'))
-                    ->icon('heroicon-o-document-text')
-                    ->visible(fn (TimeEntry $record): bool => $record->isReadyToInvoice())
-                    ->schema([
-                        TextInput::make('invoice_reference')
-                            ->label(__('Invoice reference'))
-                            ->required()
-                            ->maxLength(255),
-                        DatePicker::make('invoiced_at')
-                            ->label(__('Invoiced at'))
-                            ->default(today()->toDateString())
-                            ->required(),
-                    ])
-                    ->fillForm(fn (): array => [
-                        'invoice_reference' => '',
-                        'invoiced_at' => today()->toDateString(),
-                    ])
-                    ->action(function (TimeEntry $record, array $data): void {
-                        $record->markAsInvoiced(
-                            invoiceReference: $data['invoice_reference'] ?? null,
-                            invoicedAt: $data['invoiced_at'] ?? null,
-                        );
-
-                        Notification::make()
-                            ->success()
-                            ->title(__('Time entry marked as invoiced'))
-                            ->send();
-                    }),
                 EditAction::make()
                     ->visible(fn (TimeEntry $record): bool => ! $record->isLocked()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    self::invoiceBulkAction(),
+                    self::addToBillingReportBulkAction(),
                     DeleteBulkAction::make(),
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),

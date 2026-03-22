@@ -12,7 +12,6 @@ use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Project;
 use App\Support\EnumValue;
 use App\Support\Filament\FilteredByOwner;
-use App\Support\Filament\HourlyRateCurrencyFields;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
@@ -62,7 +61,6 @@ class ProjectForm
                                         }
 
                                         $defaults = $financials->fromCustomer($state);
-                                        $set('currency', $defaults->currency);
                                         $set('hourly_rate', $defaults->hourlyRate);
                                     }),
                                 Textarea::make('description')
@@ -74,31 +72,25 @@ class ProjectForm
                         Section::make(__('Financial details'))
                             ->schema([
                                 Toggle::make('use_custom_financials')
-                                    ->label(__('Use custom currency and hourly rate for this project'))
-                                    ->default(fn (?Project $record): bool => $record instanceof Project && ($record->currency !== null || $record->hourly_rate !== null))
+                                    ->label(__('Use custom hourly rate for this project'))
+                                    ->default(fn (?Project $record): bool => $record instanceof Project && $record->hourly_rate !== null)
                                     ->dehydrated(false)
                                     ->live()
-                                    ->afterStateHydrated(function (Get $get, Set $set, mixed $state): void {
+                                    ->afterStateHydrated(function (Set $set, mixed $state): void {
                                         if ((bool) $state) {
                                             return;
                                         }
 
-                                        $set('currency', null);
                                         $set('hourly_rate', null);
                                     })
                                     ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($financials): void {
                                         if (! (bool) $state) {
-                                            $set('currency', null);
                                             $set('hourly_rate', null);
 
                                             return;
                                         }
 
                                         $defaults = $financials->fromCustomer($get('customer_id'));
-
-                                        if (blank($get('currency'))) {
-                                            $set('currency', $defaults->currency);
-                                        }
 
                                         if (blank($get('hourly_rate'))) {
                                             $set('hourly_rate', $defaults->hourlyRate);
@@ -120,16 +112,18 @@ class ProjectForm
                                         $set('hourly_rate', null);
                                     }),
 
-                                ...HourlyRateCurrencyFields::make(
-                                    currencyField: 'currency',
-                                    rateField: 'hourly_rate',
-                                    currencyRequired: fn (Get $get): bool => (bool) $get('use_custom_financials'),
-                                    rateRequired: fn (Get $get): bool => (bool) $get('use_custom_financials')
-                                        && in_array(EnumValue::from($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true),
-                                    currencyVisible: fn (Get $get): bool => (bool) $get('use_custom_financials'),
-                                    rateVisible: fn (Get $get): bool => (bool) $get('use_custom_financials')
-                                        && in_array(EnumValue::from($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true),
-                                ),
+                                Hidden::make('currency')
+                                    ->dehydrateStateUsing(fn (): null => null),
+
+                                TextInput::make('hourly_rate')
+                                    ->label(__('Hourly rate'))
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->required(fn (Get $get): bool => (bool) $get('use_custom_financials')
+                                        && in_array(EnumValue::from($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true))
+                                    ->visible(fn (Get $get): bool => (bool) $get('use_custom_financials')
+                                        && in_array(EnumValue::from($get('pricing_model')), [ProjectPricingModel::Hourly->value, ProjectPricingModel::Retainer->value], true))
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get)),
 
                                 TextInput::make('fixed_price')
                                     ->label(__('Fixed price'))

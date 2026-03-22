@@ -12,7 +12,6 @@ use App\Filament\Resources\Tags\Schemas\TagsSelect;
 use App\Models\Task;
 use App\Support\EnumValue;
 use App\Support\Filament\FilteredByOwner;
-use App\Support\Filament\HourlyRateCurrencyFields;
 use App\Support\TimeDuration;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
@@ -61,7 +60,6 @@ class TaskForm
                                         }
 
                                         $defaults = $financials->fromProject($state);
-                                        $set('currency', $defaults->currency);
                                         $set('hourly_rate_override', $defaults->hourlyRate);
                                     }),
                                 Select::make('billing_model')
@@ -98,8 +96,8 @@ class TaskForm
                         Section::make(__('Billing details'))
                             ->schema([
                                 Toggle::make('use_custom_financials')
-                                    ->label(__('Use custom currency and hourly rate for this task'))
-                                    ->default(fn (?Task $record): bool => $record instanceof Task && ($record->currency !== null || $record->hourly_rate_override !== null))
+                                    ->label(__('Use custom hourly rate for this task'))
+                                    ->default(fn (?Task $record): bool => $record instanceof Task && $record->hourly_rate_override !== null)
                                     ->dehydrated(false)
                                     ->live()
                                     ->afterStateHydrated(function (Set $set, mixed $state): void {
@@ -107,12 +105,10 @@ class TaskForm
                                             return;
                                         }
 
-                                        $set('currency', null);
                                         $set('hourly_rate_override', null);
                                     })
                                     ->afterStateUpdated(function (Get $get, Set $set, mixed $state) use ($financials): void {
                                         if (! (bool) $state) {
-                                            $set('currency', null);
                                             $set('hourly_rate_override', null);
 
                                             return;
@@ -120,26 +116,24 @@ class TaskForm
 
                                         $defaults = $financials->fromProject($get('project_id'));
 
-                                        if (blank($get('currency'))) {
-                                            $set('currency', $defaults->currency);
-                                        }
-
                                         if (blank($get('hourly_rate_override'))) {
                                             $set('hourly_rate_override', $defaults->hourlyRate);
                                         }
                                     })
-                                    ->helperText(__('When turned off, currency and hourly rate are inherited automatically from the project.')),
-                                ...HourlyRateCurrencyFields::make(
-                                    currencyField: 'currency',
-                                    rateField: 'hourly_rate_override',
-                                    rateLabel: 'Hourly rate',
-                                    currencyRequired: fn (Get $get): bool => (bool) $get('use_custom_financials'),
-                                    rateRequired: fn (Get $get): bool => (bool) $get('use_custom_financials')
-                                        && EnumValue::from($get('billing_model')) === TaskBillingModel::Hourly->value,
-                                    currencyVisible: fn (Get $get): bool => (bool) $get('use_custom_financials'),
-                                    rateVisible: fn (Get $get): bool => (bool) $get('use_custom_financials')
-                                        && EnumValue::from($get('billing_model')) === TaskBillingModel::Hourly->value,
-                                ),
+                                    ->helperText(__('When turned off, the hourly rate is inherited automatically from the project.')),
+
+                                Hidden::make('currency')
+                                    ->dehydrateStateUsing(fn (): null => null),
+
+                                TextInput::make('hourly_rate_override')
+                                    ->label(__('Hourly rate'))
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->required(fn (Get $get): bool => (bool) $get('use_custom_financials')
+                                        && EnumValue::from($get('billing_model')) === TaskBillingModel::Hourly->value)
+                                    ->visible(fn (Get $get): bool => (bool) $get('use_custom_financials')
+                                        && EnumValue::from($get('billing_model')) === TaskBillingModel::Hourly->value)
+                                    ->suffix(fn (Get $get): string => Currency::resolveFromForm($get)),
                                 TextInput::make('fixed_price')
                                     ->label(__('Fixed price'))
                                     ->numeric()

@@ -34,9 +34,6 @@ class TaskFactory extends Factory
             'status' => fake()->randomElement(TaskStatus::cases()),
             'is_billable' => fake()->boolean(90),
             'track_time' => $isHourly,
-            'is_invoiced' => false,
-            'invoice_reference' => null,
-            'invoiced_at' => null,
             'currency' => fake()->optional(0.8)->randomElement(['CZK', 'EUR', 'USD']),
             'quantity' => null,
             'hourly_rate_override' => function (array $attributes) use ($isHourly): ?float {

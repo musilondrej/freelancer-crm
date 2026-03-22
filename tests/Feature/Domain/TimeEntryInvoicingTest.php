@@ -9,7 +9,6 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
-use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 
@@ -167,51 +166,6 @@ it('keeps historical time entry hourly rate when task rate changes later', funct
 
     expect((float) $timeEntry->hourly_rate_override)->toBe(1800.0)
         ->and($timeEntry->calculatedAmount())->toBe(1800.0);
-});
-
-it('marks a finished billable time entry as invoiced', function (): void {
-    $context = buildTimeEntryContext();
-
-    $timeEntry = TimeEntry::query()->create([
-        'owner_id' => $context['task']->owner_id,
-        'task_id' => $context['task']->id,
-        'started_at' => now()->subHour(),
-        'ended_at' => now(),
-        'minutes' => 60,
-    ]);
-
-    expect($timeEntry->isReadyToInvoice())->toBeTrue();
-
-    $invoiceDate = CarbonImmutable::parse('2026-03-31 12:00:00');
-
-    $timeEntry->markAsInvoiced('INV-2026-003', $invoiceDate);
-    $timeEntry->refresh();
-
-    expect($timeEntry->isInvoiced())->toBeTrue()
-        ->and($timeEntry->isReadyToInvoice())->toBeFalse()
-        ->and($timeEntry->resolvedInvoiceReference())->toBe('INV-2026-003')
-        ->and($timeEntry->resolvedInvoicedAt()?->toDateTimeString())->toBe($invoiceDate->toDateTimeString());
-});
-
-it('requires invoice reference when marking time entries as invoiced', function (): void {
-    $context = buildTimeEntryContext();
-
-    $timeEntry = TimeEntry::query()->create([
-        'owner_id' => $context['task']->owner_id,
-        'task_id' => $context['task']->id,
-        'started_at' => now()->subMinutes(30),
-        'ended_at' => now(),
-        'minutes' => 30,
-    ]);
-
-    expect(fn () => $timeEntry->markAsInvoiced('   '))
-        ->toThrow(ValidationException::class);
-
-    $timeEntry->refresh();
-
-    expect($timeEntry->isInvoiced())->toBeFalse()
-        ->and($timeEntry->resolvedInvoiceReference())->toBeNull()
-        ->and($timeEntry->resolvedInvoicedAt())->toBeNull();
 });
 
 it('does not consider running or non-billable time entries ready to invoice', function (): void {

@@ -50,7 +50,7 @@ class TimeEntriesRelationManager extends RelationManager
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    TimeEntriesTable::invoiceBulkAction(),
+                    TimeEntriesTable::addToBillingReportBulkAction(),
                     DeleteBulkAction::make(),
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
@@ -59,6 +59,7 @@ class TimeEntriesRelationManager extends RelationManager
             ->modifyQueryUsing(fn (Builder $query) => $query
                 ->withoutGlobalScopes([
                     SoftDeletingScope::class,
-                ]));
+                ])
+                ->with(['billingReportLines.billingReport']));
     }
 }

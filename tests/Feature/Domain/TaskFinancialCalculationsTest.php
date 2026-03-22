@@ -5,12 +5,12 @@ use App\Enums\ProjectPipelineStage;
 use App\Enums\ProjectPricingModel;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
+use App\Models\BillingReport;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
-use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 
@@ -275,7 +275,7 @@ it('blocks switching a task to fixed price when time entries already exist', fun
     ]))->toThrow(ValidationException::class);
 });
 
-it('marks a ready task as invoiced with a shared invoice reference', function (): void {
+it('marks a ready task as invoiced once its billing report is finalized', function (): void {
     $context = buildActivityCalculationContext();
 
     $task = Task::query()->create([
@@ -289,37 +289,19 @@ it('marks a ready task as invoiced with a shared invoice reference', function ()
         'completed_at' => now(),
     ]);
 
-    $invoiceDate = CarbonImmutable::parse('2026-03-31 09:00:00');
+    $this->actingAs($context['owner']);
 
-    $task->markAsInvoiced('INV-2026-003', $invoiceDate);
-    $task->refresh();
+    $report = BillingReport::factory()
+        ->for($context['owner'], 'owner')
+        ->create(['customer_id' => $context['customer']->id]);
 
-    expect($task->isInvoiced())->toBeTrue()
-        ->and($task->isReadyToInvoice())->toBeFalse()
-        ->and($task->resolvedInvoiceReference())->toBe('INV-2026-003')
-        ->and($task->resolvedInvoicedAt()?->toDateTimeString())->toBe($invoiceDate->toDateTimeString());
-});
+    $report->addFixedPriceTask($task);
 
-it('normalizes blank invoice references when marking a task as invoiced', function (): void {
-    $context = buildActivityCalculationContext();
+    expect($task->fresh()->isInvoiced())->toBeFalse()
+        ->and($task->fresh()->isReadyToInvoice())->toBeFalse();
 
-    $task = Task::query()->create([
-        'owner_id' => $context['owner']->id,
-        'project_id' => $context['project']->id,
-        'title' => 'Hourly maintenance review',
-        'billing_model' => TaskBillingModel::Hourly,
-        'status' => TaskStatus::Done,
-        'is_billable' => true,
-        'hourly_rate_override' => 1200,
-        'completed_at' => now(),
-    ]);
+    $report->finalize('FAK-2026-001');
 
-    logTaskTime($task, 90);
-
-    $task->markAsInvoiced('   ', '2026-03-18');
-    $task->refresh();
-
-    expect($task->isInvoiced())->toBeTrue()
-        ->and($task->resolvedInvoiceReference())->toBeNull()
-        ->and($task->resolvedInvoicedAt())->not->toBeNull();
+    expect($task->fresh()->isInvoiced())->toBeTrue()
+        ->and($task->fresh()->isReadyToInvoice())->toBeFalse();
 });

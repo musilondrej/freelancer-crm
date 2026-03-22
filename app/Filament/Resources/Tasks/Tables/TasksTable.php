@@ -14,14 +14,12 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -30,7 +28,6 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
 
 class TasksTable
@@ -106,11 +103,16 @@ class TasksTable
                     ->label(__('Billable'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                IconColumn::make('is_invoiced')
+                IconColumn::make('in_billing_report')
                     ->boolean()
-                    ->label(__('Invoiced'))
+                    ->label(__('Billed'))
                     ->state(fn (Task $record): bool => $record->isInvoiced())
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->trueIcon('heroicon-o-document-check')
+                    ->falseIcon('heroicon-o-minus')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->sortable(false),
                 TextColumn::make('amount')
                     ->label(__('Amount'))
                     ->state(function (Task $record): string {
@@ -138,15 +140,6 @@ class TasksTable
                     ->date($dateFormat)
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('invoice_reference')
-                    ->label(__('Invoice reference'))
-                    ->state(fn (Task $record): ?string => $record->resolvedInvoiceReference())
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('invoiced_at')
-                    ->label(__('Invoiced at'))
-                    ->state(fn (Task $record): ?CarbonInterface => $record->resolvedInvoicedAt())
-                    ->dateTime($dateTimeFormat, timezone: $timezone)
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->label(__('Created at'))
                     ->dateTime($dateTimeFormat, timezone: $timezone)
@@ -162,17 +155,15 @@ class TasksTable
                     ->label(__('Project'))
                     ->searchable()
                     ->preload(),
-                Filter::make('ready_to_invoice')
-                    ->label(__('Ready to invoice'))
+                Filter::make('ready_to_bill')
+                    ->label(__('Ready to bill'))
                     ->query(function (Builder $query) use ($ownerId): Builder {
                         /** @var Builder<Task> $query */
                         return $query
                             ->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId))
                             ->billable()
                             ->done()
-                            ->where('is_invoiced', false)
-                            ->whereNull('invoice_reference')
-                            ->whereNull('invoiced_at')
+                            ->whereDoesntHave('billingReportLine')
                             ->whereNotNull('completed_at');
                     }),
                 Filter::make('completed_range')
@@ -272,112 +263,11 @@ class TasksTable
                                 ->success()
                                 ->send();
                         }),
-                    Action::make('mark_invoiced')
-                        ->label(__('Mark as invoiced'))
-                        ->icon('heroicon-o-banknotes')
-                        ->color('info')
-                        ->visible(fn (Task $record): bool => (bool) $record->is_billable && ! $record->isInvoiced() && $record->isReadyToInvoice())
-                        ->schema([
-                            TextInput::make('invoice_reference')
-                                ->label(__('Invoice reference'))
-                                ->maxLength(64),
-                            DatePicker::make('invoiced_at')
-                                ->label(__('Invoiced at'))
-                                ->default(today()->toDateString())
-                                ->required(),
-                        ])
-                        ->fillForm(fn (): array => [
-                            'invoice_reference' => null,
-                            'invoiced_at' => today()->toDateString(),
-                        ])
-                        ->action(function (Task $record, array $data): void {
-                            $record->markAsInvoiced(
-                                invoiceReference: $data['invoice_reference'] ?? null,
-                                invoicedAt: $data['invoiced_at'] ?? null,
-                            );
-
-                            Notification::make()
-                                ->title(__('Task marked as invoiced'))
-                                ->success()
-                                ->send();
-                        }),
                     EditAction::make(),
                 ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    BulkAction::make('invoice_selected')
-                        ->label(__('Invoice selected'))
-                        ->icon('heroicon-o-banknotes')
-                        ->color('info')
-                        ->schema([
-                            TextInput::make('invoice_reference')
-                                ->label(__('Invoice reference'))
-                                ->maxLength(64),
-                            DatePicker::make('invoiced_at')
-                                ->label(__('Invoiced at'))
-                                ->default(today()->toDateString())
-                                ->required(),
-                        ])
-                        ->action(function (BulkAction $action, Collection $records, array $data): void {
-                            $readyRecords = $records->filter(function ($record) use ($action): bool {
-                                if (! $record instanceof Task) {
-                                    return false;
-                                }
-
-                                if (! $record->isReadyToInvoice()) {
-                                    $action->reportBulkProcessingFailure(
-                                        'not_ready_to_invoice',
-                                        message: function (int $failureCount, int $totalCount): string {
-                                            if (($failureCount === 1) && ($totalCount === 1)) {
-                                                return __('The selected task is not ready to invoice.');
-                                            }
-
-                                            if ($failureCount === $totalCount) {
-                                                return __('All selected tasks are already invoiced, not billable, or not done yet.');
-                                            }
-
-                                            if ($failureCount === 1) {
-                                                return __('One selected task was skipped because it is not ready to invoice.');
-                                            }
-
-                                            return __(':count selected tasks were skipped because they are not ready to invoice.', ['count' => $failureCount]);
-                                        },
-                                    );
-
-                                    return false;
-                                }
-
-                                return true;
-                            });
-
-                            if ($readyRecords->isEmpty()) {
-                                return;
-                            }
-
-                            foreach ($readyRecords as $record) {
-                                if (! $record instanceof Task) {
-                                    continue;
-                                }
-
-                                $record->markAsInvoiced(
-                                    $data['invoice_reference'] ?? null,
-                                    $data['invoiced_at'] ?? null,
-                                );
-                            }
-                        })
-                        ->successNotificationTitle(__('Selected tasks marked as invoiced'))
-                        ->failureNotificationTitle(function (int $successCount, int $totalCount): string {
-                            if ($successCount > 0) {
-                                return __(':count of :total selected tasks were assigned to an invoice.', [
-                                    'count' => $successCount,
-                                    'total' => $totalCount,
-                                ]);
-                            }
-
-                            return __('No selected tasks were ready to invoice.');
-                        })
-                        ->deselectRecordsAfterCompletion(),
                     DeleteBulkAction::make(),
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),

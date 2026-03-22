@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\BillingReportStatus;
 use App\Enums\Priority;
 use App\Enums\TaskBillingModel;
 use App\Enums\TaskStatus;
 use App\Models\Concerns\EnforcesOwner;
 use App\Support\EnumValue;
-use Carbon\CarbonImmutable;
-use Carbon\CarbonInterface;
 use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -56,9 +56,6 @@ class Task extends Model
         'priority',
         'is_billable',
         'track_time',
-        'is_invoiced',
-        'invoice_reference',
-        'invoiced_at',
         'currency',
         'quantity',
         'hourly_rate_override',
@@ -81,8 +78,6 @@ class Task extends Model
             'estimated_minutes' => 'integer',
             'is_billable' => 'boolean',
             'track_time' => 'boolean',
-            'is_invoiced' => 'boolean',
-            'invoiced_at' => 'datetime',
             'quantity' => 'decimal:2',
             'hourly_rate_override' => 'decimal:2',
             'fixed_price' => 'decimal:2',
@@ -119,24 +114,6 @@ class Task extends Model
                 $task->quantity = null;
                 $task->hourly_rate_override = null;
             }
-
-            $hasInvoiceReference = $task->invoice_reference !== null
-                && trim((string) $task->invoice_reference) !== '';
-            $hasInvoicedAt = $task->invoiced_at !== null;
-
-            if ((bool) $task->is_invoiced || $hasInvoiceReference || $hasInvoicedAt) {
-                $task->is_invoiced = true;
-
-                if ($task->invoiced_at === null) {
-                    $task->invoiced_at = now();
-                }
-
-                return;
-            }
-
-            $task->is_invoiced = false;
-            $task->invoice_reference = null;
-            $task->invoiced_at = null;
         });
     }
 
@@ -162,6 +139,14 @@ class Task extends Model
     public function timeEntries(): HasMany
     {
         return $this->hasMany(TimeEntry::class);
+    }
+
+    /**
+     * @return HasOne<BillingReportLine, $this>
+     */
+    public function billingReportLine(): HasOne
+    {
+        return $this->hasOne(BillingReportLine::class);
     }
 
     /**
@@ -350,9 +335,7 @@ class Task extends Model
         $query->when($ownerId !== null, fn (Builder $builder): Builder => $builder->where('owner_id', $ownerId));
         $query->where('is_billable', true);
         $query->whereIn('status', TaskStatus::doneValues());
-        $query->where('is_invoiced', false);
-        $query->whereNull('invoice_reference');
-        $query->whereNull('invoiced_at');
+        $query->whereDoesntHave('billingReportLine');
 
         return $query;
     }
@@ -367,66 +350,38 @@ class Task extends Model
         return $this->billing_model === TaskBillingModel::FixedPrice;
     }
 
+    /**
+     * A task is invoiced once its billing report line belongs to a finalized report.
+     */
     public function isInvoiced(): bool
     {
-        if ((bool) $this->is_invoiced) {
-            return true;
+        if ($this->relationLoaded('billingReportLine')) {
+            $line = $this->getRelation('billingReportLine');
+
+            if (! $line instanceof BillingReportLine) {
+                return false;
+            }
+
+            return $line->relationLoaded('billingReport')
+                ? $line->billingReport?->isFinalized() === true
+                : $line->billingReport()->finalized()->exists();
         }
 
-        if ($this->invoice_reference !== null && trim((string) $this->invoice_reference) !== '') {
-            return true;
-        }
-
-        return $this->invoiced_at !== null;
+        return $this->billingReportLine()
+            ->whereHas('billingReport', fn (Builder $q): Builder => $q->where('status', BillingReportStatus::Finalized))
+            ->exists();
     }
 
     public function isReadyToInvoice(): bool
     {
-        if (! $this->is_billable || $this->isInvoiced()) {
+        if (! $this->is_billable) {
+            return false;
+        }
+
+        if ($this->billingReportLine()->exists()) {
             return false;
         }
 
         return $this->status->isDone() && $this->calculatedAmount() !== null;
-    }
-
-    public function markAsInvoiced(?string $invoiceReference = null, CarbonInterface|string|null $invoicedAt = null): void
-    {
-        if ($this->isInvoiced()) {
-            return;
-        }
-
-        $resolvedAt = $invoicedAt instanceof CarbonInterface
-            ? $invoicedAt
-            : ($invoicedAt !== null ? CarbonImmutable::parse($invoicedAt) : now());
-
-        $this->update([
-            'is_invoiced' => true,
-            'invoice_reference' => $invoiceReference,
-            'invoiced_at' => $resolvedAt,
-        ]);
-
-        $this->refresh();
-    }
-
-    public function resolvedInvoiceReference(): ?string
-    {
-        $ref = trim((string) ($this->invoice_reference ?? ''));
-
-        return $ref !== '' ? $ref : null;
-    }
-
-    public function resolvedInvoicedAt(): ?CarbonInterface
-    {
-        $rawInvoicedAt = $this->getAttribute('invoiced_at');
-
-        if ($rawInvoicedAt instanceof CarbonInterface) {
-            return $rawInvoicedAt;
-        }
-
-        if (is_string($rawInvoicedAt) && trim($rawInvoicedAt) !== '') {
-            return CarbonImmutable::parse($rawInvoicedAt);
-        }
-
-        return null;
     }
 }

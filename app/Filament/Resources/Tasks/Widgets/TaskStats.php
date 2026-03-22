@@ -36,15 +36,15 @@ class TaskStats extends BaseWidget
             ->whereDate('due_date', '<', today())
             ->count();
 
-        $readyToInvoice = (clone $query)->readyToInvoice()->count();
+        $readyToBill = (clone $query)->readyToInvoice()->count();
 
         return [
             Stat::make(__('Open tasks'), number_format($open))
                 ->color('primary'),
             Stat::make(__('Overdue tasks'), number_format($overdue))
                 ->color($overdue > 0 ? 'danger' : 'gray'),
-            Stat::make(__('Ready to invoice'), number_format($readyToInvoice))
-                ->color($readyToInvoice > 0 ? 'warning' : 'gray'),
+            Stat::make(__('Ready to bill'), number_format($readyToBill))
+                ->color($readyToBill > 0 ? 'warning' : 'gray'),
         ];
     }
 }
